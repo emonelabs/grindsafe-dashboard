@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 interface SessionData {
   time: string;
@@ -19,9 +20,18 @@ interface SavedSession {
 }
 
 export function PlayerView() {
+  // Mock player data
+  const currentPlayer = {
+    name: 'Marcus Chen',
+    avatar: 'https://images.unsplash.com/photo-1674644674031-b49db824edbc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+    team: 'High Rollers'
+  };
+
+  const [activeTab, setActiveTab] = useState('sessions');
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
   const [currentPL, setCurrentPL] = useState(0);
@@ -63,8 +73,17 @@ export function PlayerView() {
     }
   ]);
 
-  // Initialize video stream
+  // Initialize video stream only when screen sharing is enabled
   useEffect(() => {
+    if (!isScreenSharing) {
+      // Stop any existing stream
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        setStream(null);
+      }
+      return;
+    }
+
     const canvas = document.createElement('canvas');
     canvas.width = 1280;
     canvas.height = 720;
@@ -102,7 +121,7 @@ export function PlayerView() {
       clearInterval(interval);
       canvasStream.getTracks().forEach(track => track.stop());
     };
-  }, []);
+  }, [isScreenSharing]);
 
   useEffect(() => {
     if (videoRef.current && stream) {
@@ -160,7 +179,6 @@ export function PlayerView() {
 
   const startSession = () => {
     setSessionActive(true);
-    setIsRecording(true);
     setSessionTime(0);
     setCurrentPL(0);
     setBiggestWin(0);
@@ -168,7 +186,29 @@ export function PlayerView() {
     setSessionData([]);
   };
 
+  const startScreenSharing = async () => {
+    try {
+      setIsScreenSharing(true);
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting screen sharing:', error);
+      setIsScreenSharing(false);
+      setIsRecording(false);
+    }
+  };
+
+  const stopScreenSharing = () => {
+    setIsScreenSharing(false);
+    setIsRecording(false);
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
   const endSession = () => {
+    // Stop screen sharing when ending session
+    stopScreenSharing();
     // Save session to history
     const newSession: SavedSession = {
       id: Date.now().toString(),
@@ -213,103 +253,174 @@ export function PlayerView() {
   if (!sessionActive) {
     return (
       <div className="space-y-6 p-6">
-        {/* Start Session Card */}
-        <div className="bg-white rounded-xl shadow-sm p-12 border border-gray-200 text-center">
-          <PlayCircle className="w-20 h-20 text-blue-600 mx-auto mb-6" />
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">Ready to Play?</h2>
-          <p className="text-gray-500 mb-8 max-w-md mx-auto">
-            Start a new session to track your performance, manage your bankroll, and record your gameplay.
-          </p>
-          
-          {/* Buy-in Input */}
-          <div className="max-w-sm mx-auto mb-8">
-            <label className="block text-gray-700 text-sm font-medium mb-2 text-left">
-              Buy-in Amount
-            </label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">$</span>
-              <input
-                type="number"
-                value={buyIn}
-                onChange={(e) => setBuyIn(Number(e.target.value))}
-                className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                placeholder="500"
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={startSession}
-            className="bg-gray-900 hover:bg-gray-800 text-white font-semibold px-8 py-4 rounded-lg transition-all shadow-sm"
-          >
-            Start Session
-          </button>
-        </div>
-
-        {/* Session History */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <History className="w-6 h-6 text-gray-700" />
-              <h3 className="text-xl font-semibold text-gray-900">Session History</h3>
-            </div>
-            <span className="text-gray-500 text-sm">{sessionHistory.length} sessions</span>
-          </div>
-
-          <div className="divide-y divide-gray-200">
-            {sessionHistory.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                No previous sessions yet. Start your first session above!
+        {/* Player Header */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">
+          <div className="flex items-center gap-4">
+            <img 
+              src={currentPlayer.avatar} 
+              alt={currentPlayer.name}
+              className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
+            />
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Hi, {currentPlayer.name.split(' ')[0]}</h2>
+              <div className="flex items-center gap-2 text-gray-500">
+                <Users className="w-4 h-4" />
+                <span className="text-sm">{currentPlayer.team}</span>
               </div>
-            ) : (
-              sessionHistory.map((session) => {
-                const sessionProfit = session.profitLoss >= 0;
-                return (
-                  <div key={session.id} className="p-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(session.date)}
-                        </div>
-                        <div className="text-gray-700">
-                          Duration: <span className="font-medium">{formatTime(session.duration)}</span>
-                        </div>
-                      </div>
-                      <div className={`text-right ${sessionProfit ? 'text-green-600' : 'text-red-600'}`}>
-                        <div className="text-2xl font-bold">
-                          {formatPL(session.profitLoss)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {((session.profitLoss / session.buyIn) * 100).toFixed(1)}% ROI
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-4">
-                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                        <div className="text-gray-500 text-xs mb-1">Buy-in</div>
-                        <div className="text-gray-900 font-medium">${session.buyIn}</div>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                        <div className="text-gray-500 text-xs mb-1">Hands</div>
-                        <div className="text-gray-900 font-medium">{session.handsPlayed}</div>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                        <div className="text-gray-500 text-xs mb-1">Biggest Win</div>
-                        <div className="text-green-600 font-medium">${session.biggestWin}</div>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                        <div className="text-gray-500 text-xs mb-1">Biggest Loss</div>
-                        <div className="text-red-600 font-medium">${session.biggestLoss}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+            </div>
           </div>
         </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="sessions">
+              <History className="w-4 h-4 mr-2" />
+              Sessions
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="sessions" className="space-y-6 mt-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Sessions</span>
+                  <History className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{sessionHistory.length}</div>
+                <div className="text-xs text-gray-500 mt-1">All time</div>
+              </div>
+
+              <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total P/L</span>
+                  <TrendingUp className="w-4 h-4 text-green-600" />
+                </div>
+                <div className={`text-2xl font-bold ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">Across all sessions</div>
+              </div>
+
+              <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Hands</span>
+                  <PlayCircle className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {sessionHistory.reduce((sum, s) => sum + s.handsPlayed, 0).toLocaleString()}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">Total hands played</div>
+              </div>
+
+              <div className="bg-white border border-gray-200 p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg Session</span>
+                  <Clock className="w-4 h-4 text-purple-600" />
+                </div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {sessionHistory.length > 0 ? formatTime(Math.round(sessionHistory.reduce((sum, s) => sum + s.duration, 0) / sessionHistory.length)) : '0h 0m'}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">Average duration</div>
+              </div>
+            </div>
+
+            {/* Start Session CTA */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-sm p-6 border border-blue-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-white text-lg font-semibold mb-1">Ready to Play?</h3>
+                  <p className="text-blue-100 text-sm">Start a new session to track your performance</p>
+                </div>
+                <button
+                  onClick={startSession}
+                  className="bg-white hover:bg-gray-50 text-blue-600 font-semibold px-6 py-3 rounded-lg transition-all shadow-sm flex items-center gap-2"
+                >
+                  <PlayCircle className="w-5 h-5" />
+                  Start Session
+                </button>
+              </div>
+            </div>
+
+            {/* Sessions Table */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h3 className="text-lg font-semibold text-gray-900">Session History</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Duration</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Hands</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">P/L</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Buy-in</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">ROI</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Win/Loss</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {sessionHistory.map((session) => {
+                      const sessionProfit = session.profitLoss >= 0;
+                      const roi = ((session.profitLoss / session.buyIn) * 100).toFixed(1);
+                      
+                      return (
+                        <tr key={session.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2 text-gray-500 text-sm">
+                              <Calendar className="w-4 h-4" />
+                              {formatDate(session.date)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm font-medium text-gray-900">{formatTime(session.duration)}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm font-medium text-gray-900">{session.handsPlayed}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className={`text-sm font-bold ${sessionProfit ? 'text-green-600' : 'text-red-600'}`}>
+                              {formatPL(session.profitLoss)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm text-gray-900">${session.buyIn}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className={`text-sm font-semibold ${parseFloat(roi) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {roi}%
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1 text-xs">
+                                <span className="text-gray-500">Win:</span>
+                                <span className="text-green-600 font-medium">${session.biggestWin}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs">
+                                <span className="text-gray-500">Loss:</span>
+                                <span className="text-red-600 font-medium">${Math.abs(session.biggestLoss)}</span>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {sessionHistory.length === 0 && (
+                <div className="text-center py-12 text-gray-400">
+                  <History className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>No sessions yet. Start your first session above!</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
@@ -395,32 +506,51 @@ export function PlayerView() {
             )}
           </div>
 
-          <div className="relative bg-black aspect-video">
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              className="w-full h-full object-cover"
-            />
-          </div>
+          {isScreenSharing ? (
+            <>
+              <div className="relative bg-black aspect-video">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              </div>
 
-          {/* Video Controls */}
-          <div className="p-4 bg-gray-50 flex items-center justify-center gap-4">
-            <button 
-              onClick={() => setIsRecording(!isRecording)}
-              className={`p-3 rounded-lg transition-all ${
-                isRecording 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
-            >
-              {isRecording ? <Square className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-            </button>
-            <span className="text-gray-600 text-sm">
-              {isRecording ? 'Stop Recording' : 'Start Recording'}
-            </span>
-          </div>
+              {/* Video Controls */}
+              <div className="p-4 bg-gray-50 flex items-center justify-center gap-4">
+                <button 
+                  onClick={stopScreenSharing}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2"
+                >
+                  <Square className="w-4 h-4" />
+                  Stop Sharing
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="relative bg-gray-100 aspect-video flex items-center justify-center">
+                <div className="text-center p-8">
+                  <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-gray-700 mb-2">Screen Sharing Disabled</h4>
+                  <p className="text-sm text-gray-500 mb-4">Share your screen to record your gameplay</p>
+                </div>
+              </div>
+
+              {/* Start Sharing Button */}
+              <div className="p-4 bg-gray-50 flex items-center justify-center gap-4">
+                <button 
+                  onClick={startScreenSharing}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2"
+                >
+                  <Play className="w-4 h-4" />
+                  Start Screen Sharing
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         {/* P/L Graph */}
