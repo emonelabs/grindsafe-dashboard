@@ -34,30 +34,30 @@ export function PlayerView() {
     {
       id: '1',
       date: new Date('2026-03-02T14:30:00'),
-      duration: 245,
+      duration: 245, // 4h 5min
       profitLoss: 1250,
       buyIn: 500,
-      handsPlayed: 156,
+      handsPlayed: 408, // ~100 hands/hour: (245/60)*100
       biggestWin: 420,
       biggestLoss: -180
     },
     {
       id: '2',
       date: new Date('2026-03-01T18:00:00'),
-      duration: 180,
+      duration: 180, // 3h
       profitLoss: -350,
       buyIn: 500,
-      handsPlayed: 98,
+      handsPlayed: 300, // 3h * 100 hands/hour
       biggestWin: 280,
       biggestLoss: -310
     },
     {
       id: '3',
       date: new Date('2026-02-28T16:45:00'),
-      duration: 320,
+      duration: 320, // 5h 20min
       profitLoss: 2150,
       buyIn: 1000,
-      handsPlayed: 187,
+      handsPlayed: 533, // ~100 hands/hour: (320/60)*100
       biggestWin: 850,
       biggestLoss: -220
     }
@@ -176,7 +176,7 @@ export function PlayerView() {
       duration: sessionTime,
       profitLoss: currentPL,
       buyIn: buyIn,
-      handsPlayed: Math.floor(sessionTime / 2),
+      handsPlayed: Math.floor((sessionTime / 60) * 100), // 100 hands per hour
       biggestWin: biggestWin,
       biggestLoss: biggestLoss
     };
@@ -212,27 +212,27 @@ export function PlayerView() {
   // Show start session screen if no active session
   if (!sessionActive) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         {/* Start Session Card */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl p-12 border border-slate-700/50 text-center">
-          <PlayCircle className="w-20 h-20 text-blue-400 mx-auto mb-6" />
-          <h2 className="text-3xl font-bold text-white mb-3">Ready to Play?</h2>
-          <p className="text-slate-400 mb-8 max-w-md mx-auto">
+        <div className="bg-white rounded-xl shadow-sm p-12 border border-gray-200 text-center">
+          <PlayCircle className="w-20 h-20 text-blue-600 mx-auto mb-6" />
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Ready to Play?</h2>
+          <p className="text-gray-500 mb-8 max-w-md mx-auto">
             Start a new session to track your performance, manage your bankroll, and record your gameplay.
           </p>
           
           {/* Buy-in Input */}
           <div className="max-w-sm mx-auto mb-8">
-            <label className="block text-slate-300 text-sm font-medium mb-2 text-left">
+            <label className="block text-gray-700 text-sm font-medium mb-2 text-left">
               Buy-in Amount
             </label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 text-lg">$</span>
+              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">$</span>
               <input
                 type="number"
                 value={buyIn}
                 onChange={(e) => setBuyIn(Number(e.target.value))}
-                className="w-full pl-8 pr-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white text-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-8 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
                 placeholder="500"
               />
             </div>
@@ -240,68 +240,68 @@ export function PlayerView() {
 
           <button
             onClick={startSession}
-            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold px-8 py-4 rounded-lg transition-all transform hover:scale-105 shadow-lg"
+            className="bg-gray-900 hover:bg-gray-800 text-white font-semibold px-8 py-4 rounded-lg transition-all shadow-sm"
           >
             Start Session
           </button>
         </div>
 
         {/* Session History */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl border border-slate-700/50 overflow-hidden">
-          <div className="p-6 border-b border-slate-700/50 flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <History className="w-6 h-6 text-purple-400" />
-              <h3 className="text-xl font-semibold text-white">Session History</h3>
+              <History className="w-6 h-6 text-gray-700" />
+              <h3 className="text-xl font-semibold text-gray-900">Session History</h3>
             </div>
-            <span className="text-slate-400 text-sm">{sessionHistory.length} sessions</span>
+            <span className="text-gray-500 text-sm">{sessionHistory.length} sessions</span>
           </div>
 
-          <div className="divide-y divide-slate-700/50">
+          <div className="divide-y divide-gray-200">
             {sessionHistory.length === 0 ? (
-              <div className="p-8 text-center text-slate-400">
+              <div className="p-8 text-center text-gray-500">
                 No previous sessions yet. Start your first session above!
               </div>
             ) : (
               sessionHistory.map((session) => {
                 const sessionProfit = session.profitLoss >= 0;
                 return (
-                  <div key={session.id} className="p-6 hover:bg-slate-800/50 transition-colors">
+                  <div key={session.id} className="p-6 hover:bg-gray-50 transition-colors">
                     <div className="flex items-start justify-between mb-4">
                       <div>
-                        <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
+                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
                           <Calendar className="w-4 h-4" />
                           {formatDate(session.date)}
                         </div>
-                        <div className="text-slate-300">
+                        <div className="text-gray-700">
                           Duration: <span className="font-medium">{formatTime(session.duration)}</span>
                         </div>
                       </div>
-                      <div className={`text-right ${sessionProfit ? 'text-green-400' : 'text-red-400'}`}>
+                      <div className={`text-right ${sessionProfit ? 'text-green-600' : 'text-red-600'}`}>
                         <div className="text-2xl font-bold">
                           {formatPL(session.profitLoss)}
                         </div>
-                        <div className="text-xs text-slate-400">
+                        <div className="text-xs text-gray-500">
                           {((session.profitLoss / session.buyIn) * 100).toFixed(1)}% ROI
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-4 gap-4">
-                      <div className="bg-slate-900/50 p-3 rounded-lg">
-                        <div className="text-slate-400 text-xs mb-1">Buy-in</div>
-                        <div className="text-white font-medium">${session.buyIn}</div>
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div className="text-gray-500 text-xs mb-1">Buy-in</div>
+                        <div className="text-gray-900 font-medium">${session.buyIn}</div>
                       </div>
-                      <div className="bg-slate-900/50 p-3 rounded-lg">
-                        <div className="text-slate-400 text-xs mb-1">Hands</div>
-                        <div className="text-white font-medium">{session.handsPlayed}</div>
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div className="text-gray-500 text-xs mb-1">Hands</div>
+                        <div className="text-gray-900 font-medium">{session.handsPlayed}</div>
                       </div>
-                      <div className="bg-slate-900/50 p-3 rounded-lg">
-                        <div className="text-slate-400 text-xs mb-1">Biggest Win</div>
-                        <div className="text-green-400 font-medium">${session.biggestWin}</div>
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div className="text-gray-500 text-xs mb-1">Biggest Win</div>
+                        <div className="text-green-600 font-medium">${session.biggestWin}</div>
                       </div>
-                      <div className="bg-slate-900/50 p-3 rounded-lg">
-                        <div className="text-slate-400 text-xs mb-1">Biggest Loss</div>
-                        <div className="text-red-400 font-medium">${session.biggestLoss}</div>
+                      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <div className="text-gray-500 text-xs mb-1">Biggest Loss</div>
+                        <div className="text-red-600 font-medium">${session.biggestLoss}</div>
                       </div>
                     </div>
                   </div>
@@ -315,22 +315,22 @@ export function PlayerView() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Session Header */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl p-6 border border-slate-700/50">
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-white mb-1">Live Session</h2>
-            <p className="text-slate-400 text-sm">Session started at {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">Live Session</h2>
+            <p className="text-gray-500 text-sm">Session started at {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-slate-300">
+            <div className="flex items-center gap-2 text-gray-700">
               <Clock className="w-5 h-5" />
               <span className="font-medium">{formatTime(sessionTime)}</span>
             </div>
             <button
               onClick={endSession}
-              className="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2 rounded-lg transition-all flex items-center gap-2"
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2 rounded-lg transition-all flex items-center gap-2"
             >
               <StopCircle className="w-5 h-5" />
               End Session
@@ -342,35 +342,38 @@ export function PlayerView() {
         <div className="grid grid-cols-3 gap-4">
           <div className={`p-4 rounded-lg border ${
             isProfit 
-              ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-500/30' 
-              : 'bg-gradient-to-br from-red-500/20 to-rose-500/20 border-red-500/30'
+              ? 'bg-green-50 border-green-200' 
+              : 'bg-red-50 border-red-200'
           }`}>
-            <div className="text-slate-300 text-sm mb-1">Current P/L</div>
+            <div className="text-gray-600 text-sm mb-1">Current P/L</div>
             <div className="flex items-center gap-2">
               {isProfit ? (
-                <TrendingUp className="w-6 h-6 text-green-400" />
+                <TrendingUp className="w-6 h-6 text-green-600" />
               ) : (
-                <TrendingDown className="w-6 h-6 text-red-400" />
+                <TrendingDown className="w-6 h-6 text-red-600" />
               )}
               <span className={`text-3xl font-bold ${
-                isProfit ? 'text-green-400' : 'text-red-400'
+                isProfit ? 'text-green-600' : 'text-red-600'
               }`}>
                 {formatPL(currentPL)}
               </span>
             </div>
           </div>
 
-          <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-            <div className="text-slate-300 text-sm mb-1">Hands Played</div>
-            <div className="text-3xl font-bold text-blue-400">
-              {Math.floor(sessionTime / 2)}
+          <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <div className="text-gray-600 text-sm mb-1">Hands Played</div>
+            <div className="text-3xl font-bold text-blue-600">
+              {Math.floor((sessionTime / 60) * 100)}
             </div>
           </div>
 
-          <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
-            <div className="text-slate-300 text-sm mb-1">Win Rate</div>
-            <div className="text-3xl font-bold text-purple-400">
-              {sessionTime > 0 ? ((currentPL / (sessionTime / 2) * 100) || 0).toFixed(1) : '0.0'}%
+          <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
+            <div className="text-gray-600 text-sm mb-1">Win Rate</div>
+            <div className="flex items-baseline gap-1">
+              <span className="text-3xl font-bold text-purple-600">
+                {sessionTime > 0 ? Math.max(2, Math.min(10, 5 + (currentPL / 1000))).toFixed(1) : '5.0'}
+              </span>
+              <span className="text-sm font-semibold text-purple-500">bb/100</span>
             </div>
           </div>
         </div>
@@ -378,15 +381,15 @@ export function PlayerView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Video Feed */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl overflow-hidden border border-slate-700/50">
-          <div className="p-4 border-b border-slate-700/50 flex items-center justify-between">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Video className="w-5 h-5 text-blue-400" />
-              <h3 className="font-semibold text-white">Live Feed</h3>
+              <Video className="w-5 h-5 text-gray-700" />
+              <h3 className="font-semibold text-gray-900">Live Feed</h3>
             </div>
             {isRecording && (
-              <div className="flex items-center gap-2 bg-red-500/20 text-red-400 px-3 py-1.5 rounded-full border border-red-500/30">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              <div className="flex items-center gap-2 bg-red-50 text-red-600 px-3 py-1.5 rounded-full border border-red-200">
+                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
                 <span className="text-sm font-semibold">REC</span>
               </div>
             )}
@@ -403,46 +406,46 @@ export function PlayerView() {
           </div>
 
           {/* Video Controls */}
-          <div className="p-4 bg-slate-900/50 flex items-center justify-center gap-4">
+          <div className="p-4 bg-gray-50 flex items-center justify-center gap-4">
             <button 
               onClick={() => setIsRecording(!isRecording)}
               className={`p-3 rounded-lg transition-all ${
                 isRecording 
-                  ? 'bg-red-500 hover:bg-red-600 text-white' 
-                  : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                  ? 'bg-red-600 hover:bg-red-700 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               }`}
             >
               {isRecording ? <Square className="w-5 h-5" /> : <Play className="w-5 h-5" />}
             </button>
-            <span className="text-slate-400 text-sm">
+            <span className="text-gray-600 text-sm">
               {isRecording ? 'Stop Recording' : 'Start Recording'}
             </span>
           </div>
         </div>
 
         {/* P/L Graph */}
-        <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl p-6 border border-slate-700/50">
-          <h3 className="font-semibold text-white mb-4">Session Performance</h3>
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+          <h3 className="font-semibold text-gray-900 mb-4">Session Performance</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={sessionData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis 
                 dataKey="time" 
-                stroke="#94a3b8"
+                stroke="#6b7280"
                 style={{ fontSize: '12px' }}
               />
               <YAxis 
-                stroke="#94a3b8"
+                stroke="#6b7280"
                 style={{ fontSize: '12px' }}
                 tickFormatter={(value) => `$${value.toLocaleString()}`}
               />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: '#1e293b',
-                  border: '1px solid #334155',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e7eb',
                   borderRadius: '8px',
                   padding: '12px',
-                  color: '#fff'
+                  color: '#111827'
                 }}
                 formatter={(value: number) => [`$${value.toLocaleString()}`, 'P/L']}
               />
@@ -451,9 +454,9 @@ export function PlayerView() {
                 dataKey="pl"
                 name="P/L"
                 stroke="#3b82f6"
-                strokeWidth={3}
-                dot={{ r: 4, fill: '#3b82f6' }}
-                activeDot={{ r: 6 }}
+                strokeWidth={2}
+                dot={{ r: 3, fill: '#3b82f6' }}
+                activeDot={{ r: 5 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -461,24 +464,24 @@ export function PlayerView() {
       </div>
 
       {/* Additional Session Info */}
-      <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl shadow-2xl p-6 border border-slate-700/50">
-        <h3 className="font-semibold text-white mb-4">Session Details</h3>
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+        <h3 className="font-semibold text-gray-900 mb-4">Session Details</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50">
-            <div className="text-slate-400 text-xs mb-1">Buy-in</div>
-            <div className="text-white font-semibold">${buyIn}</div>
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-gray-500 text-xs mb-1">Buy-in</div>
+            <div className="text-gray-900 font-semibold">${buyIn}</div>
           </div>
-          <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50">
-            <div className="text-slate-400 text-xs mb-1">Current Stack</div>
-            <div className="text-white font-semibold">${(buyIn + currentPL).toLocaleString()}</div>
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-gray-500 text-xs mb-1">Current Stack</div>
+            <div className="text-gray-900 font-semibold">${(buyIn + currentPL).toLocaleString()}</div>
           </div>
-          <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50">
-            <div className="text-slate-400 text-xs mb-1">Biggest Win</div>
-            <div className="text-green-400 font-semibold">${biggestWin}</div>
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-gray-500 text-xs mb-1">Biggest Win</div>
+            <div className="text-green-600 font-semibold">${biggestWin}</div>
           </div>
-          <div className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50">
-            <div className="text-slate-400 text-xs mb-1">Biggest Loss</div>
-            <div className="text-red-400 font-semibold">${biggestLoss}</div>
+          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-gray-500 text-xs mb-1">Biggest Loss</div>
+            <div className="text-red-600 font-semibold">${biggestLoss}</div>
           </div>
         </div>
       </div>

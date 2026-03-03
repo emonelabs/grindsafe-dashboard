@@ -18,80 +18,80 @@ const mockSessions: SavedSession[] = [
   {
     id: '1',
     date: new Date('2026-03-02T14:30:00'),
-    duration: 245,
+    duration: 245, // 4h 5min
     profitLoss: 1250,
     buyIn: 500,
-    handsPlayed: 156,
+    handsPlayed: 408, // (245/60)*100
     biggestWin: 420,
     biggestLoss: -180
   },
   {
     id: '2',
     date: new Date('2026-03-01T18:00:00'),
-    duration: 180,
+    duration: 180, // 3h
     profitLoss: -350,
     buyIn: 500,
-    handsPlayed: 98,
+    handsPlayed: 300, // (180/60)*100
     biggestWin: 280,
     biggestLoss: -310
   },
   {
     id: '3',
     date: new Date('2026-02-28T16:45:00'),
-    duration: 320,
+    duration: 320, // 5h 20min
     profitLoss: 2150,
     buyIn: 1000,
-    handsPlayed: 187,
+    handsPlayed: 533, // (320/60)*100
     biggestWin: 850,
     biggestLoss: -220
   },
   {
     id: '4',
     date: new Date('2026-02-27T20:15:00'),
-    duration: 195,
+    duration: 195, // 3h 15min
     profitLoss: -580,
     buyIn: 500,
-    handsPlayed: 112,
+    handsPlayed: 325, // (195/60)*100
     biggestWin: 310,
     biggestLoss: -420
   },
   {
     id: '5',
     date: new Date('2026-02-26T15:30:00'),
-    duration: 280,
+    duration: 280, // 4h 40min
     profitLoss: 890,
     buyIn: 500,
-    handsPlayed: 168,
+    handsPlayed: 467, // (280/60)*100
     biggestWin: 520,
     biggestLoss: -180
   },
   {
     id: '6',
     date: new Date('2026-02-25T19:00:00'),
-    duration: 210,
+    duration: 210, // 3h 30min
     profitLoss: 1650,
     buyIn: 1000,
-    handsPlayed: 134,
+    handsPlayed: 350, // (210/60)*100
     biggestWin: 920,
     biggestLoss: -240
   },
   {
     id: '7',
     date: new Date('2026-02-24T17:45:00'),
-    duration: 155,
+    duration: 155, // 2h 35min
     profitLoss: -420,
     buyIn: 500,
-    handsPlayed: 89,
+    handsPlayed: 258, // (155/60)*100
     biggestWin: 180,
     biggestLoss: -380
   },
   {
     id: '8',
     date: new Date('2026-02-23T16:30:00'),
-    duration: 340,
+    duration: 340, // 5h 40min
     profitLoss: 2340,
     buyIn: 1000,
-    handsPlayed: 198,
+    handsPlayed: 567, // (340/60)*100
     biggestWin: 1120,
     biggestLoss: -310
   }
@@ -156,11 +156,11 @@ export function SessionsView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">Session Analytics</h1>
-        <p className="text-slate-400">Track your performance across all poker sessions</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">Session Analytics</h1>
+        <p className="text-gray-500 text-sm">Track your performance across all poker sessions</p>
       </div>
 
       {/* Overall Stats Cards */}

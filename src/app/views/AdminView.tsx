@@ -3,6 +3,13 @@ import { PlayerCard } from '../components/PlayerCard';
 import { PLGraph } from '../components/PLGraph';
 import { FilterPanel, FilterState } from '../components/FilterPanel';
 import { PlayerSessionModal } from '../components/PlayerSessionModal';
+import { HandHistory } from '../components/HandHistory';
+import { MetricsMarquee } from '../components/MetricsMarquee';
+import { LiveVideoGrid } from '../components/LiveVideoGrid';
+import { RecentSplits } from '../components/RecentSplits';
+import { WalletPerformance } from '../components/WalletPerformance';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play } from 'lucide-react';
 
 interface Player {
   id: string;
@@ -12,9 +19,30 @@ interface Player {
   sessionTime: number;
   isRecording: boolean;
   color: string;
+  teamId: string;
+}
+
+interface Team {
+  id: string;
+  name: string;
+  memberCount: number;
+  totalProfitLoss: number;
+  activePlayers: number;
+  color: string;
+  gameType: 'Cash' | 'MTT';
+  tableStructure: '6-max' | '9-max';
 }
 
 export function AdminView() {
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  const [teams, setTeams] = useState<Team[]>([
+    { id: 'team1', name: 'High Rollers', memberCount: 8, totalProfitLoss: 15420, activePlayers: 5, color: '#3b82f6', gameType: 'Cash', tableStructure: '6-max' },
+    { id: 'team2', name: 'Weekend Warriors', memberCount: 12, totalProfitLoss: -3200, activePlayers: 3, color: '#10b981', gameType: 'MTT', tableStructure: '9-max' },
+    { id: 'team3', name: 'Professional Squad', memberCount: 6, totalProfitLoss: 28750, activePlayers: 4, color: '#f59e0b', gameType: 'Cash', tableStructure: '9-max' },
+    { id: 'team4', name: 'Grinders', memberCount: 15, totalProfitLoss: 8900, activePlayers: 7, color: '#8b5cf6', gameType: 'Cash', tableStructure: '6-max' },
+  ]);
+
   const [players, setPlayers] = useState<Player[]>([
     {
       id: 'player1',
@@ -23,7 +51,8 @@ export function AdminView() {
       profitLoss: 2450,
       sessionTime: 186,
       isRecording: true,
-      color: '#3b82f6'
+      color: '#3b82f6',
+      teamId: 'team1'
     },
     {
       id: 'player2',
@@ -32,7 +61,8 @@ export function AdminView() {
       profitLoss: 3200,
       sessionTime: 245,
       isRecording: true,
-      color: '#10b981'
+      color: '#10b981',
+      teamId: 'team1'
     },
     {
       id: 'player3',
@@ -41,7 +71,8 @@ export function AdminView() {
       profitLoss: -850,
       sessionTime: 142,
       isRecording: false,
-      color: '#f59e0b'
+      color: '#f59e0b',
+      teamId: 'team2'
     },
     {
       id: 'player4',
@@ -50,7 +81,8 @@ export function AdminView() {
       profitLoss: 4850,
       sessionTime: 298,
       isRecording: true,
-      color: '#8b5cf6'
+      color: '#8b5cf6',
+      teamId: 'team3'
     },
     {
       id: 'player5',
@@ -59,7 +91,8 @@ export function AdminView() {
       profitLoss: 1800,
       sessionTime: 167,
       isRecording: true,
-      color: '#ec4899'
+      color: '#ec4899',
+      teamId: 'team4'
     },
     {
       id: 'player6',
@@ -67,8 +100,99 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1769071166530-11f7857f4c59?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: -1200,
       sessionTime: 203,
-      isRecording: false,
-      color: '#06b6d4'
+      isRecording: true,
+      color: '#06b6d4',
+      teamId: 'team2'
+    },
+    {
+      id: 'player7',
+      name: 'Michael Chen',
+      avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: 3750,
+      sessionTime: 225,
+      isRecording: true,
+      color: '#f97316',
+      teamId: 'team1'
+    },
+    {
+      id: 'player8',
+      name: 'Lisa Anderson',
+      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: 2100,
+      sessionTime: 198,
+      isRecording: true,
+      color: '#14b8a6',
+      teamId: 'team3'
+    },
+    {
+      id: 'player9',
+      name: 'Robert Kim',
+      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: -950,
+      sessionTime: 178,
+      isRecording: true,
+      color: '#a855f7',
+      teamId: 'team2'
+    },
+    {
+      id: 'player10',
+      name: 'Jennifer Lee',
+      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: 5200,
+      sessionTime: 312,
+      isRecording: true,
+      color: '#06b6d4',
+      teamId: 'team4'
+    },
+    {
+      id: 'player11',
+      name: 'Tom Bradley',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: 1650,
+      sessionTime: 189,
+      isRecording: true,
+      color: '#eab308',
+      teamId: 'team3'
+    },
+    {
+      id: 'player12',
+      name: 'Nina Patel',
+      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: -420,
+      sessionTime: 156,
+      isRecording: true,
+      color: '#ec4899',
+      teamId: 'team1'
+    },
+    {
+      id: 'player13',
+      name: 'Carlos Rivera',
+      avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: 2890,
+      sessionTime: 267,
+      isRecording: true,
+      color: '#22c55e',
+      teamId: 'team4'
+    },
+    {
+      id: 'player14',
+      name: 'Sophia Martinez',
+      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: 3340,
+      sessionTime: 234,
+      isRecording: true,
+      color: '#3b82f6',
+      teamId: 'team2'
+    },
+    {
+      id: 'player15',
+      name: 'Ryan O\'Connor',
+      avatar: 'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      profitLoss: 1120,
+      sessionTime: 145,
+      isRecording: true,
+      color: '#f59e0b',
+      teamId: 'team3'
     }
   ]);
 
@@ -81,10 +205,14 @@ export function AdminView() {
     playerStatus: 'all'
   });
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
 
-  // Simulate real-time data updates
+  const totalProfitLoss = players.reduce((sum, p) => sum + p.profitLoss, 0);
+  const activePlayers = players.filter(p => p.isRecording).length;
+  const totalSessions = players.length;
+  const avgProfit = totalProfitLoss / players.length;
+
   useEffect(() => {
-    // Initialize graph data
     const initialData = [];
     const startTime = new Date();
     startTime.setHours(startTime.getHours() - 4);
@@ -106,7 +234,6 @@ export function AdminView() {
 
     setGraphData(initialData);
 
-    // Update data every 10 seconds
     const interval = setInterval(() => {
       setGraphData(prevData => {
         const newData = [...prevData];
@@ -139,8 +266,27 @@ export function AdminView() {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter players
+  // Update team totals when players change
+  useEffect(() => {
+    setTeams(prevTeams =>
+      prevTeams.map(team => {
+        const teamPlayers = players.filter(p => p.teamId === team.id);
+        const totalProfitLoss = teamPlayers.reduce((sum, p) => sum + p.profitLoss, 0);
+        const activePlayers = teamPlayers.filter(p => p.isRecording).length;
+        return {
+          ...team,
+          totalProfitLoss,
+          activePlayers
+        };
+      })
+    );
+  }, [players]);
+
   const filteredPlayers = players.filter(player => {
+    if (activeTab === 'teams' && selectedTeam && player.teamId !== selectedTeam) {
+      return false;
+    }
+
     if (filters.searchQuery && !player.name.toLowerCase().includes(filters.searchQuery.toLowerCase())) {
       return false;
     }
@@ -156,49 +302,407 @@ export function AdminView() {
     return true;
   });
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Admin Dashboard
-        </h1>
-        <p className="text-slate-400">
-          Real-time monitoring of all active poker sessions
-        </p>
-      </div>
-
-      {/* Filter Panel */}
-      <FilterPanel onFilterChange={setFilters} />
-
-      {/* P/L Graph */}
-      <PLGraph data={graphData} players={players} />
-
-      {/* Player Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPlayers.map(player => (
-          <PlayerCard 
-            key={player.id} 
-            player={player}
-            onViewSession={() => setSelectedPlayer(player)}
-          />
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filteredPlayers.length === 0 && (
-        <div className="text-center py-12 bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl border border-slate-700/50">
-          <p className="text-slate-400 text-lg">No players match your current filters</p>
+  const MetricCard = ({ title, value, change, icon: Icon, positive }: { title: string; value: string; change?: string; icon: any; positive?: boolean }) => (
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{title}</span>
+        <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+          <Icon className="w-4 h-4 text-gray-600" />
         </div>
-      )}
+      </div>
+      <div className="flex items-end justify-between">
+        <span className="text-2xl font-bold text-gray-900">{value}</span>
+        {change && (
+          <span className={`text-sm font-medium ${positive ? 'text-green-600' : 'text-red-600'}`}>
+            {change}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 
-      {/* Player Session Modal */}
-      {selectedPlayer && (
-        <PlayerSessionModal
-          player={selectedPlayer}
-          onClose={() => setSelectedPlayer(null)}
-        />
-      )}
+  return (
+    <div className="space-y-0">
+      {/* Metrics Marquee */}
+      <MetricsMarquee 
+        totalProfitLoss={totalProfitLoss}
+        activePlayers={activePlayers}
+        totalSessions={totalSessions}
+        avgProfit={avgProfit}
+        teams={teams.length}
+      />
+
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-500 text-sm">Real-time poker session monitoring</p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
+        <TabsList className="bg-white border border-gray-200">
+          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+            <LayoutGrid className="w-4 h-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="teams" className="flex items-center gap-2 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+            <Users className="w-4 h-4" />
+            Teams
+          </TabsTrigger>
+          <TabsTrigger value="players" className="flex items-center gap-2 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+            <User className="w-4 h-4" />
+            Players
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-3 mt-6">
+          {/* Live Video Grid - Full Width */}
+          <LiveVideoGrid players={players} onPlayerClick={setSelectedPlayer} />
+
+          {/* 70/30 Split: P/L Performance & Hand History */}
+          <div className="grid grid-cols-1 lg:grid-cols-10 gap-3">
+            {/* LEFT SIDE - P/L Performance (70%) */}
+            <div className="lg:col-span-7 space-y-3">
+              {/* Company-Wide Consolidated P/L Chart */}
+              <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Company-Wide P/L Performance</h3>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-gray-500">Updated 2s ago</span>
+                    <span className={`text-xl font-bold ${totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {totalProfitLoss >= 0 ? '+' : ''}${totalProfitLoss.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <PLGraph data={graphData} players={players} showLegend={false} height={280} />
+                </div>
+              </div>
+
+              {/* Hierarchical Team & Player P/L Charts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {teams.map(team => {
+                  const teamPlayers = players.filter(p => p.teamId === team.id);
+                  return (
+                    <div key={team.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Team Header & Chart */}
+                      <div className="border-b border-gray-200">
+                        <div className="px-3 py-2.5 border-b border-gray-200 bg-gray-50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color }}></div>
+                              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">{team.name}</h4>
+                              <div className="flex items-center gap-1">
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                  team.gameType === 'Cash' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                                }`}>
+                                  {team.gameType}
+                                </span>
+                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
+                                  {team.tableStructure}
+                                </span>
+                              </div>
+                            </div>
+                            <div className={`text-base font-bold ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {team.totalProfitLoss >= 0 ? '+' : ''}${team.totalProfitLoss.toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1">
+                            {team.activePlayers} active • {team.memberCount} total
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          <PLGraph 
+                            data={graphData} 
+                            players={teamPlayers} 
+                            showLegend={false} 
+                            height={140}
+                            compact={false}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Individual Players Under This Team */}
+                      <div className="p-2 bg-gray-50">
+                        <div className="grid grid-cols-2 gap-2">
+                          {teamPlayers.map(player => (
+                            <div 
+                              key={player.id}
+                              onClick={() => setSelectedPlayer(player)}
+                              className="bg-white border border-gray-200 rounded overflow-hidden hover:border-gray-400 hover:shadow-sm transition-all cursor-pointer"
+                            >
+                              <div className="px-2 py-1.5 border-b border-gray-100 bg-white">
+                                <div className="flex items-center gap-1.5">
+                                  <img src={player.avatar} alt={player.name} className="w-5 h-5 rounded-full border border-gray-200" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-[10px] font-semibold text-gray-900 truncate">{player.name}</div>
+                                    {player.isRecording && (
+                                      <div className="flex items-center gap-0.5">
+                                        <div className="w-1 h-1 bg-red-500 rounded-full animate-pulse"></div>
+                                        <span className="text-[8px] text-red-600 font-medium">LIVE</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="p-2">
+                                <div className="mb-1">
+                                  <div className={`text-sm font-bold ${player.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {player.profitLoss >= 0 ? '+' : ''}${player.profitLoss.toLocaleString()}
+                                  </div>
+                                  <div className="text-[8px] text-gray-500">
+                                    {Math.floor(player.sessionTime / 60)}h {player.sessionTime % 60}m
+                                  </div>
+                                </div>
+                                <PLGraph 
+                                  data={graphData} 
+                                  players={[player]} 
+                                  showLegend={false} 
+                                  height={60}
+                                  compact={true}
+                                  showAxes={false}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+
+            {/* RIGHT SIDE - Live Activity Feed (30%) */}
+            <div className="lg:col-span-3 lg:sticky lg:top-6 space-y-3">
+              <HandHistory />
+              <RecentSplits />
+              <WalletPerformance />
+            </div>
+          </div>
+
+          {/* Bottom Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            {teams.slice(0, 4).map(team => (
+              <div key={team.id} className="bg-white border border-gray-200 p-3 rounded">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: team.color + '20' }}>
+                      <Users className="w-3 h-3" style={{ color: team.color }} />
+                    </div>
+                    <span className="text-xs font-semibold text-gray-900">{team.name}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 mb-2">
+                  <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
+                    team.gameType === 'Cash' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {team.gameType}
+                  </span>
+                  <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-gray-200 text-gray-700">
+                    {team.tableStructure}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-[10px] text-gray-500">Members</div>
+                    <div className="text-sm font-bold text-gray-900">{team.memberCount}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-500">Active</div>
+                    <div className="text-sm font-bold text-gray-900">{team.activePlayers}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-gray-500">P/L</div>
+                    <div className={`text-sm font-bold ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {team.totalProfitLoss >= 0 ? '+' : ''}${(team.totalProfitLoss / 1000).toFixed(1)}K
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="teams" className="space-y-6 mt-6">
+          <div className="flex gap-3 flex-wrap">
+            <button
+              onClick={() => setSelectedTeam(null)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                selectedTeam === null 
+                  ? 'bg-gray-900 text-white' 
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+              }`}
+            >
+              All Teams
+            </button>
+            {teams.map(team => (
+              <button
+                key={team.id}
+                onClick={() => setSelectedTeam(team.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  selectedTeam === team.id 
+                    ? 'bg-gray-900 text-white' 
+                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                }`}
+              >
+                <div 
+                  className="w-2 h-2 rounded-full" 
+                  style={{ backgroundColor: team.color }}
+                />
+                {team.name}
+              </button>
+            ))}
+          </div>
+
+          {selectedTeam === null ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {teams.map(team => (
+                <div
+                  key={team.id}
+                  className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: team.color + '20' }}
+                    >
+                      <Users className="w-4 h-4" style={{ color: team.color }} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 text-sm">{team.name}</h4>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                          team.gameType === 'Cash' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {team.gameType}
+                        </span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
+                          {team.tableStructure}
+                        </span>
+                        <span className="text-xs text-gray-500">• {team.memberCount} members</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Active</span>
+                      <span className="font-medium text-gray-900">{team.activePlayers}</span>
+                    </div>
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">P/L</span>
+                      <span className={`font-medium ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {team.totalProfitLoss >= 0 ? '+' : ''}${team.totalProfitLoss.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {(() => {
+                const team = teams.find(t => t.id === selectedTeam);
+                if (!team) return null;
+                const teamPlayers = players.filter(p => p.teamId === selectedTeam);
+                
+                return (
+                  <>
+                    <div className="bg-white rounded-lg border border-gray-200 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <h2 className="text-lg font-bold text-gray-900">{team.name}</h2>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs font-bold px-2 py-1 rounded ${
+                              team.gameType === 'Cash' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {team.gameType}
+                            </span>
+                            <span className="text-xs font-semibold px-2 py-1 rounded bg-gray-200 text-gray-700">
+                              {team.tableStructure}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-6">
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">Members</p>
+                          <p className="text-2xl font-bold text-gray-900">{team.memberCount}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">Active</p>
+                          <p className="text-2xl font-bold text-gray-900">{team.activePlayers}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 uppercase tracking-wide">Total P/L</p>
+                          <p className={`text-2xl font-bold ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {team.totalProfitLoss >= 0 ? '+' : ''}${team.totalProfitLoss.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {teamPlayers.map(player => (
+                        <PlayerCard 
+                          key={player.id} 
+                          player={player}
+                          onViewSession={() => setSelectedPlayer(player)}
+                        />
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="players" className="space-y-6 mt-6">
+          <FilterPanel onFilterChange={setFilters} />
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filteredPlayers.map(player => {
+              const team = teams.find(t => t.id === player.teamId);
+              return (
+                <div key={player.id} className="relative">
+                  {team && (
+                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1 text-xs text-gray-500 bg-white/90 px-2 py-0.5 rounded-full border border-gray-200">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: team.color }} />
+                      {team.name}
+                    </div>
+                  )}
+                  <PlayerCard 
+                    player={player}
+                    onViewSession={() => setSelectedPlayer(player)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {filteredPlayers.length === 0 && (
+            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+              <p className="text-gray-500">No players match your current filters</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+        {selectedPlayer && (
+          <PlayerSessionModal
+            player={selectedPlayer}
+            onClose={() => setSelectedPlayer(null)}
+          />
+        )}
+      </div>
     </div>
   );
 }

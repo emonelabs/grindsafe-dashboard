@@ -3,9 +3,9 @@ import { Sidebar } from './components/Sidebar';
 
 export function Layout() {
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="flex-1 overflow-auto bg-gray-50">
         <Outlet />
       </main>
     </div>
