@@ -1,192 +1,114 @@
 import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, User, Settings, Activity, History, PlayCircle, Users, Network, Split, Wallet } from 'lucide-react';
+import { LayoutDashboard, User, Settings, Activity, History, PlayCircle, Users, Network, Split, Wallet, ChevronRight, ChevronLeft } from 'lucide-react';
+import { useState } from 'react';
 
 export function Sidebar() {
   const location = useLocation();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const isPlayerSection = location.pathname.startsWith('/player');
   const isAdminSection = location.pathname === '/' || location.pathname.startsWith('/admin');
 
   return (
-    <div className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col sticky top-0 shadow-sm">
+    <div className={`${isExpanded ? 'w-64' : 'w-16'} h-screen bg-white border-r border-gray-200 flex flex-col sticky top-0 transition-all duration-300`}>
       {/* Logo/Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <Activity className="w-6 h-6 text-white" />
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 bg-gray-900 rounded-md flex items-center justify-center flex-shrink-0">
+            <Activity className="w-5 h-5 text-white" />
           </div>
-          <div>
-            <h2 className="text-gray-900 font-bold text-lg">PokerTrack</h2>
-            <p className="text-gray-500 text-xs">Pro Monitor</p>
-          </div>
+          {isExpanded && (
+            <div className="min-w-0">
+              <h2 className="text-gray-900 font-semibold text-base truncate">PokerTrack</h2>
+              <p className="text-gray-500 text-xs truncate">Pro Monitor</p>
+            </div>
+          )}
         </div>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="p-1.5 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
+        >
+          {isExpanded ? (
+            <ChevronLeft className="w-4 h-4 text-gray-500" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-gray-500" />
+          )}
+        </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
         {/* Admin View - Parent */}
         <div className="space-y-1">
           <Link
             to="/"
+            title={!isExpanded ? 'Admin View' : ''}
             className={`
-              flex items-start gap-3 p-3 rounded-lg transition-all duration-200
+              flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
               ${location.pathname === '/'
-                ? 'bg-blue-50 border border-blue-200' 
-                : 'hover:bg-gray-100 border border-transparent'
+                ? 'bg-gray-100 text-gray-900' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }
             `}
           >
-            <LayoutDashboard className={`w-5 h-5 mt-0.5 ${location.pathname === '/' ? 'text-blue-600' : 'text-gray-500'}`} />
-            <div className="flex-1">
-              <div className={`font-medium ${location.pathname === '/' ? 'text-gray-900' : 'text-gray-700'}`}>
-                Admin View
-              </div>
-              <div className="text-xs text-gray-500 mt-0.5">
-                Monitor all players
-              </div>
-            </div>
+            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+            {isExpanded && <span>Admin View</span>}
           </Link>
 
-          {/* Admin View Subsections */}
-          {isAdminSection && (
-            <div className="ml-8 space-y-1 border-l-2 border-gray-200 pl-2">
-              <Link
-                to="/"
-                className={`
-                  flex items-center gap-2 p-2 rounded-lg transition-all duration-200 text-sm
-                  ${location.pathname === '/'
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <Activity className="w-4 h-4" />
-                <span>Overview</span>
-              </Link>
-              <Link
-                to="/admin/teams"
-                className={`
-                  flex items-center gap-2 p-2 rounded-lg transition-all duration-200 text-sm
-                  ${location.pathname === '/admin/teams'
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <Users className="w-4 h-4" />
-                <span>Teams</span>
-              </Link>
-              <Link
-                to="/admin/organization"
-                className={`
-                  flex items-center gap-2 p-2 rounded-lg transition-all duration-200 text-sm
-                  ${location.pathname === '/admin/organization'
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <Network className="w-4 h-4" />
-                <span>Organization</span>
-              </Link>
-              <Link
-                to="/admin/splits"
-                className={`
-                  flex items-center gap-2 p-2 rounded-lg transition-all duration-200 text-sm
-                  ${location.pathname === '/admin/splits'
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <Split className="w-4 h-4" />
-                <span>Splits</span>
-              </Link>
-              <Link
-                to="/admin/wallets"
-                className={`
-                  flex items-center gap-2 p-2 rounded-lg transition-all duration-200 text-sm
-                  ${location.pathname === '/admin/wallets'
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <Wallet className="w-4 h-4" />
-                <span>Wallets</span>
-              </Link>
-            </div>
-          )}
+
         </div>
 
         {/* Player View - Parent */}
         <div className="space-y-1">
           <Link
             to="/player"
+            title={!isExpanded ? 'Player View' : ''}
             className={`
-              flex items-start gap-3 p-3 rounded-lg transition-all duration-200
+              flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
               ${isPlayerSection
-                ? 'bg-purple-50 border border-purple-200' 
-                : 'hover:bg-gray-100 border border-transparent'
+                ? 'bg-gray-100 text-gray-900' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }
             `}>
-            <User className={`w-5 h-5 mt-0.5 ${isPlayerSection ? 'text-purple-600' : 'text-gray-500'}`} />
-            <div className="flex-1">
-              <div className={`font-medium ${isPlayerSection ? 'text-gray-900' : 'text-gray-700'}`}>
-                Player View
-              </div>
-              <div className="text-xs text-gray-500 mt-0.5">
-                Your sessions
-              </div>
-            </div>
+            <User className="w-5 h-5 flex-shrink-0" />
+            {isExpanded && <span>Player View</span>}
           </Link>
 
-          {/* Player View Subsections */}
-          {isPlayerSection && (
-            <div className="ml-8 space-y-1 border-l-2 border-gray-200 pl-2">
-              <Link
-                to="/player"
-                className={`
-                  flex items-center gap-2 p-2 rounded-lg transition-all duration-200 text-sm
-                  ${location.pathname === '/player'
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <PlayCircle className="w-4 h-4" />
-                <span>Live Session</span>
-              </Link>
-              <Link
-                to="/player/sessions"
-                className={`
-                  flex items-center gap-2 p-2 rounded-lg transition-all duration-200 text-sm
-                  ${location.pathname === '/player/sessions'
-                    ? 'bg-gray-100 text-gray-900' 
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                <History className="w-4 h-4" />
-                <span>Sessions</span>
-              </Link>
-            </div>
-          )}
+
         </div>
       </nav>
 
       {/* Footer */}
       <div className="p-4 border-t border-gray-200">
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-          <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-bold">JD</span>
+        {isExpanded ? (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-semibold">JD</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-gray-900 truncate">John Doe</div>
+              <div className="text-xs text-gray-500">Admin</div>
+            </div>
+            <button 
+              title="Settings"
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
+            >
+              <Settings className="w-4 h-4 text-gray-500" />
+            </button>
           </div>
-          <div className="flex-1">
-            <div className="text-gray-900 text-sm font-medium">John Doe</div>
-            <div className="text-xs text-gray-500">Online</div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
+              <span className="text-white text-xs font-semibold">JD</span>
+            </div>
+            <button 
+              title="Settings"
+              className="p-1.5 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              <Settings className="w-4 h-4 text-gray-500" />
+            </button>
           </div>
-          <Settings className="w-4 h-4 text-gray-400 cursor-pointer hover:text-gray-700 transition-colors" />
-        </div>
+        )}
       </div>
     </div>
   );

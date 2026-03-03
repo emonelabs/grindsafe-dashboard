@@ -68,42 +68,32 @@ export function WalletPerformance() {
         <span className="text-[10px] text-gray-500">{wallets.length} wallets</span>
       </div>
       
- <div className="p-4 space-y-4">
+      <div className="p-3 space-y-3">
         {/* Summary Stats */}
-        <div className="grid grid-cols-3 gap-3">
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <ArrowDownLeft className="w-4 h-4 text-green-600" />
-              <span className="text-xs font-medium text-green-700">Money In</span>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+            <div className="flex items-center gap-1 mb-1">
+              <ArrowDownLeft className="w-3 h-3 text-gray-600" />
+              <span className="text-[10px] font-medium text-gray-600">In</span>
             </div>
-            <div className="text-xl font-bold text-green-600">${totalIn.toLocaleString()}</div>
+            <div className="text-sm font-bold text-gray-900">${totalIn.toLocaleString()}</div>
           </div>
 
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <ArrowUpRight className="w-4 h-4 text-red-600" />
-              <span className="text-xs font-medium text-red-700">Money Out</span>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+            <div className="flex items-center gap-1 mb-1">
+              <ArrowUpRight className="w-3 h-3 text-gray-600" />
+              <span className="text-[10px] font-medium text-gray-600">Out</span>
             </div>
-            <div className="text-xl font-bold text-red-600">${totalOut.toLocaleString()}</div>
+            <div className="text-sm font-bold text-gray-900">${totalOut.toLocaleString()}</div>
           </div>
 
-          <div className={`border rounded-lg p-3 ${
-            netBalance >= 0 
-              ? 'bg-blue-50 border-blue-200' 
-              : 'bg-gray-50 border-gray-200'
-          }`}>
-            <div className="flex items-center gap-2 mb-1">
-              {netBalance >= 0 ? (
-                <TrendingUp className="w-4 h-4 text-blue-600" />
-              ) : (
-                <TrendingDown className="w-4 h-4 text-gray-600" />
-              )}
-              <span className={`text-xs font-medium ${
-                netBalance >= 0 ? 'text-blue-700' : 'text-gray-700'
-              }`}>Net Balance</span>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+            <div className="flex items-center gap-1 mb-1">
+              <TrendingUp className="w-3 h-3 text-gray-600" />
+              <span className="text-[10px] font-medium text-gray-600">Net</span>
             </div>
-            <div className={`text-xl font-bold ${
-              netBalance >= 0 ? 'text-blue-600' : 'text-gray-600'
+            <div className={`text-sm font-bold ${
+              netBalance >= 0 ? 'text-gray-900' : 'text-gray-600'
             }`}>
               {netBalance >= 0 ? '+' : ''}${netBalance.toLocaleString()}
             </div>
@@ -115,40 +105,27 @@ export function WalletPerformance() {
           {wallets.map((wallet, index) => (
             <div 
               key={index}
-              className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors"
+              className="border border-gray-200 rounded-lg p-2 hover:bg-gray-50 transition-colors"
             >
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1.5">
                 <div className="flex items-center gap-2">
-                  <WalletIcon type={wallet.walletType} className="w-8 h-8" />
+                  <WalletIcon type={wallet.walletType} className="w-6 h-6" />
                   <div>
-                    <div className="text-sm font-semibold text-gray-900">{wallet.walletName}</div>
-                    <div className="text-xs text-gray-500">{wallet.transactionCount} transactions</div>
+                    <div className="text-xs font-semibold text-gray-900">{wallet.walletName}</div>
+                    <div className="text-[10px] text-gray-500">{wallet.transactionCount} txns</div>
                   </div>
                 </div>
-                <div className={`text-sm font-bold ${
-                  wallet.netBalance >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {wallet.netBalance >= 0 ? '+' : ''}${wallet.netBalance.toLocaleString()}
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="flex items-center justify-between">
+              <div className="grid grid-cols-2 gap-2 text-[10px]">
+                <div className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
                   <span className="text-gray-500">In:</span>
-                  <span className="font-semibold text-green-600">${wallet.totalIn.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">${wallet.totalIn.toLocaleString()}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
                   <span className="text-gray-500">Out:</span>
-                  <span className="font-semibold text-red-600">${wallet.totalOut.toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">${wallet.totalOut.toLocaleString()}</span>
                 </div>
-              </div>
-
-              {/* Progress bar */}
-              <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-green-500 to-blue-500"
-                  style={{ width: `${(wallet.totalIn / (wallet.totalIn + wallet.totalOut)) * 100}%` }}
-                />
               </div>
             </div>
           ))}

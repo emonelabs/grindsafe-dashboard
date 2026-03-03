@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { X, Clock, TrendingUp, TrendingDown, Video, DollarSign, Target } from 'lucide-react';
+import { X, Clock, TrendingUp, TrendingDown, Video, DollarSign, Target, Spade, Heart, Diamond, Club, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface Player {
   id: string;
@@ -17,6 +17,47 @@ interface PlayerSessionModalProps {
   onClose: () => void;
 }
 
+interface Hand {
+  id: string;
+  timestamp: Date;
+  action: 'win' | 'loss' | 'fold';
+  amount: number;
+  cards?: string[];
+  flop?: string[];
+  turn?: string;
+  river?: string;
+  pot: number;
+  position: string;
+  reconciled: boolean;
+}
+
+const suits = {
+  's': Spade,
+  'h': Heart,
+  'd': Diamond,
+  'c': Club
+};
+
+const suitColors = {
+  's': 'text-gray-900',
+  'h': 'text-red-600',
+  'd': 'text-red-600',
+  'c': 'text-gray-900'
+};
+
+const Card = ({ card }: { card: string }) => {
+  const rank = card.slice(0, -1);
+  const suit = card.slice(-1) as 's' | 'h' | 'd' | 'c';
+  const SuitIcon = suits[suit];
+  
+  return (
+    <div className="inline-flex items-center gap-0.5 bg-white border border-gray-300 rounded px-1.5 py-0.5 text-xs font-bold shadow-sm">
+      <span className={suitColors[suit]}>{rank}</span>
+      <SuitIcon className={`w-3 h-3 ${suitColors[suit]}`} />
+    </div>
+  );
+};
+
 // Array of actual online poker gameplay screenshots
 const pokerImages = [
   'https://pokerindustrypro.com/site_media/media/uploads/news/winamax-multiple-playgrounds-tables-playing-wm.png',
@@ -29,6 +70,7 @@ const pokerImages = [
 
 export function PlayerSessionModal({ player, onClose }: PlayerSessionModalProps) {
   const [sessionData, setSessionData] = useState<any[]>([]);
+  const [hands, setHands] = useState<Hand[]>([]);
   
   // Select consistent poker image for this player
   const imageIndex = parseInt(player.id.replace(/\D/g, '')) % pokerImages.length;
@@ -53,10 +95,102 @@ export function PlayerSessionModal({ player, onClose }: PlayerSessionModalProps)
     setSessionData(initialData);
   }, [player]);
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
+  // Generate hand history for this specific player
+  useEffect(() => {
+    const cardRanks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
+    const cardSuits = ['s', 'h', 'd', 'c'];
+    const positions = ['BTN', 'SB', 'BB', 'UTG', 'MP', 'CO'];
+    const actions: Array<'win' | 'loss' | 'fold'> = ['win', 'loss', 'fold'];
+
+    const generateCard = (exclude: string[] = []): string => {
+      let card: string;
+      do {
+        const rank = cardRanks[Math.floor(Math.random() * cardRanks.length)];
+        const suit = cardSuits[Math.floor(Math.random() * cardSuits.length)];
+        card = `${rank}${suit}`;
+      } while (exclude.includes(card));
+      return card;
+    };
+
+    const generateHand = (): Hand => {
+      const action = actions[Math.floor(Math.random() * actions.length)];
+      const amount = action === 'fold' ? 0 : Math.floor(Math.random() * 500) + 50;
+      
+      const usedCards: string[] = [];
+      
+      const cards = action !== 'fold' ? [
+        generateCard(usedCards),
+        generateCard([...usedCards])
+      ] : undefined;
+      
+      if (cards) {
+        usedCards.push(...cards);
+      }
+
+      let flop: string[] | undefined;
+      let turn: string | undefined;
+      let river: string | undefined;
+
+      if (action === 'fold') {
+        if (Math.random() > 0.4) {
+          flop = [generateCard(usedCards), generateCard(usedCards), generateCard(usedCards)];
+          usedCards.push(...flop);
+        }
+      } else {
+        flop = [generateCard(usedCards), generateCard(usedCards), generateCard(usedCards)];
+        usedCards.push(...flop);
+        
+        if (Math.random() > 0.3) {
+          turn = generateCard(usedCards);
+          usedCards.push(turn);
+          
+          if (Math.random() > 0.4) {
+            river = generateCard(usedCards);
+          }
+        }
+      }
+
+      return {
+        id: `${Date.now()}-${Math.random()}`,
+        timestamp: new Date(Date.now() - Math.random() * 3600000),
+        action,
+        amount,
+        cards,
+        flop,
+        turn,
+        river,
+        pot: Math.floor(Math.random() * 1000) + 100,
+        position: positions[Math.floor(Math.random() * positions.length)],
+        reconciled: Math.random() > 0.2
+      };
+    };
+
+    const initialHands = Array.from({ length: 10 }, generateHand).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    setHands(initialHands);
+
+    const interval = setInterval(() => {
+      const newHand = generateHand();
+      setHands(prev => [newHand, ...prev].slice(0, 20));
+    }, Math.random() * 5000 + 5000);
+
+    return () => clearInterval(interval);
+  }, [player]);
+
+  const formatTime = (dateOrMinutes: Date | number) => {
+    if (typeof dateOrMinutes === 'number') {
+      // For session time in minutes
+      const hours = Math.floor(dateOrMinutes / 60);
+      const mins = dateOrMinutes % 60;
+      return `${hours}h ${mins}m`;
+    } else {
+      // For hand timestamps
+      const now = new Date();
+      const diff = Math.floor((now.getTime() - dateOrMinutes.getTime()) / 1000);
+      
+      if (diff < 60) return `${diff}s ago`;
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      return dateOrMinutes.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    }
   };
 
   const formatPL = (amount: number) => {
@@ -82,18 +216,25 @@ export function PlayerSessionModal({ player, onClose }: PlayerSessionModalProps)
     : 5;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl border border-gray-200 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity"
+        onClick={onClose}
+      />
+      
+      {/* Slide-in Panel */}
+      <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-50 overflow-y-auto animate-slide-in-right">
         {/* Header */}
-        <div className="sticky top-0 bg-white backdrop-blur-sm border-b border-gray-200 p-6 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
           <div className="flex items-center gap-4">
             <img
               src={player.avatar}
               alt={player.name}
-              className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 shadow-sm"
+              className="w-14 h-14 rounded-full object-cover border-2 border-gray-200 shadow-sm"
             />
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">{player.name}'s Session</h2>
+              <h2 className="text-xl font-bold text-gray-900">{player.name}'s Session</h2>
               <div className="flex items-center gap-2 text-gray-500 text-sm mt-1">
                 <Clock className="w-4 h-4" />
                 <span>Duration: {formatTime(player.sessionTime)}</span>
@@ -111,20 +252,16 @@ export function PlayerSessionModal({ player, onClose }: PlayerSessionModalProps)
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className={`p-4 rounded-lg border ${
-              isProfit 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-red-50 border-red-200'
-            }`}>
-              <div className="text-gray-600 text-sm mb-1 font-medium">Current P/L</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-4 rounded-lg border bg-gray-50 border-gray-200">
+              <div className="text-gray-500 text-xs mb-1 font-medium">Current P/L</div>
               <div className="flex items-center gap-2">
                 {isProfit ? (
-                  <TrendingUp className="w-6 h-6 text-green-600" />
+                  <TrendingUp className="w-5 h-5 text-gray-400" />
                 ) : (
-                  <TrendingDown className="w-6 h-6 text-red-600" />
+                  <TrendingDown className="w-5 h-5 text-gray-400" />
                 )}
-                <span className={`text-3xl font-bold ${
+                <span className={`text-2xl font-bold ${
                   isProfit ? 'text-green-600' : 'text-red-600'
                 }`}>
                   {formatPL(player.profitLoss)}
@@ -132,27 +269,26 @@ export function PlayerSessionModal({ player, onClose }: PlayerSessionModalProps)
               </div>
             </div>
 
-            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-              <div className="text-gray-600 text-sm mb-1 font-medium">Hands Played</div>
-              <div className="text-3xl font-bold text-blue-600">
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+              <div className="text-gray-500 text-xs mb-1 font-medium">Hands Played</div>
+              <div className="text-2xl font-bold text-gray-900">
                 {handsPlayed}
               </div>
             </div>
 
-            <div className="p-4 rounded-lg bg-purple-50 border border-purple-200">
-              <div className="text-gray-600 text-sm mb-1 font-medium">Win Rate</div>
+            <div className="p-4 rounded-lg bg-gray-50 border border-gray-200">
+              <div className="text-gray-500 text-xs mb-1 font-medium">Win Rate</div>
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-purple-600">
+                <span className="text-2xl font-bold text-gray-900">
                   {normalizedBB100.toFixed(1)}
                 </span>
-                <span className="text-sm font-semibold text-purple-500">bb/100</span>
+                <span className="text-sm font-semibold text-gray-500">bb/100</span>
               </div>
             </div>
           </div>
 
-          {/* Video and Graph */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Video Feed */}
+          {/* Video Feed */}
+          <div className="space-y-6">
             <div className="bg-white rounded-xl overflow-hidden border border-gray-200">
               <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -215,40 +351,145 @@ export function PlayerSessionModal({ player, onClose }: PlayerSessionModalProps)
                       dot={{ r: 3, fill: player.color }}
                       activeDot={{ r: 5 }}
                     />
-                  </LineChart>
-                </ResponsiveContainer>
+                   </LineChart>
+                 </ResponsiveContainer>
+               </div>
+             </div>
+
+            {/* Session Details */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50">
+                <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Session Details</h3>
+              </div>
+              <div className="p-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="text-gray-500 text-xs mb-1 font-medium">Buy-in</div>
+                    <div className="text-gray-900 font-bold">${buyIn}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="text-gray-500 text-xs mb-1 font-medium">Current Stack</div>
+                    <div className="text-gray-900 font-bold">${(buyIn + player.profitLoss).toLocaleString()}</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="text-gray-500 text-xs mb-1 font-medium">Biggest Win</div>
+                    <div className="text-green-600 font-bold">$850</div>
+                  </div>
+                  <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="text-gray-500 text-xs mb-1 font-medium">Biggest Loss</div>
+                    <div className="text-red-600 font-bold">-$320</div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Session Details */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50">
-              <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Session Details</h3>
-            </div>
-            <div className="p-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-gray-500 text-xs mb-1 font-medium">Buy-in</div>
-                  <div className="text-gray-900 font-bold">${buyIn}</div>
+            {/* Hand History */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">Live Hand History</h3>
                 </div>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-gray-500 text-xs mb-1 font-medium">Current Stack</div>
-                  <div className="text-gray-900 font-bold">${(buyIn + player.profitLoss).toLocaleString()}</div>
-                </div>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-gray-500 text-xs mb-1 font-medium">Biggest Win</div>
-                  <div className="text-green-600 font-bold">$850</div>
-                </div>
-                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-gray-500 text-xs mb-1 font-medium">Biggest Loss</div>
-                  <div className="text-red-600 font-bold">-$320</div>
-                </div>
+                <span className="text-[10px] text-gray-500">{hands.length} hands</span>
+              </div>
+              
+              <div className="divide-y divide-gray-100 overflow-y-auto" style={{ maxHeight: '400px' }}>
+                {hands.map((hand) => (
+                  <div 
+                    key={hand.id} 
+                    className="p-2 hover:bg-gray-50 transition-colors animate-fadeIn border-l-2"
+                    style={{ 
+                      borderLeftColor: hand.action === 'win' ? '#10b981' : hand.action === 'loss' ? '#ef4444' : '#e5e7eb'
+                    }}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-medium text-gray-600 bg-gray-100 px-1 py-0.5 rounded">
+                              {hand.position}
+                            </span>
+                            <div className="group relative">
+                              {hand.reconciled ? (
+                                <CheckCircle2 className="w-3 h-3 text-green-600" />
+                              ) : (
+                                <AlertCircle className="w-3 h-3 text-amber-500" />
+                              )}
+                              <div className="absolute left-0 top-4 hidden group-hover:block z-10 w-32 p-2 bg-gray-900 text-white text-[10px] rounded shadow-lg">
+                                {hand.reconciled ? 'Reconciled' : 'Not Reconciled'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold ${
+                              hand.action === 'win' ? 'text-green-600' : hand.action === 'loss' ? 'text-red-600' : 'text-gray-500'
+                            }`}>
+                              {hand.action === 'win' ? '+' : hand.action === 'loss' ? '-' : ''}${hand.amount.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* All Cards - Horizontal Layout */}
+                        <div className="mb-1.5 flex items-center gap-2 flex-wrap">
+                          {/* Hole Cards */}
+                          {hand.cards && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-[8px] font-semibold text-gray-500 uppercase tracking-wide">H:</span>
+                              {hand.cards.map((card, idx) => (
+                                <Card key={idx} card={card} />
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Flop */}
+                          {hand.flop && (
+                            <>
+                              <div className="w-px h-4 bg-gray-300"></div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[8px] font-semibold text-gray-500 uppercase tracking-wide">F:</span>
+                                {hand.flop.map((card, idx) => (
+                                  <Card key={idx} card={card} />
+                                ))}
+                              </div>
+                            </>
+                          )}
+
+                          {/* Turn */}
+                          {hand.turn && (
+                            <>
+                              <div className="w-px h-4 bg-gray-300"></div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[8px] font-semibold text-gray-500 uppercase tracking-wide">T:</span>
+                                <Card card={hand.turn} />
+                              </div>
+                            </>
+                          )}
+
+                          {/* River */}
+                          {hand.river && (
+                            <>
+                              <div className="w-px h-4 bg-gray-300"></div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[8px] font-semibold text-gray-500 uppercase tracking-wide">R:</span>
+                                <Card card={hand.river} />
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-gray-500">
+                          <span>Pot: ${hand.pot.toLocaleString()}</span>
+                          <span>{formatTime(hand.timestamp)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

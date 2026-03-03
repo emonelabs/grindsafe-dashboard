@@ -9,7 +9,11 @@ import { LiveVideoGrid } from '../components/LiveVideoGrid';
 import { RecentSplits } from '../components/RecentSplits';
 import { WalletPerformance } from '../components/WalletPerformance';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
-import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play } from 'lucide-react';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet } from 'lucide-react';
+import { TeamsView } from './TeamsView';
+import { OrganizationView } from './OrganizationView';
+import { SplitsView } from './SplitsView';
+import { WalletsView } from './WalletsView';
 
 interface Player {
   id: string;
@@ -206,11 +210,70 @@ export function AdminView() {
   });
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [timePeriod, setTimePeriod] = useState<string>('today');
 
-  const totalProfitLoss = players.reduce((sum, p) => sum + p.profitLoss, 0);
-  const activePlayers = players.filter(p => p.isRecording).length;
-  const totalSessions = players.length;
-  const avgProfit = totalProfitLoss / players.length;
+  // Calculate time range based on selected period
+  const getTimeRange = () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    switch (timePeriod) {
+      case 'today':
+        return { start: today, end: now };
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return { start: yesterday, end: today };
+      case 'week':
+        const weekStart = new Date(today);
+        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        return { start: weekStart, end: now };
+      case 'month':
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { start: monthStart, end: now };
+      case 'last-month':
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+        return { start: lastMonthStart, end: lastMonthEnd };
+      case 'quarter':
+        const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
+        const quarterStart = new Date(now.getFullYear(), quarterMonth, 1);
+        return { start: quarterStart, end: now };
+      case 'year':
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        return { start: yearStart, end: now };
+      case 'all':
+      default:
+        return { start: new Date(2020, 0, 1), end: now };
+    }
+  };
+
+  // Apply time-based multiplier to simulate different periods
+  const getTimePeriodMultiplier = () => {
+    switch (timePeriod) {
+      case 'today': return 0.1;
+      case 'yesterday': return 0.12;
+      case 'week': return 0.4;
+      case 'month': return 1.0;
+      case 'last-month': return 0.95;
+      case 'quarter': return 2.5;
+      case 'year': return 8.0;
+      case 'all': return 12.0;
+      default: return 1.0;
+    }
+  };
+
+  const multiplier = getTimePeriodMultiplier();
+  const adjustedPlayers = players.map(p => ({
+    ...p,
+    profitLoss: Math.round(p.profitLoss * multiplier),
+    sessionTime: Math.round(p.sessionTime * multiplier)
+  }));
+
+  const totalProfitLoss = adjustedPlayers.reduce((sum, p) => sum + p.profitLoss, 0);
+  const activePlayers = adjustedPlayers.filter(p => p.isRecording).length;
+  const totalSessions = adjustedPlayers.length;
+  const avgProfit = totalProfitLoss / adjustedPlayers.length;
 
   useEffect(() => {
     const initialData = [];
@@ -223,7 +286,7 @@ export function AdminView() {
         time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
       };
 
-      players.forEach(player => {
+      adjustedPlayers.forEach(player => {
         const volatility = Math.random() * 400 - 200;
         const trend = player.profitLoss / 24 * i;
         dataPoint[player.id] = Math.round(trend + volatility);
@@ -244,7 +307,7 @@ export function AdminView() {
         }
 
         const newPoint: any = { time: currentTime };
-        players.forEach(player => {
+        adjustedPlayers.forEach(player => {
           const lastValue = newData[newData.length - 1]?.[player.id] || 0;
           const change = Math.random() * 300 - 150;
           newPoint[player.id] = Math.round(lastValue + change);
@@ -264,13 +327,13 @@ export function AdminView() {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [timePeriod, multiplier]);
 
   // Update team totals when players change
   useEffect(() => {
     setTeams(prevTeams =>
       prevTeams.map(team => {
-        const teamPlayers = players.filter(p => p.teamId === team.id);
+        const teamPlayers = adjustedPlayers.filter(p => p.teamId === team.id);
         const totalProfitLoss = teamPlayers.reduce((sum, p) => sum + p.profitLoss, 0);
         const activePlayers = teamPlayers.filter(p => p.isRecording).length;
         return {
@@ -280,9 +343,9 @@ export function AdminView() {
         };
       })
     );
-  }, [players]);
+  }, [players, timePeriod, multiplier]);
 
-  const filteredPlayers = players.filter(player => {
+  const filteredPlayers = adjustedPlayers.filter(player => {
     if (activeTab === 'teams' && selectedTeam && player.teamId !== selectedTeam) {
       return false;
     }
@@ -333,32 +396,57 @@ export function AdminView() {
       />
 
       <div className="space-y-6 p-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-500 text-sm">Real-time poker session monitoring</p>
+        {/* Tabs */}
+        <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
+        <div className="flex items-center justify-between mb-6">
+          <TabsList className="bg-white border border-gray-200 p-1 gap-1">
+            <TabsTrigger value="overview" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Activity className="w-4 h-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="teams" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Users className="w-4 h-4" />
+              Teams
+            </TabsTrigger>
+            <TabsTrigger value="organization" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Network className="w-4 h-4" />
+              Organization
+            </TabsTrigger>
+            <TabsTrigger value="splits" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Split className="w-4 h-4" />
+              Splits
+            </TabsTrigger>
+            <TabsTrigger value="wallets" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Wallet className="w-4 h-4" />
+              Wallets
+            </TabsTrigger>
+            <TabsTrigger value="players" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <User className="w-4 h-4" />
+              Players
+            </TabsTrigger>
+          </TabsList>
+          
+          {/* Time Period Filter */}
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-gray-500" />
+            <select
+              value={timePeriod}
+              onChange={(e) => setTimePeriod(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors cursor-pointer"
+            >
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="last-month">Last Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="year">This Year</option>
+              <option value="all">All Time</option>
+            </select>
           </div>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="bg-white border border-gray-200">
-          <TabsTrigger value="overview" className="flex items-center gap-2 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
-            <LayoutGrid className="w-4 h-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="teams" className="flex items-center gap-2 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
-            <Users className="w-4 h-4" />
-            Teams
-          </TabsTrigger>
-          <TabsTrigger value="players" className="flex items-center gap-2 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
-            <User className="w-4 h-4" />
-            Players
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-3 mt-6">
+        <TabsContent value="overview" className="space-y-3">
           {/* Live Video Grid - Full Width */}
           <LiveVideoGrid players={players} onPlayerClick={setSelectedPlayer} />
 
@@ -381,7 +469,7 @@ export function AdminView() {
                   </div>
                 </div>
                 <div className="p-4">
-                  <PLGraph data={graphData} players={players} showLegend={false} height={280} />
+                  <PLGraph data={graphData} players={adjustedPlayers} showLegend={false} height={280} />
                 </div>
               </div>
 
@@ -663,6 +751,18 @@ export function AdminView() {
               })()}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="organization" className="space-y-6 mt-6">
+          <OrganizationView />
+        </TabsContent>
+
+        <TabsContent value="splits" className="space-y-6 mt-6">
+          <SplitsView />
+        </TabsContent>
+
+        <TabsContent value="wallets" className="space-y-6 mt-6">
+          <WalletsView />
         </TabsContent>
 
         <TabsContent value="players" className="space-y-6 mt-6">

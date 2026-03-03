@@ -39,6 +39,12 @@ export function SplitsView() {
       const playerShare = Math.round(totalProfit * (splitPercentage / 100));
       const houseShare = totalProfit - playerShare;
       const sessionDuration = Math.floor(Math.random() * 300) + 120; // 2-7 hours in minutes
+      
+      // Calculate session date based on daysAgo
+      const sessionDate = new Date();
+      sessionDate.setDate(sessionDate.getDate() - daysAgo);
+      sessionDate.setHours(Math.floor(Math.random() * 12) + 8); // Random hour between 8am-8pm
+      sessionDate.setMinutes(Math.floor(Math.random() * 60));
 
       return {
         id: `split-${Date.now()}-${Math.random()}`,
