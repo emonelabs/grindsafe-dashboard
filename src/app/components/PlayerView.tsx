@@ -71,14 +71,40 @@ export function PlayerView() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [sessionActive, setSessionActive] = useState(false);
-  const [sessionTime, setSessionTime] = useState(0);
-  const [currentPL, setCurrentPL] = useState(0);
-  const [currentEV, setCurrentEV] = useState(0);
-  const [sessionData, setSessionData] = useState<SessionData[]>([]);
-  const [buyIn, setBuyIn] = useState(500);
-  const [biggestWin, setBiggestWin] = useState(0);
-  const [biggestLoss, setBiggestLoss] = useState(0);
+  
+  // Initialize session state from localStorage
+  const [sessionActive, setSessionActive] = useState(() => {
+    const saved = localStorage.getItem('activeSession');
+    return saved ? JSON.parse(saved).isActive : false;
+  });
+  const [sessionTime, setSessionTime] = useState(() => {
+    const saved = localStorage.getItem('activeSession');
+    return saved ? JSON.parse(saved).time : 0;
+  });
+  const [currentPL, setCurrentPL] = useState(() => {
+    const saved = localStorage.getItem('activeSession');
+    return saved ? JSON.parse(saved).pl : 0;
+  });
+  const [currentEV, setCurrentEV] = useState(() => {
+    const saved = localStorage.getItem('activeSession');
+    return saved ? JSON.parse(saved).ev : 0;
+  });
+  const [sessionData, setSessionData] = useState<SessionData[]>(() => {
+    const saved = localStorage.getItem('activeSession');
+    return saved ? JSON.parse(saved).data : [];
+  });
+  const [buyIn, setBuyIn] = useState(() => {
+    const saved = localStorage.getItem('activeSession');
+    return saved ? JSON.parse(saved).buyIn : 500;
+  });
+  const [biggestWin, setBiggestWin] = useState(() => {
+    const saved = localStorage.getItem('activeSession');
+    return saved ? JSON.parse(saved).biggestWin : 0;
+  });
+  const [biggestLoss, setBiggestLoss] = useState(() => {
+    const saved = localStorage.getItem('activeSession');
+    return saved ? JSON.parse(saved).biggestLoss : 0;
+  });
   const [showHistory, setShowHistory] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SavedSession[]>([
     {
@@ -559,6 +585,22 @@ export function PlayerView() {
     setAccountPerformanceData(data);
   }, [pokerAccounts]);
 
+  // Persist session state to localStorage whenever it changes
+  useEffect(() => {
+    if (sessionActive) {
+      localStorage.setItem('activeSession', JSON.stringify({
+        isActive: sessionActive,
+        time: sessionTime,
+        pl: currentPL,
+        ev: currentEV,
+        data: sessionData,
+        buyIn: buyIn,
+        biggestWin: biggestWin,
+        biggestLoss: biggestLoss
+      }));
+    }
+  }, [sessionActive, sessionTime, currentPL, currentEV, sessionData, buyIn, biggestWin, biggestLoss]);
+
   // Update session data when active
   useEffect(() => {
     if (!sessionActive) return;
@@ -660,6 +702,17 @@ export function PlayerView() {
     setBiggestWin(0);
     setBiggestLoss(0);
     setSessionData([]);
+    // Initial save to localStorage
+    localStorage.setItem('activeSession', JSON.stringify({
+      isActive: true,
+      time: 0,
+      pl: 0,
+      ev: 0,
+      data: [],
+      buyIn: 500,
+      biggestWin: 0,
+      biggestLoss: 0
+    }));
   };
 
   const startScreenSharing = async () => {
@@ -701,6 +754,10 @@ export function PlayerView() {
     setSessionHistory([newSession, ...sessionHistory]);
     setSessionActive(false);
     setIsRecording(false);
+    // Clear session from localStorage
+    localStorage.removeItem('activeSession');
+    // Switch back to overview tab after ending session
+    setActiveTab('overview');
   };
 
   const formatTime = (minutes: number) => {
@@ -2548,6 +2605,207 @@ export function PlayerView() {
     );
   }
 
+  // Show live session ONLY when session is active
+  if (sessionActive) {
+    return (
+      <div className="space-y-0 relative">
+        {renderAiModal()}
+        
+        {/* Live Session View - Player is locked in */}
+        <div className={`space-y-3 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
+        {/* Compact Session Header Bar */}
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">Live Session</span>
+                </div>
+                <span className="text-xs text-gray-500">
+                  Started {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded border border-gray-200">
+                  <Clock className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs font-semibold text-gray-700">{formatTime(sessionTime)}</span>
+                </div>
+                <button
+                  onClick={endSession}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded transition-all flex items-center gap-1.5"
+                >
+                  <Square className="w-3 h-3" />
+                  End
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Compact Metrics Row */}
+          <div className="grid grid-cols-6 divide-x divide-gray-200 bg-white">
+            <div className="px-3 py-2">
+              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">P/L</div>
+              <div className={`text-lg font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                {formatPL(currentPL)}
+              </div>
+            </div>
+
+            <div className="px-3 py-2">
+              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">EV</div>
+              <div className="text-lg font-bold text-blue-600">
+                {formatPL(currentEV)}
+              </div>
+            </div>
+
+            <div className="px-3 py-2">
+              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Hands</div>
+              <div className="text-lg font-bold text-gray-900">
+                {Math.floor((sessionTime / 60) * 100)}
+              </div>
+            </div>
+
+            <div className="px-3 py-2">
+              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">BB/100</div>
+              <div className="text-lg font-bold text-purple-600">
+                {sessionTime > 0 ? Math.max(2, Math.min(10, 5 + (currentPL / 1000))).toFixed(1) : '5.0'}
+              </div>
+            </div>
+
+            <div className="px-3 py-2">
+              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Best Win</div>
+              <div className="text-lg font-bold text-green-600">
+                ${biggestWin}
+              </div>
+            </div>
+
+            <div className="px-3 py-2">
+              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Worst Loss</div>
+              <div className="text-lg font-bold text-red-600">
+                -${Math.abs(biggestLoss)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Session Performance Chart - Full Width */}
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Performance</h3>
+          </div>
+          <div className="p-4">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={sessionData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#6b7280"
+                  style={{ fontSize: '10px' }}
+                />
+                <YAxis 
+                  stroke="#6b7280"
+                  style={{ fontSize: '10px' }}
+                  tickFormatter={(value) => `$${value}`}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '6px',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value: number, name: string) => [`$${value}`, name === 'pl' ? 'P/L' : 'EV']}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="pl" 
+                  stroke="#10b981" 
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="ev" 
+                  stroke="#3b82f6" 
+                  strokeWidth={2}
+                  dot={false}
+                  strokeDasharray="5 5"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* 50/50 Grid: Live Feed | Live Hands */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Live Feed */}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Live Feed</h3>
+                {isScreenSharing && (
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-[10px] font-medium text-red-600 uppercase tracking-wide">Recording</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {isScreenSharing ? (
+              <>
+                <div className="relative bg-black aspect-video">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                {/* Video Controls */}
+                <div className="p-2 bg-gray-50 flex items-center justify-center gap-2 border-t border-gray-200">
+                  <button 
+                    onClick={stopScreenSharing}
+                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center gap-1.5"
+                  >
+                    <Square className="w-3 h-3" />
+                    Stop Sharing
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="relative bg-gray-100 aspect-video flex items-center justify-center">
+                  <div className="text-center p-4">
+                    <Video className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500">Screen sharing disabled</p>
+                  </div>
+                </div>
+
+                {/* Start Sharing Button */}
+                <div className="p-2 bg-gray-50 flex items-center justify-center gap-2 border-t border-gray-200">
+                  <button 
+                    onClick={startScreenSharing}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center gap-1.5"
+                  >
+                    <Play className="w-3 h-3" />
+                    Start Sharing
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Live Hands */}
+          <PlayerHandHistory />
+        </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show tabs/overview when NO session is active
   return (
     <div className="space-y-0 relative">
       {renderAiModal()}
@@ -2739,213 +2997,6 @@ export function PlayerView() {
           editAccount={selectedAccountForEdit}
         />
       </SlideInPanel>
-      
-      <div className={`space-y-3 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
-      {/* Compact Session Header Bar */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">Live Session</span>
-              </div>
-              <span className="text-xs text-gray-500">
-                Started {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded border border-gray-200">
-                <Clock className="w-3.5 h-3.5 text-gray-500" />
-                <span className="text-xs font-semibold text-gray-700">{formatTime(sessionTime)}</span>
-              </div>
-              <button
-                onClick={endSession}
-                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded transition-all flex items-center gap-1.5"
-              >
-                <Square className="w-3 h-3" />
-                End
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Compact Metrics Row */}
-        <div className="grid grid-cols-6 divide-x divide-gray-200 bg-white">
-          <div className="px-3 py-2">
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">P/L</div>
-            <div className={`text-lg font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-              {formatPL(currentPL)}
-            </div>
-          </div>
-
-          <div className="px-3 py-2">
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">EV</div>
-            <div className="text-lg font-bold text-blue-600">
-              {formatPL(currentEV)}
-            </div>
-          </div>
-
-          <div className="px-3 py-2">
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Hands</div>
-            <div className="text-lg font-bold text-gray-900">
-              {Math.floor((sessionTime / 60) * 100)}
-            </div>
-          </div>
-
-          <div className="px-3 py-2">
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">BB/100</div>
-            <div className="text-lg font-bold text-purple-600">
-              {sessionTime > 0 ? Math.max(2, Math.min(10, 5 + (currentPL / 1000))).toFixed(1) : '5.0'}
-            </div>
-          </div>
-
-          <div className="px-3 py-2">
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Best Win</div>
-            <div className="text-lg font-bold text-green-600">
-              +${Math.abs(biggestWin)}
-            </div>
-          </div>
-
-          <div className="px-3 py-2">
-            <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Worst Loss</div>
-            <div className="text-lg font-bold text-red-600">
-              -${Math.abs(biggestLoss)}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Session Performance Chart - Full Width */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-4 py-2 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Performance</h3>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-              <span className="text-[10px] text-gray-600">P/L</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-              <span className="text-[10px] text-gray-600">EV</span>
-            </div>
-          </div>
-        </div>
-        <div className="p-3">
-        <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={sessionData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis 
-              dataKey="time" 
-              stroke="#6b7280"
-              style={{ fontSize: '12px' }}
-            />
-            <YAxis 
-              stroke="#6b7280"
-              style={{ fontSize: '12px' }}
-              tickFormatter={(value) => `$${value.toLocaleString()}`}
-            />
-            <Tooltip 
-              contentStyle={{ 
-                backgroundColor: '#ffffff',
-                border: '1px solid #e5e7eb',
-                borderRadius: '8px',
-                padding: '12px',
-                color: '#111827'
-              }}
-              formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === 'pl' ? 'Actual P/L' : 'EV']}
-            />
-            <Line
-              type="monotone"
-              dataKey="pl"
-              name="pl"
-              stroke="#10b981"
-              strokeWidth={2}
-              dot={{ r: 3, fill: '#10b981' }}
-              activeDot={{ r: 5 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="ev"
-              name="ev"
-              stroke="#3b82f6"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={{ r: 3, fill: '#3b82f6' }}
-              activeDot={{ r: 5 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* 50/50 Grid: Video Feed and Live Hands */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Video Feed */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-4 py-2 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Video className="w-4 h-4 text-gray-600" />
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Live Feed</h3>
-            </div>
-            {isRecording && (
-              <div className="flex items-center gap-1.5 bg-red-50 text-red-600 px-2 py-0.5 rounded border border-red-200">
-                <div className="w-1.5 h-1.5 bg-red-600 rounded-full animate-pulse" />
-                <span className="text-[10px] font-bold uppercase">REC</span>
-              </div>
-            )}
-          </div>
-
-          {isScreenSharing ? (
-            <>
-              <div className="relative bg-black aspect-video">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover"
-                />
-              </div>
-
-              {/* Video Controls */}
-              <div className="p-2 bg-gray-50 flex items-center justify-center gap-2 border-t border-gray-200">
-                <button 
-                  onClick={stopScreenSharing}
-                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center gap-1.5"
-                >
-                  <Square className="w-3 h-3" />
-                  Stop Sharing
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="relative bg-gray-100 aspect-video flex items-center justify-center">
-                <div className="text-center p-4">
-                  <Video className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-xs text-gray-500">Screen sharing disabled</p>
-                </div>
-              </div>
-
-              {/* Start Sharing Button */}
-              <div className="p-2 bg-gray-50 flex items-center justify-center gap-2 border-t border-gray-200">
-                <button 
-                  onClick={startScreenSharing}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center gap-1.5"
-                >
-                  <Play className="w-3 h-3" />
-                  Start Sharing
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Live Hands */}
-        <PlayerHandHistory />
-      </div>
-      </div>
     </div>
   );
 }
