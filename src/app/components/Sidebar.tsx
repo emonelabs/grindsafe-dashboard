@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, User, Settings, Activity, History, PlayCircle, Users, Network, Split, Wallet, ChevronRight, ChevronLeft } from 'lucide-react';
+import { LayoutDashboard, User, Settings, Activity, History, PlayCircle, Users, Network, Split, Wallet, ChevronRight, ChevronLeft, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
 
 export function Sidebar() {
@@ -8,6 +8,7 @@ export function Sidebar() {
 
   const isPlayerSection = location.pathname.startsWith('/player');
   const isAdminSection = location.pathname === '/' || location.pathname.startsWith('/admin');
+  const isMessagesSection = location.pathname.startsWith('/messages');
 
   return (
     <div className={`${isExpanded ? 'w-64' : 'w-16'} h-screen bg-white border-r border-gray-200 flex flex-col sticky top-0 transition-all duration-300`}>
@@ -73,8 +74,23 @@ export function Sidebar() {
             <User className="w-5 h-5 flex-shrink-0" />
             {isExpanded && <span>Player View</span>}
           </Link>
+        </div>
 
-
+        {/* Messages View */}
+        <div className="space-y-1">
+          <Link
+            to="/messages"
+            title={!isExpanded ? 'Messages' : ''}
+            className={`
+              flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+              ${isMessagesSection
+                ? 'bg-gray-100 text-gray-900' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }
+            `}>
+            <MessageSquare className="w-5 h-5 flex-shrink-0" />
+            {isExpanded && <span>Messages</span>}
+          </Link>
         </div>
       </nav>
 
