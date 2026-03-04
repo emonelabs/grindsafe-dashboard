@@ -852,10 +852,6 @@ export function PlayerView() {
               <History className="w-4 h-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="balance">
-              <Wallet className="w-4 h-4 mr-2" />
-              Balance
-            </TabsTrigger>
             <TabsTrigger value="operations">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
               Operations
@@ -864,7 +860,53 @@ export function PlayerView() {
 
           <TabsContent value="overview" className="space-y-3 mt-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-3 rounded shadow-sm border border-blue-500">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wide">Current Balance</span>
+                  <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center">
+                    <Wallet className="w-4 h-4 text-blue-100" />
+                  </div>
+                </div>
+                <div className="flex items-end justify-between">
+                  <span className="text-2xl font-bold text-white">
+                    ${(buyIn + sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 p-3 rounded">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Deposits</span>
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <ArrowDownRight className="w-4 h-4 text-green-600" />
+                  </div>
+                </div>
+                <div className="flex items-end justify-between">
+                  <span className="text-2xl font-bold text-gray-900">
+                    ${(sessionHistory.reduce((sum, s) => sum + s.buyIn, 0) + buyIn).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 p-3 rounded">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Winnings</span>
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                    {sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? (
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-600" />
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-end justify-between">
+                  <span className={`text-2xl font-bold ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
+                  </span>
+                </div>
+              </div>
+
               <div className="bg-white border border-gray-200 p-3 rounded">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Sessions</span>
@@ -1671,140 +1713,9 @@ export function PlayerView() {
                   <div className="text-[9px] text-gray-500">combos</div>
                 </div>
               </div>
-              </div>
             </div>
             </div>
             </div>
-          </TabsContent>
-
-          <TabsContent value="balance" className="space-y-3 mt-6">
-            {/* Balance Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded shadow-sm border-2 border-blue-500">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wide">Current Balance</span>
-                  <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center">
-                    <Wallet className="w-4 h-4 text-blue-100" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">
-                  ${(buyIn + sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0)).toLocaleString()}
-                </div>
-                <div className="text-[10px] text-blue-200">Available funds</div>
-              </div>
-
-              <div className="bg-white border border-gray-200 p-4 rounded hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Total Deposits</span>
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <ArrowDownRight className="w-4 h-4 text-green-600" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold text-gray-900 mb-1">
-                  ${(sessionHistory.reduce((sum, s) => sum + s.buyIn, 0) + buyIn).toLocaleString()}
-                </div>
-                <div className="text-[10px] text-gray-500">All time</div>
-              </div>
-
-              <div className="bg-white border border-gray-200 p-4 rounded hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Total Winnings</span>
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    {sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? (
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-red-600" />
-                    )}
-                  </div>
-                </div>
-                <div className={`text-2xl font-bold mb-1 ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
-                </div>
-                <div className="text-[10px] text-gray-500">Net profit/loss</div>
-              </div>
-            </div>
-
-            {/* Recent Transactions */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Recent Transactions</h3>
-              </div>
-              <div className="divide-y divide-gray-100">
-                {sessionHistory.slice(0, 10).map((session) => {
-                  const isProfit = session.profitLoss >= 0;
-                  return (
-                    <div key={session.id} className="p-3 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            isProfit ? 'bg-green-100' : 'bg-red-100'
-                          }`}>
-                            {isProfit ? (
-                              <TrendingUp className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <TrendingDown className="w-4 h-4 text-red-600" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-semibold text-gray-900 text-sm">Session Payout</div>
-                            <div className="text-[10px] text-gray-500">
-                              {formatDate(session.date)} • {formatTime(session.duration)}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className={`text-base font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-                            {formatPL(session.profitLoss)}
-                          </div>
-                          <div className="text-[10px] text-gray-500">
-                            {session.handsPlayed} hands
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {sessionHistory.length === 0 && (
-                  <div className="p-8 text-center text-gray-400">
-                    <DollarSign className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                    <p className="text-xs">No transactions yet. Start playing to see your balance activity!</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Balance Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                    <ArrowDownRight className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900 text-sm">Deposit Funds</h4>
-                    <p className="text-[10px] text-gray-500">Add money to your balance</p>
-                  </div>
-                </div>
-                <button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg transition-all text-sm">
-                  Deposit
-                </button>
-              </div>
-
-              <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-2.5 mb-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900 text-sm">Withdraw Funds</h4>
-                    <p className="text-[10px] text-gray-500">Transfer money out</p>
-                  </div>
-                </div>
-                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg transition-all text-sm">
-                  Withdraw
-                </button>
-              </div>
             </div>
           </TabsContent>
 
