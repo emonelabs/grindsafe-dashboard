@@ -3,11 +3,21 @@ import { Layout } from './Layout';
 import { AdminView } from './views/AdminView';
 import { PlayerView } from './components/PlayerView';
 import MessagesView from './views/MessagesView';
+import { LoginView } from './views/LoginView';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 export const router = createBrowserRouter([
   {
+    path: '/login',
+    Component: LoginView,
+  },
+  {
     path: '/',
-    Component: Layout,
+    element: (
+      <ProtectedRoute>
+        <Layout />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
