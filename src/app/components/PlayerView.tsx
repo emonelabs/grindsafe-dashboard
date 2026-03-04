@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from 'recharts';
-import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle, Upload } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle, Upload, FileText } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import SlideInPanel from './SlideInPanel';
@@ -14,6 +14,8 @@ import { PaymentWalletsContent } from './PokerWalletsContent';
 import PokerAccountForm, { PokerAccount } from './forms/PokerAccountForm';
 import { PokerAccountsContent } from './PokerAccountsContent';
 import { PlayerHandHistory } from './PlayerHandHistory';
+import LegalDocumentForm, { LegalDocument } from './forms/LegalDocumentForm';
+import { LegalDocumentsContent } from './LegalDocumentsContent';
 
 interface SessionData {
   time: string;
@@ -60,7 +62,7 @@ export function PlayerView() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | 'legaldocument' | null>(null);
   const [aiQuery, setAiQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
@@ -274,6 +276,50 @@ export function PlayerView() {
     }
   ]);
   const [selectedAccountForEdit, setSelectedAccountForEdit] = useState<PokerAccount | null>(null);
+
+  // Legal Documents state
+  const [legalDocuments, setLegalDocuments] = useState<LegalDocument[]>([
+    {
+      id: 'd1',
+      title: 'National ID - Marcus Chen',
+      type: 'ID Front',
+      fileUrl: 'https://images.unsplash.com/photo-1614680376573-df3480f0c6ff?w=800&h=600&fit=crop',
+      fileSize: '1.8 MB',
+      status: 'active',
+      uploadedAt: new Date('2026-01-15'),
+      notes: 'Valid until 2030'
+    },
+    {
+      id: 'd2',
+      title: 'National ID - Back Side',
+      type: 'ID Back',
+      fileUrl: 'https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&h=600&fit=crop',
+      fileSize: '1.5 MB',
+      status: 'active',
+      uploadedAt: new Date('2026-01-15')
+    },
+    {
+      id: 'd3',
+      title: 'Passport - Marcus Chen',
+      type: 'Passport',
+      fileUrl: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?w=800&h=600&fit=crop',
+      fileSize: '2.2 MB',
+      status: 'active',
+      uploadedAt: new Date('2026-01-10'),
+      notes: 'Valid until 2028'
+    },
+    {
+      id: 'd4',
+      title: 'Drivers License',
+      type: 'Drivers License',
+      fileUrl: 'https://images.unsplash.com/photo-1554224311-beee2ece8c1a?w=800&h=600&fit=crop',
+      fileSize: '1.1 MB',
+      status: 'expired',
+      uploadedAt: new Date('2023-01-01'),
+      notes: 'Expired - renewal pending'
+    }
+  ]);
+  const [selectedDocumentForEdit, setSelectedDocumentForEdit] = useState<LegalDocument | null>(null);
 
   // Generate mock operations
   const generateOperations = (page: number, count: number = 10) => {
@@ -497,6 +543,42 @@ export function PlayerView() {
         createdAt: new Date()
       };
       setPokerRoomAccounts(prev => [...prev, newAccount]);
+    }
+  };
+
+  // Legal Document handlers
+  const handleAddDocument = () => {
+    setSelectedDocumentForEdit(null);
+    setActiveSlideIn('legaldocument');
+  };
+
+  const handleEditDocument = (document: LegalDocument) => {
+    setSelectedDocumentForEdit(document);
+    setActiveSlideIn('legaldocument');
+  };
+
+  const handleDeleteDocument = (documentId: string) => {
+    setLegalDocuments(prev => prev.filter(d => d.id !== documentId));
+  };
+
+  const handleDocumentSubmit = (documentData: Omit<LegalDocument, 'id' | 'uploadedAt'>) => {
+    if (selectedDocumentForEdit) {
+      // Edit existing document
+      setLegalDocuments(prev => 
+        prev.map(d => 
+          d.id === selectedDocumentForEdit.id 
+            ? { ...documentData, id: d.id, uploadedAt: d.uploadedAt }
+            : d
+        )
+      );
+    } else {
+      // Add new document
+      const newDocument: LegalDocument = {
+        ...documentData,
+        id: `d${Date.now()}`,
+        uploadedAt: new Date()
+      };
+      setLegalDocuments(prev => [...prev, newDocument]);
     }
   };
 
@@ -1213,6 +1295,24 @@ export function PlayerView() {
         </SlideInPanel>
 
         <SlideInPanel 
+          isOpen={activeSlideIn === 'legaldocument'} 
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedDocumentForEdit(null);
+          }}
+          title={selectedDocumentForEdit ? 'Edit Legal Document' : 'Add Legal Document'}
+        >
+          <LegalDocumentForm 
+            onClose={() => {
+              setActiveSlideIn(null);
+              setSelectedDocumentForEdit(null);
+            }}
+            onSubmit={handleDocumentSubmit}
+            editDocument={selectedDocumentForEdit}
+          />
+        </SlideInPanel>
+
+        <SlideInPanel 
           isOpen={activeSlideIn === 'accountdetails'} 
           onClose={() => {
             setActiveSlideIn(null);
@@ -1359,6 +1459,10 @@ export function PlayerView() {
             <TabsTrigger value="accounts">
               <Users className="w-4 h-4 mr-2" />
               Accounts
+            </TabsTrigger>
+            <TabsTrigger value="legal">
+              <FileText className="w-4 h-4 mr-2" />
+              Legal
             </TabsTrigger>
           </TabsList>
 
@@ -2599,6 +2703,15 @@ export function PlayerView() {
               onDelete={handleDeleteAccount}
             />
           </TabsContent>
+
+          <TabsContent value="legal" className="mt-6">
+            <LegalDocumentsContent
+              documents={legalDocuments}
+              onAddDocument={handleAddDocument}
+              onEditDocument={handleEditDocument}
+              onDeleteDocument={handleDeleteDocument}
+            />
+          </TabsContent>
         </Tabs>
         </div>
       </div>
@@ -2995,6 +3108,24 @@ export function PlayerView() {
           }}
           onSubmit={handleAccountSubmit}
           editAccount={selectedAccountForEdit}
+        />
+      </SlideInPanel>
+
+      <SlideInPanel 
+        isOpen={activeSlideIn === 'legaldocument'} 
+        onClose={() => {
+          setActiveSlideIn(null);
+          setSelectedDocumentForEdit(null);
+        }}
+        title={selectedDocumentForEdit ? 'Edit Legal Document' : 'Add Legal Document'}
+      >
+        <LegalDocumentForm 
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedDocumentForEdit(null);
+          }}
+          onSubmit={handleDocumentSubmit}
+          editDocument={selectedDocumentForEdit}
         />
       </SlideInPanel>
     </div>
