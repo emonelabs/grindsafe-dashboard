@@ -40,6 +40,12 @@ export function LoginView() {
       return;
     }
 
+    // Check if email is authorized
+    if (email.toLowerCase() !== 'joao@emonelabs.com') {
+      setError('Only verified business emails are allowed');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
