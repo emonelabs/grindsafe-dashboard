@@ -11,6 +11,8 @@ import SwapForm from './forms/SwapForm';
 import HandHistoryForm from './forms/HandHistoryForm';
 import PaymentWalletForm, { PaymentWallet } from './forms/PokerWalletForm';
 import { PaymentWalletsContent } from './PokerWalletsContent';
+import PokerAccountForm, { PokerAccount } from './forms/PokerAccountForm';
+import { PokerAccountsContent } from './PokerAccountsContent';
 
 interface SessionData {
   time: string;
@@ -57,7 +59,7 @@ export function PlayerView() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | null>(null);
   const [aiQuery, setAiQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
@@ -214,6 +216,37 @@ export function PlayerView() {
     }
   ]);
   const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
+
+  // Poker Room Accounts state
+  const [pokerRoomAccounts, setPokerRoomAccounts] = useState<PokerAccount[]>([
+    {
+      id: 'a1',
+      pokerRoom: 'PokerStars',
+      nickname: 'MarcusPS',
+      email: 'marcus.chen@example.com',
+      status: 'active',
+      createdAt: new Date('2026-03-01'),
+      notes: 'Main account for MTTs'
+    },
+    {
+      id: 'a2',
+      pokerRoom: 'GGPoker',
+      nickname: 'MarcusGG',
+      email: 'marcus.chen@example.com',
+      status: 'active',
+      createdAt: new Date('2026-02-28')
+    },
+    {
+      id: 'a3',
+      pokerRoom: 'PartyPoker',
+      nickname: 'Marcus_Party',
+      email: 'marcus@party.com',
+      status: 'inactive',
+      createdAt: new Date('2026-02-15'),
+      notes: 'Cash games only'
+    }
+  ]);
+  const [selectedAccountForEdit, setSelectedAccountForEdit] = useState<PokerAccount | null>(null);
 
   // Generate mock operations
   const generateOperations = (page: number, count: number = 10) => {
@@ -401,6 +434,42 @@ export function PlayerView() {
         createdAt: new Date()
       };
       setPaymentWallets(prev => [...prev, newWallet]);
+    }
+  };
+
+  // Poker Account handlers
+  const handleAddAccount = () => {
+    setSelectedAccountForEdit(null);
+    setActiveSlideIn('pokeraccount');
+  };
+
+  const handleEditAccount = (account: PokerAccount) => {
+    setSelectedAccountForEdit(account);
+    setActiveSlideIn('pokeraccount');
+  };
+
+  const handleDeleteAccount = (accountId: string) => {
+    setPokerRoomAccounts(prev => prev.filter(a => a.id !== accountId));
+  };
+
+  const handleAccountSubmit = (accountData: Omit<PokerAccount, 'id' | 'createdAt'>) => {
+    if (selectedAccountForEdit) {
+      // Edit existing account
+      setPokerRoomAccounts(prev => 
+        prev.map(a => 
+          a.id === selectedAccountForEdit.id 
+            ? { ...accountData, id: a.id, createdAt: a.createdAt }
+            : a
+        )
+      );
+    } else {
+      // Add new account
+      const newAccount: PokerAccount = {
+        ...accountData,
+        id: `a${Date.now()}`,
+        createdAt: new Date()
+      };
+      setPokerRoomAccounts(prev => [...prev, newAccount]);
     }
   };
 
@@ -1068,6 +1137,24 @@ export function PlayerView() {
         </SlideInPanel>
 
         <SlideInPanel 
+          isOpen={activeSlideIn === 'pokeraccount'} 
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedAccountForEdit(null);
+          }}
+          title={selectedAccountForEdit ? 'Edit Poker Account' : 'Add Poker Account'}
+        >
+          <PokerAccountForm 
+            onClose={() => {
+              setActiveSlideIn(null);
+              setSelectedAccountForEdit(null);
+            }}
+            onSubmit={handleAccountSubmit}
+            editAccount={selectedAccountForEdit}
+          />
+        </SlideInPanel>
+
+        <SlideInPanel 
           isOpen={activeSlideIn === 'accountdetails'} 
           onClose={() => {
             setActiveSlideIn(null);
@@ -1164,7 +1251,7 @@ export function PlayerView() {
         
         <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
         {/* Player Header */}
-        <div className="px-6 py-4">
+        <div className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <img 
@@ -1210,6 +1297,10 @@ export function PlayerView() {
             <TabsTrigger value="wallets">
               <Wallet className="w-4 h-4 mr-2" />
               Wallets
+            </TabsTrigger>
+            <TabsTrigger value="accounts">
+              <Users className="w-4 h-4 mr-2" />
+              Accounts
             </TabsTrigger>
           </TabsList>
 
@@ -2441,6 +2532,15 @@ export function PlayerView() {
               onDelete={handleDeleteWallet}
             />
           </TabsContent>
+
+          <TabsContent value="accounts" className="mt-6">
+            <PokerAccountsContent
+              accounts={pokerRoomAccounts}
+              onAdd={handleAddAccount}
+              onEdit={handleEditAccount}
+              onDelete={handleDeleteAccount}
+            />
+          </TabsContent>
         </Tabs>
         </div>
       </div>
@@ -2618,6 +2718,24 @@ export function PlayerView() {
           }}
           onSubmit={handleWalletSubmit}
           editWallet={selectedWalletForEdit}
+        />
+      </SlideInPanel>
+
+      <SlideInPanel 
+        isOpen={activeSlideIn === 'pokeraccount'} 
+        onClose={() => {
+          setActiveSlideIn(null);
+          setSelectedAccountForEdit(null);
+        }}
+        title={selectedAccountForEdit ? 'Edit Poker Account' : 'Add Poker Account'}
+      >
+        <PokerAccountForm 
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedAccountForEdit(null);
+          }}
+          onSubmit={handleAccountSubmit}
+          editAccount={selectedAccountForEdit}
         />
       </SlideInPanel>
       
