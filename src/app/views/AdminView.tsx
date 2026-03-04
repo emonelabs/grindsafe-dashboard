@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { PlayerCard } from '../components/PlayerCard';
 import { PLGraph } from '../components/PLGraph';
 import { FilterPanel, FilterState } from '../components/FilterPanel';
@@ -9,11 +9,11 @@ import { LiveVideoGrid } from '../components/LiveVideoGrid';
 import { RecentSplits } from '../components/RecentSplits';
 import { WalletPerformance } from '../components/WalletPerformance';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
-import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet } from 'lucide-react';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight } from 'lucide-react';
 import { TeamsView } from './TeamsView';
-import { OrganizationView } from './OrganizationView';
-import { SplitsView } from './SplitsView';
-import { WalletsView } from './WalletsView';
+import { PaymentWalletsContent } from '../components/PokerWalletsContent';
+import PaymentWalletForm, { PaymentWallet } from '../components/forms/PokerWalletForm';
+import SlideInPanel from '../components/SlideInPanel';
 
 interface Player {
   id: string;
@@ -211,6 +211,58 @@ export function AdminView() {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [timePeriod, setTimePeriod] = useState<string>('today');
+  
+  // Payment Wallets state
+  const [paymentWallets, setPaymentWallets] = useState<PaymentWallet[]>([
+    {
+      id: 'w1',
+      provider: 'Skrill',
+      username: 'company_skrill',
+      email: 'finance@company.com',
+      balance: 15420.50,
+      status: 'active',
+      createdAt: new Date('2026-03-01'),
+      notes: 'Main company wallet'
+    },
+    {
+      id: 'w2',
+      provider: 'Neteller',
+      username: 'company_neteller',
+      email: 'finance@company.com',
+      balance: 8250.00,
+      status: 'active',
+      createdAt: new Date('2026-02-28')
+    },
+    {
+      id: 'w3',
+      provider: 'Pix',
+      username: '+55-11-98765-4321',
+      email: 'brazil@company.com',
+      balance: 0.00,
+      status: 'inactive',
+      createdAt: new Date('2026-02-15')
+    },
+    {
+      id: 'w4',
+      provider: 'LuxonPay',
+      username: 'company_luxon',
+      email: 'finance@company.com',
+      balance: 12875.25,
+      status: 'active',
+      createdAt: new Date('2026-01-10'),
+      notes: 'Secondary payment method'
+    }
+  ]);
+  const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'paymentwallet' | null>(null);
+
+  // Operations state for infinite scroll
+  const [operations, setOperations] = useState<any[]>([]);
+  const [operationsPage, setOperationsPage] = useState(1);
+  const [isLoadingOperations, setIsLoadingOperations] = useState(false);
+  const [hasMoreOperations, setHasMoreOperations] = useState(true);
+  const [expandedOperations, setExpandedOperations] = useState<Set<string>>(new Set());
+  const operationsScrollRef = useRef<HTMLDivElement>(null);
 
   // Calculate time range based on selected period
   const getTimeRange = () => {
@@ -365,6 +417,200 @@ export function AdminView() {
     return true;
   });
 
+  // Payment Wallet handlers
+  const handleAddWallet = () => {
+    setSelectedWalletForEdit(null);
+    setActiveSlideIn('paymentwallet');
+  };
+
+  const handleEditWallet = (wallet: PaymentWallet) => {
+    setSelectedWalletForEdit(wallet);
+    setActiveSlideIn('paymentwallet');
+  };
+
+  const handleDeleteWallet = (walletId: string) => {
+    setPaymentWallets(prev => prev.filter(w => w.id !== walletId));
+  };
+
+  const handleWalletSubmit = (walletData: Omit<PaymentWallet, 'id' | 'createdAt'>) => {
+    if (selectedWalletForEdit) {
+      // Edit existing wallet
+      setPaymentWallets(prev => 
+        prev.map(w => 
+          w.id === selectedWalletForEdit.id 
+            ? { ...walletData, id: w.id, createdAt: w.createdAt }
+            : w
+        )
+      );
+    } else {
+      // Add new wallet
+      const newWallet: PaymentWallet = {
+        ...walletData,
+        id: `w${Date.now()}`,
+        createdAt: new Date()
+      };
+      setPaymentWallets(prev => [...prev, newWallet]);
+    }
+    setActiveSlideIn(null);
+  };
+
+  // Generate mock operations
+  const generateOperations = (page: number, count: number = 10) => {
+    const types = ['Deposit', 'Withdrawal', 'Split', 'Swap'];
+    const wallets = ['Main Wallet', 'PokerStars', 'GGPoker', 'Bank Account', 'Credit Card'];
+    const operations = [];
+    
+    for (let i = 0; i < count; i++) {
+      const type = types[Math.floor(Math.random() * types.length)];
+      const daysAgo = (page - 1) * count + i;
+      const date = new Date();
+      date.setDate(date.getDate() - daysAgo);
+      date.setHours(Math.floor(Math.random() * 12) + 8);
+      date.setMinutes(Math.floor(Math.random() * 60));
+      
+      const opNumber = 1234 - ((page - 1) * count + i);
+      let transactions: any[] = [];
+      let amount = 0;
+      
+      // Pick a random player for this operation
+      const randomPlayer = players[Math.floor(Math.random() * players.length)];
+      
+      if (type === 'Deposit') {
+        const txCount = Math.floor(Math.random() * 2) + 1;
+        for (let j = 0; j < txCount; j++) {
+          const txAmount = Math.floor(Math.random() * 2000) + 500;
+          amount += txAmount;
+          const sources = ['Bank Transfer', 'Credit Card', 'Wire Transfer'];
+          transactions.push({
+            from: sources[Math.floor(Math.random() * sources.length)],
+            fromType: 'external',
+            to: 'Main Wallet',
+            toType: 'wallet',
+            amount: txAmount
+          });
+        }
+      } else if (type === 'Withdrawal') {
+        const txAmount = Math.floor(Math.random() * 3000) + 500;
+        amount = txAmount;
+        transactions.push({
+          from: 'Main Wallet',
+          fromType: 'wallet',
+          to: 'Bank Account',
+          toType: 'external',
+          amount: txAmount
+        });
+      } else if (type === 'Split') {
+        const profit = Math.floor(Math.random() * 4000) + 1000;
+        amount = profit;
+        const playerShare = Math.floor(profit * 0.5);
+        const houseShare = profit - playerShare;
+        transactions.push({
+          from: 'Session Profit',
+          fromType: 'profit',
+          to: 'Player Share (50%)',
+          toType: 'player',
+          amount: playerShare
+        });
+        transactions.push({
+          from: 'Session Profit',
+          fromType: 'profit',
+          to: 'House Share (50%)',
+          toType: 'house',
+          amount: houseShare
+        });
+      } else if (type === 'Swap') {
+        const txCount = Math.floor(Math.random() * 2) + 1;
+        for (let j = 0; j < txCount; j++) {
+          const txAmount = Math.floor(Math.random() * 1000) + 100;
+          amount += txAmount;
+          const platforms = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'];
+          transactions.push({
+            from: 'Main Wallet',
+            fromType: 'wallet',
+            to: platforms[Math.floor(Math.random() * platforms.length)],
+            toType: 'platform',
+            amount: txAmount
+          });
+        }
+      }
+      
+      operations.push({
+        id: `OP-${opNumber.toString().padStart(6, '0')}`,
+        type,
+        date,
+        amount,
+        transactions,
+        status: 'Completed',
+        player: randomPlayer
+      });
+    }
+    
+    return operations;
+  };
+
+  // Initialize operations
+  useEffect(() => {
+    if (activeTab === 'operations' && operations.length === 0) {
+      const initialOps = generateOperations(1, 15);
+      setOperations(initialOps);
+      // Expand only the first (latest) operation
+      if (initialOps.length > 0) {
+        setExpandedOperations(new Set([initialOps[0].id]));
+      }
+    }
+  }, [activeTab]);
+
+  // Toggle operation expansion
+  const toggleOperation = (operationId: string) => {
+    setExpandedOperations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(operationId)) {
+        newSet.delete(operationId);
+      } else {
+        newSet.add(operationId);
+      }
+      return newSet;
+    });
+  };
+
+  // Infinite scroll handler
+  const handleOperationsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (isLoadingOperations || !hasMoreOperations) {
+      return;
+    }
+    
+    const target = e.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = target;
+    
+    // Calculate how close we are to the bottom
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+    
+    // Load more when scrolled 90% down
+    if (scrollPercentage > 0.9) {
+      setIsLoadingOperations(true);
+      
+      // Simulate loading delay
+      setTimeout(() => {
+        const nextPage = operationsPage + 1;
+        const newOperations = generateOperations(nextPage, 10);
+        
+        setOperations(prev => {
+          const updatedOps = [...prev, ...newOperations];
+          
+          // Stop loading more after 50 operations
+          if (updatedOps.length >= 50) {
+            setHasMoreOperations(false);
+          }
+          
+          return updatedOps;
+        });
+        
+        setOperationsPage(nextPage);
+        setIsLoadingOperations(false);
+      }, 500);
+    }
+  }, [isLoadingOperations, hasMoreOperations, operationsPage]);
+
   const MetricCard = ({ title, value, change, icon: Icon, positive }: { title: string; value: string; change?: string; icon: any; positive?: boolean }) => (
     <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between mb-2">
@@ -402,19 +648,15 @@ export function AdminView() {
           <TabsList className="bg-white border border-gray-200 p-1 gap-1">
             <TabsTrigger value="overview" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <Activity className="w-4 h-4" />
-              Overview
+              Live
             </TabsTrigger>
             <TabsTrigger value="teams" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <Users className="w-4 h-4" />
               Teams
             </TabsTrigger>
-            <TabsTrigger value="organization" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
-              <Network className="w-4 h-4" />
-              Organization
-            </TabsTrigger>
-            <TabsTrigger value="splits" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
-              <Split className="w-4 h-4" />
-              Splits
+            <TabsTrigger value="operations" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <ArrowLeftRight className="w-4 h-4" />
+              Operations
             </TabsTrigger>
             <TabsTrigger value="wallets" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <Wallet className="w-4 h-4" />
@@ -423,6 +665,10 @@ export function AdminView() {
             <TabsTrigger value="players" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <User className="w-4 h-4" />
               Players
+            </TabsTrigger>
+            <TabsTrigger value="sessions" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Play className="w-4 h-4" />
+              Sessions
             </TabsTrigger>
           </TabsList>
           
@@ -575,224 +821,492 @@ export function AdminView() {
               <WalletPerformance />
             </div>
           </div>
-
-          {/* Bottom Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {teams.slice(0, 4).map(team => (
-              <div key={team.id} className="bg-white border border-gray-200 p-3 rounded">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: team.color + '20' }}>
-                      <Users className="w-3 h-3" style={{ color: team.color }} />
-                    </div>
-                    <span className="text-xs font-semibold text-gray-900">{team.name}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 mb-2">
-                  <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${
-                    team.gameType === 'Cash' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                  }`}>
-                    {team.gameType}
-                  </span>
-                  <span className="text-[8px] font-semibold px-1 py-0.5 rounded bg-gray-200 text-gray-700">
-                    {team.tableStructure}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <div className="text-[10px] text-gray-500">Members</div>
-                    <div className="text-sm font-bold text-gray-900">{team.memberCount}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-gray-500">Active</div>
-                    <div className="text-sm font-bold text-gray-900">{team.activePlayers}</div>
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-gray-500">P/L</div>
-                    <div className={`text-sm font-bold ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {team.totalProfitLoss >= 0 ? '+' : ''}${(team.totalProfitLoss / 1000).toFixed(1)}K
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </TabsContent>
 
-        <TabsContent value="teams" className="space-y-6 mt-6">
-          <div className="flex gap-3 flex-wrap">
-            <button
-              onClick={() => setSelectedTeam(null)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                selectedTeam === null 
-                  ? 'bg-gray-900 text-white' 
-                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-              }`}
-            >
-              All Teams
-            </button>
-            {teams.map(team => (
-              <button
-                key={team.id}
-                onClick={() => setSelectedTeam(team.id)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                  selectedTeam === team.id 
-                    ? 'bg-gray-900 text-white' 
-                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
-                }`}
-              >
-                <div 
-                  className="w-2 h-2 rounded-full" 
-                  style={{ backgroundColor: team.color }}
-                />
-                {team.name}
-              </button>
-            ))}
-          </div>
-
-          {selectedTeam === null ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {teams.map(team => (
-                <div
-                  key={team.id}
-                  className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: team.color + '20' }}
-                    >
-                      <Users className="w-4 h-4" style={{ color: team.color }} />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 text-sm">{team.name}</h4>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+        <TabsContent value="teams">
+          {/* Teams Table */}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Teams</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Team</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Game Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Table</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Members</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Active</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Total P/L</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {teams.map(team => (
+                    <tr key={team.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-10 h-10 rounded-lg flex items-center justify-center"
+                            style={{ backgroundColor: team.color + '20' }}
+                          >
+                            <Users className="w-5 h-5" style={{ color: team.color }} />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">{team.name}</div>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color }}></div>
+                              <span className="text-xs text-gray-500">Team Color</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold ${
                           team.gameType === 'Cash' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
                         }`}>
                           {team.gameType}
                         </span>
-                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded bg-gray-200 text-gray-700 text-xs font-semibold">
                           {team.tableStructure}
                         </span>
-                        <span className="text-xs text-gray-500">• {team.memberCount} members</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">Active</span>
-                      <span className="font-medium text-gray-900">{team.activePlayers}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-gray-500">P/L</span>
-                      <span className={`font-medium ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {team.totalProfitLoss >= 0 ? '+' : ''}${team.totalProfitLoss.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-gray-900">{team.memberCount}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-medium text-gray-900">{team.activePlayers}</div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className={`text-sm font-bold ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {team.totalProfitLoss >= 0 ? '+' : ''}${team.totalProfitLoss.toLocaleString()}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {(() => {
-                const team = teams.find(t => t.id === selectedTeam);
-                if (!team) return null;
-                const teamPlayers = players.filter(p => p.teamId === selectedTeam);
-                
-                return (
-                  <>
-                    <div className="bg-white rounded-lg border border-gray-200 p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h2 className="text-lg font-bold text-gray-900">{team.name}</h2>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-xs font-bold px-2 py-1 rounded ${
-                              team.gameType === 'Cash' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                            }`}>
-                              {team.gameType}
-                            </span>
-                            <span className="text-xs font-semibold px-2 py-1 rounded bg-gray-200 text-gray-700">
-                              {team.tableStructure}
-                            </span>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="operations" className="flex flex-col h-[calc(100vh-280px)]">
+          {/* Operations Table */}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col flex-1">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Operations History</h3>
+            </div>
+            <div 
+              ref={operationsScrollRef}
+              onScroll={handleOperationsScroll}
+              className="overflow-x-auto overflow-y-auto flex-1"
+            >
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Type</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Player</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Transactions</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {operations.map((operation) => {
+                    const getOperationIcon = (type: string) => {
+                      switch (type) {
+                        case 'Deposit': return <ArrowDownRight className="w-4 h-4 text-gray-700" />;
+                        case 'Withdrawal': return <ArrowUpRight className="w-4 h-4 text-gray-700" />;
+                        case 'Split': return <Split className="w-4 h-4 text-gray-700" />;
+                        case 'Swap': return <Repeat2 className="w-4 h-4 text-gray-700" />;
+                        default: return <ArrowLeftRight className="w-4 h-4 text-gray-700" />;
+                      }
+                    };
+
+                    const getWalletIcon = (type: string, name: string) => {
+                      if (type === 'external') {
+                        if (name.includes('Bank') || name.includes('Wire')) {
+                          return (
+                            <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                              <DollarSign className="w-3 h-3 text-gray-600" />
+                            </div>
+                          );
+                        }
+                        if (name.includes('Card')) {
+                          return (
+                            <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                              <CreditCard className="w-3 h-3 text-gray-600" />
+                            </div>
+                          );
+                        }
+                      }
+                      if (type === 'wallet') {
+                        return (
+                          <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                            <Wallet className="w-3 h-3 text-blue-600" />
                           </div>
+                        );
+                      }
+                      if (type === 'profit') {
+                        return (
+                          <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+                            <DollarSign className="w-3 h-3 text-purple-600" />
+                          </div>
+                        );
+                      }
+                      if (type === 'player') {
+                        return (
+                          <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                            <Users className="w-3 h-3 text-blue-600" />
+                          </div>
+                        );
+                      }
+                      if (type === 'house') {
+                        return (
+                          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                            <DollarSign className="w-3 h-3 text-gray-600" />
+                          </div>
+                        );
+                      }
+                      if (type === 'platform') {
+                        if (name === 'PokerStars') {
+                          return (
+                            <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-red-600">PS</span>
+                            </div>
+                          );
+                        }
+                        if (name === 'GGPoker') {
+                          return (
+                            <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-orange-600">GG</span>
+                            </div>
+                          );
+                        }
+                        if (name === '888Poker') {
+                          return (
+                            <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-green-600">888</span>
+                            </div>
+                          );
+                        }
+                        if (name === 'PartyPoker') {
+                          return (
+                            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-purple-600">PP</span>
+                            </div>
+                          );
+                        }
+                      }
+                      return (
+                        <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                          <Wallet className="w-3 h-3 text-gray-600" />
                         </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-6">
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">Members</p>
-                          <p className="text-2xl font-bold text-gray-900">{team.memberCount}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">Active</p>
-                          <p className="text-2xl font-bold text-gray-900">{team.activePlayers}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">Total P/L</p>
-                          <p className={`text-2xl font-bold ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {team.totalProfitLoss >= 0 ? '+' : ''}${team.totalProfitLoss.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    };
+
+                    const formatDate = (date: Date) => {
+                      return date.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                      });
+                    };
+
+                    const formatTime = (date: Date) => {
+                      return date.toLocaleTimeString('en-US', { 
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+                    };
+
+                    const isExpanded = expandedOperations.has(operation.id);
                     
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {teamPlayers.map(player => (
-                        <PlayerCard 
-                          key={player.id} 
-                          player={player}
-                          onViewSession={() => setSelectedPlayer(player)}
-                        />
-                      ))}
-                    </div>
-                  </>
-                );
-              })()}
+                    return (
+                      <>
+                        <tr 
+                          key={operation.id} 
+                          onClick={() => toggleOperation(operation.id)}
+                          className="hover:bg-gray-50 transition-colors cursor-pointer"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-shrink-0">
+                                <ChevronRight 
+                                  className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                />
+                              </div>
+                              <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                                {getOperationIcon(operation.type)}
+                              </div>
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900">{operation.type}</div>
+                                <div className="text-xs text-gray-500">{operation.id}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <img 
+                                src={operation.player.avatar} 
+                                alt={operation.player.name}
+                                className="w-8 h-8 rounded-full border border-gray-200"
+                              />
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">{operation.player.name}</div>
+                                <div className="text-xs text-gray-500">{teams.find(t => t.id === operation.player.teamId)?.name || 'No Team'}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm text-gray-900">{formatDate(operation.date)}</div>
+                            <div className="text-xs text-gray-500">{formatTime(operation.date)}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm font-bold text-gray-900">
+                              {operation.type === 'Withdrawal' ? '-' : operation.type === 'Deposit' ? '+' : ''}${operation.amount.toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm text-gray-900">{operation.transactions.length} transaction{operation.transactions.length !== 1 ? 's' : ''}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                              <CheckCircle className="w-3 h-3" />
+                              {operation.status}
+                            </span>
+                          </td>
+                        </tr>
+                        
+                        {/* Sub-transactions - Only show when expanded */}
+                        {isExpanded && (
+                          <tr className="bg-gray-50">
+                            <td colSpan={6} className="px-4 py-0">
+                              <div className="pl-12 py-2 space-y-1">
+                                {operation.transactions.map((tx: any, txIndex: number) => (
+                                  <div key={txIndex} className="flex items-center justify-between py-1.5 px-3 bg-white rounded border border-gray-200">
+                                    <div className="flex items-center gap-2">
+                                      {getWalletIcon(tx.fromType, tx.from)}
+                                      <span className="text-xs text-gray-600">{tx.from}</span>
+                                      <span className="text-xs text-gray-400">→</span>
+                                      {getWalletIcon(tx.toType, tx.to)}
+                                      <span className="text-xs text-gray-600">{tx.to}</span>
+                                    </div>
+                                    <span className="text-xs font-semibold text-gray-900">${tx.amount.toLocaleString()}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                  
+                  {/* Loading indicator */}
+                  {isLoadingOperations && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center">
+                        <div className="flex items-center justify-center gap-2 text-gray-500">
+                          <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                          <span className="text-sm">Loading more operations...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  
+                  {/* End of list indicator */}
+                  {!hasMoreOperations && operations.length > 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-6 text-center">
+                        <span className="text-xs text-gray-400">No more operations to load</span>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
+          </div>
         </TabsContent>
 
-        <TabsContent value="organization" className="space-y-6 mt-6">
-          <OrganizationView />
+        <TabsContent value="wallets">
+          <PaymentWalletsContent
+            wallets={paymentWallets}
+            onAdd={handleAddWallet}
+            onEdit={handleEditWallet}
+            onDelete={handleDeleteWallet}
+          />
         </TabsContent>
 
-        <TabsContent value="splits" className="space-y-6 mt-6">
-          <SplitsView />
+        <TabsContent value="players">
+          {/* Players Table - Simple version without filters */}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Players</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Player</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Team</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Session Time</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">P/L</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {adjustedPlayers.map(player => {
+                    const team = teams.find(t => t.id === player.teamId);
+                    return (
+                      <tr key={player.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <img 
+                              src={player.avatar} 
+                              alt={player.name}
+                              className="w-10 h-10 rounded-full border border-gray-200"
+                            />
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">{player.name}</div>
+                              <div className="text-xs text-gray-500">ID: {player.id}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {team && (
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color }}></div>
+                              <span className="text-sm text-gray-900">{team.name}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {player.isRecording ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-red-50 text-red-700 text-xs font-medium">
+                              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                              LIVE
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded bg-gray-100 text-gray-600 text-xs font-medium">
+                              Offline
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">
+                            {Math.floor(player.sessionTime / 60)}h {player.sessionTime % 60}m
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className={`text-sm font-bold ${player.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {player.profitLoss >= 0 ? '+' : ''}${player.profitLoss.toLocaleString()}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </TabsContent>
 
-        <TabsContent value="wallets" className="space-y-6 mt-6">
-          <WalletsView />
-        </TabsContent>
-
-        <TabsContent value="players" className="space-y-6 mt-6">
+        <TabsContent value="sessions" className="space-y-3">
           <FilterPanel onFilterChange={setFilters} />
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {filteredPlayers.map(player => {
-              const team = teams.find(t => t.id === player.teamId);
-              return (
-                <div key={player.id} className="relative">
-                  {team && (
-                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1 text-xs text-gray-500 bg-white/90 px-2 py-0.5 rounded-full border border-gray-200">
-                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: team.color }} />
-                      {team.name}
-                    </div>
-                  )}
-                  <PlayerCard 
-                    player={player}
-                    onViewSession={() => setSelectedPlayer(player)}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          {filteredPlayers.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
-              <p className="text-gray-500">No players match your current filters</p>
+          {/* Sessions Table - With filters and View Session */}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Player Sessions</h3>
             </div>
-          )}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Player</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Team</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Session Time</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">P/L</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredPlayers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-12 text-center">
+                        <p className="text-gray-500">No players match your current filters</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPlayers.map(player => {
+                      const team = teams.find(t => t.id === player.teamId);
+                      return (
+                        <tr key={player.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <img 
+                                src={player.avatar} 
+                                alt={player.name}
+                                className="w-10 h-10 rounded-full border border-gray-200"
+                              />
+                              <div>
+                                <div className="text-sm font-semibold text-gray-900">{player.name}</div>
+                                <div className="text-xs text-gray-500">ID: {player.id}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {team && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color }}></div>
+                                <span className="text-sm text-gray-900">{team.name}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {player.isRecording ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-red-50 text-red-700 text-xs font-medium">
+                                <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                                LIVE
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded bg-gray-100 text-gray-600 text-xs font-medium">
+                                Offline
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm text-gray-900">
+                              {Math.floor(player.sessionTime / 60)}h {player.sessionTime % 60}m
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className={`text-sm font-bold ${player.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {player.profitLoss >= 0 ? '+' : ''}${player.profitLoss.toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => setSelectedPlayer(player)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-xs font-medium rounded transition-colors"
+                            >
+                              <Play className="w-3 h-3" />
+                              View Session
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -802,6 +1316,25 @@ export function AdminView() {
             onClose={() => setSelectedPlayer(null)}
           />
         )}
+
+        {/* Slide-In Panel for Wallet Form */}
+        <SlideInPanel 
+          isOpen={activeSlideIn === 'paymentwallet'} 
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedWalletForEdit(null);
+          }}
+          title={selectedWalletForEdit ? 'Edit Payment Wallet' : 'Add Payment Wallet'}
+        >
+          <PaymentWalletForm 
+            onClose={() => {
+              setActiveSlideIn(null);
+              setSelectedWalletForEdit(null);
+            }}
+            onSubmit={handleWalletSubmit}
+            editWallet={selectedWalletForEdit}
+          />
+        </SlideInPanel>
       </div>
     </div>
   );
