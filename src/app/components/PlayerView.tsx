@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from 'recharts';
+import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 
 interface SessionData {
   time: string;
   pl: number;
+  ev: number;
 }
 
 interface SavedSession {
@@ -13,6 +14,7 @@ interface SavedSession {
   date: Date;
   duration: number;
   profitLoss: number;
+  ev: number;
   buyIn: number;
   handsPlayed: number;
   biggestWin: number;
@@ -27,7 +29,14 @@ export function PlayerView() {
     team: 'High Rollers'
   };
 
-  const [activeTab, setActiveTab] = useState('sessions');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [aiQuery, setAiQuery] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
+  const aiInputRef = useRef<HTMLInputElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -35,6 +44,7 @@ export function PlayerView() {
   const [sessionActive, setSessionActive] = useState(false);
   const [sessionTime, setSessionTime] = useState(0);
   const [currentPL, setCurrentPL] = useState(0);
+  const [currentEV, setCurrentEV] = useState(0);
   const [sessionData, setSessionData] = useState<SessionData[]>([]);
   const [buyIn, setBuyIn] = useState(500);
   const [biggestWin, setBiggestWin] = useState(0);
@@ -46,6 +56,7 @@ export function PlayerView() {
       date: new Date('2026-03-02T14:30:00'),
       duration: 245, // 4h 5min
       profitLoss: 1250,
+      ev: 1180, // EV slightly below actual (ran above EV)
       buyIn: 500,
       handsPlayed: 408, // ~100 hands/hour: (245/60)*100
       biggestWin: 420,
@@ -56,6 +67,7 @@ export function PlayerView() {
       date: new Date('2026-03-01T18:00:00'),
       duration: 180, // 3h
       profitLoss: -350,
+      ev: -120, // EV better than actual (ran below EV)
       buyIn: 500,
       handsPlayed: 300, // 3h * 100 hands/hour
       biggestWin: 280,
@@ -66,6 +78,7 @@ export function PlayerView() {
       date: new Date('2026-02-28T16:45:00'),
       duration: 320, // 5h 20min
       profitLoss: 2150,
+      ev: 2280, // EV slightly above actual (ran below EV)
       buyIn: 1000,
       handsPlayed: 533, // ~100 hands/hour: (320/60)*100
       biggestWin: 850,
@@ -136,7 +149,8 @@ export function PlayerView() {
     // Initialize with starting data point
     setSessionData([{
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      pl: 0
+      pl: 0,
+      ev: 0
     }]);
 
     // Update data every 10 seconds
@@ -148,13 +162,17 @@ export function PlayerView() {
         }
 
         const currentTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        const lastValue = newData[newData.length - 1]?.pl || 0;
-        const change = Math.random() * 300 - 150;
-        const newPL = Math.round(lastValue + change);
+        const lastPL = newData[newData.length - 1]?.pl || 0;
+        const lastEV = newData[newData.length - 1]?.ev || 0;
+        const plChange = Math.random() * 300 - 150;
+        const evChange = plChange + (Math.random() - 0.5) * 50; // EV varies slightly from actual
+        const newPL = Math.round(lastPL + plChange);
+        const newEV = Math.round(lastEV + evChange);
         
         newData.push({
           time: currentTime,
-          pl: newPL
+          pl: newPL,
+          ev: newEV
         });
 
         return newData;
@@ -170,6 +188,11 @@ export function PlayerView() {
         
         return newPL;
       });
+
+      setCurrentEV(prev => {
+        const evVariance = (Math.random() - 0.5) * 30;
+        return Math.round(prev + (Math.random() * 100 - 50) + evVariance);
+      });
       
       setSessionTime(prev => prev + 1);
     }, 10000);
@@ -177,10 +200,46 @@ export function PlayerView() {
     return () => clearInterval(interval);
   }, [sessionActive]);
 
+  // Command palette keyboard shortcut (Cmd+O)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      console.log('Key pressed:', e.key, 'Meta:', e.metaKey, 'Ctrl:', e.ctrlKey, 'Shift:', e.shiftKey);
+      
+      // Cmd+O or Ctrl+O to toggle
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'o') {
+        console.log('✅ Command palette shortcut detected!');
+        e.preventDefault();
+        e.stopPropagation();
+        setShowCommandPalette(prev => {
+          console.log('Toggling command palette from', prev, 'to', !prev);
+          return !prev;
+        });
+        return;
+      }
+      
+      // ESC to close
+      if (e.key === 'Escape') {
+        if (showCommandPalette) {
+          console.log('Closing command palette with ESC');
+          e.preventDefault();
+          setShowCommandPalette(false);
+        }
+      }
+    };
+
+    console.log('📋 Command palette listener attached');
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => {
+      console.log('📋 Command palette listener removed');
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [showCommandPalette]);
+
   const startSession = () => {
     setSessionActive(true);
     setSessionTime(0);
     setCurrentPL(0);
+    setCurrentEV(0);
     setBiggestWin(0);
     setBiggestLoss(0);
     setSessionData([]);
@@ -215,6 +274,7 @@ export function PlayerView() {
       date: new Date(),
       duration: sessionTime,
       profitLoss: currentPL,
+      ev: currentEV,
       buyIn: buyIn,
       handsPlayed: Math.floor((sessionTime / 60) * 100), // 100 hands per hour
       biggestWin: biggestWin,
@@ -247,97 +307,854 @@ export function PlayerView() {
     });
   };
 
+  const handleAiQuery = async () => {
+    if (!aiQuery.trim()) return;
+    
+    const userMessage = aiQuery.trim();
+    
+    // Add user message to chat
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setAiQuery('');
+    setIsAiLoading(true);
+    
+    // Simulate AI response with a delay
+    setTimeout(() => {
+      // Mock AI response based on query
+      const query = userMessage.toLowerCase();
+      let response = '';
+      
+      if (query.includes('ajo') || query.includes('a-j')) {
+        response = "Based on your session history, you're losing the most money with AJo (Ace-Jack offsuit) in late position against aggressive 3-bets. Your win rate with AJo is -$130 over 47 hands. Consider:\n\n1. **Fold more often** to 3-bets when out of position\n2. **Reduce opening range** from early positions\n3. **Only continue** when you have strong reads or position advantage\n\nYour AJo performance:\n• Early Position: -$180 (fold more)\n• Middle Position: -$50 (marginal)\n• Late Position: +$100 (profitable)";
+      } else if (query.includes('profitable') || query.includes('profit')) {
+        response = "Your most profitable hands are pocket pairs AA-JJ, showing consistent wins. AA leads at +$450 average. Focus on:\n\n• Maximizing value with premium pairs\n• Playing more hands in position\n• Your suited connectors (87s, 76s) are also performing well at +$60 average";
+      } else if (query.includes('improve') || query.includes('better')) {
+        response = "Key areas for improvement:\n\n1. **Reduce losses** with weak offsuit hands (K7o-K2o)\n2. **Improve position awareness** - you're -15% ROI from early position\n3. **Session length** - Your win rate increases significantly after 3+ hours\n4. **Manage tilt** - You have 3 sessions with -$300+ swings";
+      } else {
+        response = `I analyzed your query about "${userMessage}".\n\nBased on your ${sessionHistory.length} sessions and ${sessionHistory.reduce((sum, s) => sum + s.handsPlayed, 0)} hands played, here's what I found:\n\n• Total P/L: ${formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}\n• Win Rate: ${((sessionHistory.filter(s => s.profitLoss > 0).length / sessionHistory.length) * 100).toFixed(1)}%\n• Best session: ${formatPL(Math.max(...sessionHistory.map(s => s.profitLoss)))}\n\nWhat else would you like to know?`;
+      }
+      
+      // Add AI response to chat
+      setChatMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      setIsAiLoading(false);
+      
+      // Scroll to bottom
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }, 1500);
+  };
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (showAiModal && aiInputRef.current) {
+      aiInputRef.current.focus();
+    }
+  }, [showAiModal]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+K or Ctrl+K to open
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowAiModal(true);
+      }
+      // ESC to close
+      if (e.key === 'Escape' && showAiModal) {
+        setShowAiModal(false);
+        setChatMessages([]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAiModal]);
+
   const isProfit = currentPL >= 0;
+
+  const renderAiModal = () => (
+    <>
+      {/* Fixed Search Bar Trigger - Always visible at top */}
+      {!showAiModal && (
+        <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
+          <div className="px-6 py-3">
+            <button
+              onClick={() => setShowAiModal(true)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 bg-transparent hover:bg-gray-50 transition-all text-left group rounded-lg"
+            >
+              <Search className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
+              <span className="text-sm text-gray-400 group-hover:text-gray-600">Ask AI anything about your poker performance...</span>
+              <div className="ml-auto flex items-center gap-1 text-xs text-gray-300 group-hover:text-gray-400">
+                <kbd className="px-2 py-0.5 bg-transparent border border-gray-200 rounded text-xs font-mono">⌘</kbd>
+                <kbd className="px-2 py-0.5 bg-transparent border border-gray-200 rounded text-xs font-mono">K</kbd>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Slide Down Chat Panel - Full conversation screen */}
+      {showAiModal && (
+        <div 
+          className="fixed top-0 left-0 right-0 bottom-0 z-40 bg-white animate-slideDown"
+        >
+          <div className="h-full flex flex-col">
+              {/* Header with Close Button */}
+              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-50 to-blue-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900">AI Poker Assistant</h3>
+                    <p className="text-xs text-gray-500">Ask me anything about your performance</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAiModal(false);
+                    setChatMessages([]);
+                    setAiQuery('');
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <span className="text-2xl leading-none">×</span>
+                </button>
+              </div>
+
+              {/* Chat Messages Area */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                {/* Welcome Message */}
+                {chatMessages.length === 0 && !isAiLoading && (
+                  <div className="flex flex-col items-center justify-center h-full text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mb-4">
+                      <Sparkles className="w-8 h-8 text-white" />
+                    </div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">How can I help you today?</h4>
+                    <p className="text-sm text-gray-500 mb-6 max-w-md">
+                      I can analyze your poker performance, identify leaks, and suggest improvements based on your session history.
+                    </p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {[
+                        "Where am I losing money with AJo?",
+                        "What are my most profitable hands?",
+                        "How can I improve my game?"
+                      ].map((suggestion, i) => (
+                        <button
+                          key={i}
+                          onClick={() => {
+                            setAiQuery(suggestion);
+                            setTimeout(() => handleAiQuery(), 100);
+                          }}
+                          className="px-4 py-2 text-sm bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Chat Messages */}
+                {chatMessages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {message.role === 'assistant' && (
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                        <Sparkles className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        message.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-900'
+                      }`}
+                    >
+                      <div className="text-sm leading-relaxed whitespace-pre-line">
+                        {message.content}
+                      </div>
+                    </div>
+                    {message.role === 'user' && (
+                      <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm">
+                        {currentPlayer.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Loading Indicator */}
+                {isAiLoading && (
+                  <div className="flex gap-3 justify-start">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                        <span className="text-xs text-gray-500">Analyzing...</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Input Area at Bottom */}
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={aiInputRef}
+                    type="text"
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !isAiLoading && aiQuery.trim()) {
+                        handleAiQuery();
+                      }
+                    }}
+                    placeholder="Ask anything about your poker game..."
+                    disabled={isAiLoading}
+                    className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleAiQuery}
+                    disabled={!aiQuery.trim() || isAiLoading}
+                    className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all flex items-center gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+                  <span>Press <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono text-[10px]">Enter</kbd> to send</span>
+                  <span>Press <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono text-[10px]">Esc</kbd> to close</span>
+                </div>
+              </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   // Show start session screen if no active session
   if (!sessionActive) {
     return (
-      <div className="space-y-6 p-6">
-        {/* Player Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-4">
-          <div className="flex items-center gap-4">
-            <img 
-              src={currentPlayer.avatar} 
-              alt={currentPlayer.name}
-              className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
+      <div className="space-y-0 relative">
+        {renderAiModal()}
+        
+        {/* Command Palette */}
+        {showCommandPalette && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/50 z-50 animate-fadeIn"
+              onClick={() => setShowCommandPalette(false)}
             />
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Hi, {currentPlayer.name.split(' ')[0]}</h2>
-              <div className="flex items-center gap-2 text-gray-500">
-                <Users className="w-4 h-4" />
-                <span className="text-sm">{currentPlayer.team}</span>
+            
+            {/* Command Palette Modal */}
+            <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-50 animate-fadeIn">
+              <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+                {/* Header */}
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Command className="w-4 h-4 text-gray-600" />
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Quick Actions</h3>
+                    <div className="ml-auto flex items-center gap-2">
+                      <kbd className="px-2 py-0.5 text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-300 rounded">ESC</kbd>
+                      <span className="text-xs text-gray-500">to close</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions List */}
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setActiveTab('balance');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                      <ArrowDownRight className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Request Deposit</div>
+                      <div className="text-xs text-gray-500">Add funds to your balance</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setActiveTab('balance');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                      <ArrowUpRight className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Request Withdraw</div>
+                      <div className="text-xs text-gray-500">Withdraw funds from your balance</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setActiveTab('balance');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                      <Split className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Request Split</div>
+                      <div className="text-xs text-gray-500">Split balance with another player</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setActiveTab('balance');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors">
+                      <Repeat2 className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Request Swap</div>
+                      <div className="text-xs text-gray-500">Swap stakes with another player</div>
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
+          </>
+        )}
+        
+        <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
+        {/* Player Header */}
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <img 
+                src={currentPlayer.avatar} 
+                alt={currentPlayer.name}
+                className="w-14 h-14 rounded-full object-cover border border-gray-200 shadow-sm"
+              />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Hi, {currentPlayer.name.split(' ')[0]}</h2>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Users className="w-4 h-4" />
+                  <span className="text-sm">{currentPlayer.team}</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Cmd+O hint - clickable to open */}
+            <button
+              onClick={() => {
+                console.log('Manual trigger - opening command palette');
+                setShowCommandPalette(true);
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+            >
+              <span className="text-xs text-gray-500">Press</span>
+              <kbd className="px-2 py-0.5 text-xs font-semibold text-gray-800 bg-white border border-gray-300 rounded">⌘O</kbd>
+              <span className="text-xs text-gray-500">for actions</span>
+            </button>
           </div>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="sessions">
+            <TabsTrigger value="overview">
               <History className="w-4 h-4 mr-2" />
-              Sessions
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="balance">
+              <Wallet className="w-4 h-4 mr-2" />
+              Balance
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="sessions" className="space-y-6 mt-6">
+          <TabsContent value="overview" className="space-y-3 mt-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-white border border-gray-200 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="bg-white border border-gray-200 p-3 rounded">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Sessions</span>
-                  <History className="w-4 h-4 text-gray-400" />
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Sessions</span>
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <History className="w-4 h-4 text-gray-600" />
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">{sessionHistory.length}</div>
-                <div className="text-xs text-gray-500 mt-1">All time</div>
+                <div className="flex items-end justify-between">
+                  <span className="text-2xl font-bold text-gray-900">{sessionHistory.length}</span>
+                </div>
               </div>
 
-              <div className="bg-white border border-gray-200 p-4 rounded-lg">
+              <div className="bg-white border border-gray-200 p-3 rounded">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total P/L</span>
-                  <TrendingUp className="w-4 h-4 text-green-600" />
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total P/L</span>
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                    {sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? (
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-600" />
+                    )}
+                  </div>
                 </div>
-                <div className={`text-2xl font-bold ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
+                <div className="flex items-end justify-between">
+                  <span className={`text-2xl font-bold ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
+                  </span>
                 </div>
-                <div className="text-xs text-gray-500 mt-1">Across all sessions</div>
               </div>
 
-              <div className="bg-white border border-gray-200 p-4 rounded-lg">
+              <div className="bg-white border border-gray-200 p-3 rounded">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Hands</span>
-                  <PlayCircle className="w-4 h-4 text-blue-600" />
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Hands</span>
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <PlayCircle className="w-4 h-4 text-blue-600" />
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {sessionHistory.reduce((sum, s) => sum + s.handsPlayed, 0).toLocaleString()}
+                <div className="flex items-end justify-between">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {sessionHistory.reduce((sum, s) => sum + s.handsPlayed, 0).toLocaleString()}
+                  </span>
                 </div>
-                <div className="text-xs text-gray-500 mt-1">Total hands played</div>
               </div>
 
-              <div className="bg-white border border-gray-200 p-4 rounded-lg">
+              <div className="bg-white border border-gray-200 p-3 rounded">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Avg Session</span>
-                  <Clock className="w-4 h-4 text-purple-600" />
+                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Avg Session</span>
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-purple-600" />
+                  </div>
                 </div>
-                <div className="text-2xl font-bold text-purple-600">
-                  {sessionHistory.length > 0 ? formatTime(Math.round(sessionHistory.reduce((sum, s) => sum + s.duration, 0) / sessionHistory.length)) : '0h 0m'}
+                <div className="flex items-end justify-between">
+                  <span className="text-2xl font-bold text-gray-900">
+                    {sessionHistory.length > 0 ? formatTime(Math.round(sessionHistory.reduce((sum, s) => sum + s.duration, 0) / sessionHistory.length)) : '0h 0m'}
+                  </span>
                 </div>
-                <div className="text-xs text-gray-500 mt-1">Average duration</div>
+              </div>
+            </div>
+
+            {/* 70/30 Split Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-3">
+              {/* Left Column (70%) - Chart and Sessions */}
+              <div className="lg:col-span-7 space-y-3">
+                {/* P/L & EV Chart */}
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Performance Chart</h3>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                      <span className="text-xs text-gray-600">Actual P/L</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                      <span className="text-xs text-gray-600">EV</span>
+                    </div>
+                    <span className={`text-xl font-bold ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4">
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={sessionHistory.slice().reverse().map((s, i) => ({
+                    session: `S${i + 1}`,
+                    pl: s.profitLoss,
+                    ev: s.ev,
+                    date: s.date
+                  }))}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="session" 
+                      stroke="#6b7280"
+                      style={{ fontSize: '12px' }}
+                    />
+                    <YAxis 
+                      stroke="#6b7280"
+                      style={{ fontSize: '12px' }}
+                      tickFormatter={(value) => `$${value.toLocaleString()}`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        color: '#111827'
+                      }}
+                      formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === 'pl' ? 'Actual P/L' : 'EV']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="pl"
+                      name="pl"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={{ r: 4, fill: '#10b981' }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="ev"
+                      name="ev"
+                      stroke="#3b82f6"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={{ r: 4, fill: '#3b82f6' }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* 50/50 Split: Winrate by Position & Hero/Villain Winrate */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {/* Winrate by Position - Left Half */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-gray-600" />
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Winrate by Position</h3>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Performance across board textures</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      <ChevronDown className="w-3 h-3 animate-bounce" />
+                      <span>Scroll</span>
+                    </div>
+                  </div>
+                </div>
+              
+                <div className="p-4 max-h-[600px] overflow-y-auto scrollbar-thin relative">
+                  {/* Scroll indicator at top */}
+                  <div className="sticky top-0 left-0 right-0 h-4 bg-gradient-to-b from-white to-transparent pointer-events-none z-10 -mt-4 mb-2"></div>
+                  
+                  {/* Legend */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                    <div className="text-[10px] font-bold text-gray-700 mb-2">Board Textures & Streets</div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[9px] text-gray-600">
+                      <div><span className="font-semibold">Rainbow:</span> No flush draw</div>
+                      <div><span className="font-semibold">Monotone:</span> All same suit</div>
+                      <div><span className="font-semibold">Middle Pair:</span> Connected board</div>
+                      <div><span className="font-semibold">Paired:</span> Board has pair</div>
+                      <div className="col-span-2 md:col-span-4 text-gray-500 mt-1">
+                        Each dot represents performance on specific texture at Flop, Turn, or River
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Position Grid */}
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                  {['BB (IP)', 'BB (OOP)', 'BTN (IP)', 'CO (IP)', 'CO (OOP)', 'EP (IP)', 'EP (OOP)', 'MP (IP)', 'MP (OOP)', 'SB (OOP)'].map((position) => (
+                    <div key={position} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="text-[10px] font-bold text-gray-700 mb-2 text-center">{position}</div>
+                      <div className="h-32">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart
+                            margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis 
+                              type="number" 
+                              dataKey="x"
+                              domain={[0, 1]}
+                              tick={false}
+                              stroke="#9ca3af"
+                              hide={true}
+                            />
+                            <YAxis 
+                              type="number" 
+                              dataKey="winrate"
+                              domain={[-50, 50]}
+                              ticks={[-50, -25, 0, 25, 50]}
+                              tick={{ fontSize: 9 }}
+                              stroke="#9ca3af"
+                              width={30}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '6px',
+                                padding: '6px',
+                                fontSize: '11px'
+                              }}
+                              formatter={(value: number, name: string, props: any) => [
+                                `${value > 0 ? '+' : ''}${value.toFixed(1)} bb/100`,
+                                `${props.payload.texture} - ${props.payload.street}`
+                              ]}
+                            />
+                            <ZAxis range={[50, 50]} />
+                            <Scatter 
+                              data={(() => {
+                                // Generate mock data for each position with more sparse distribution
+                                const textures = ['Rainbow', 'Monotone', 'Middle Pair', 'Paired'];
+                                const streets = ['Flop', 'Turn', 'River'];
+                                const baseWinrate = position.includes('IP') ? 8 : -3;
+                                const variance = position.includes('BB') ? 15 : 8;
+                                
+                                return textures.flatMap((texture, i) => 
+                                  streets.map((street, j) => {
+                                    const winrate = baseWinrate + (Math.random() * variance * 2 - variance) + (i * 3) - (j * 2);
+                                    
+                                    // Calculate color based on winrate (gradient from red to green)
+                                    const getColor = (wr: number) => {
+                                      if (wr >= 20) return '#10b981'; // green-500
+                                      if (wr >= 10) return '#22c55e'; // green-400
+                                      if (wr >= 5) return '#84cc16'; // lime-500
+                                      if (wr >= 0) return '#eab308'; // yellow-500
+                                      if (wr >= -5) return '#f97316'; // orange-500
+                                      if (wr >= -10) return '#f87171'; // red-400
+                                      return '#ef4444'; // red-500
+                                    };
+                                    
+                                    return {
+                                      texture,
+                                      street,
+                                      x: 0.5 + (Math.random() * 0.1 - 0.05), // Slight horizontal jitter
+                                      winrate,
+                                      fill: getColor(winrate),
+                                      label: `${texture.substring(0, 3)}-${street.substring(0, 1)}`
+                                    };
+                                  })
+                                );
+                              })()}
+                              shape={(props: any) => {
+                                const { cx, cy, fill } = props;
+                                return (
+                                  <circle
+                                    cx={cx}
+                                    cy={cy}
+                                    r={4}
+                                    fill={fill}
+                                    opacity={0.8}
+                                  />
+                                );
+                              }}
+                            />
+                          </ScatterChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {/* Average winrate for this position */}
+                      <div className="text-center mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-[9px] text-gray-500">Avg</div>
+                        <div className="text-xs font-bold text-gray-900">
+                          {position.includes('IP') ? '+8.3' : '-2.1'} bb/100
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                  {/* Scroll indicator at bottom */}
+                  <div className="sticky bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent pointer-events-none -mb-4 mt-2"></div>
+                </div>
+              </div>
+
+              {/* Hero/Villain Winrate - Right Half */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-600" />
+                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Hero/Villain Winrate</h3>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Performance vs positions</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      <ChevronDown className="w-3 h-3 animate-bounce" />
+                      <span>Scroll</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-4 max-h-[600px] overflow-y-auto scrollbar-thin relative">
+                  {/* Scroll indicator at top */}
+                  <div className="sticky top-0 left-0 right-0 h-4 bg-gradient-to-b from-white to-transparent pointer-events-none z-10 -mt-4 mb-2"></div>
+                  
+                  {/* Legend */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                    <div className="text-[10px] font-bold text-gray-700 mb-2">Positions</div>
+                    <div className="grid grid-cols-2 gap-1 text-[9px] text-gray-600">
+                      <div><span className="font-semibold">BTN:</span> Button</div>
+                      <div><span className="font-semibold">CO:</span> Cutoff</div>
+                      <div><span className="font-semibold">HJ:</span> Hijack</div>
+                      <div><span className="font-semibold">MP:</span> Mid Pos</div>
+                      <div><span className="font-semibold">EP:</span> Early Pos</div>
+                      <div><span className="font-semibold">UTG:</span> Under Gun</div>
+                      <div><span className="font-semibold">SB:</span> Small Blind</div>
+                      <div><span className="font-semibold">BB:</span> Big Blind</div>
+                    </div>
+                  </div>
+                  
+                  {/* Position vs Position Grid */}
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                  {['BB', 'SB', 'BTN', 'CO', 'HJ', 'MP', 'EP', 'UTG'].map((heroPosition) => (
+                    <div key={heroPosition} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="text-[10px] font-bold text-gray-700 mb-2 text-center">{heroPosition} vs All</div>
+                      <div className="h-32">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart
+                            margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis 
+                              type="number" 
+                              dataKey="x"
+                              domain={[0, 1]}
+                              tick={false}
+                              stroke="#9ca3af"
+                              hide={true}
+                            />
+                            <YAxis 
+                              type="number" 
+                              dataKey="winrate"
+                              domain={[-50, 50]}
+                              ticks={[-50, -25, 0, 25, 50]}
+                              tick={{ fontSize: 9 }}
+                              stroke="#9ca3af"
+                              width={30}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: '#ffffff',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '6px',
+                                padding: '6px',
+                                fontSize: '11px'
+                              }}
+                              formatter={(value: number, name: string, props: any) => [
+                                `${value > 0 ? '+' : ''}${value.toFixed(1)} bb/100`,
+                                `vs ${props.payload.villain}`
+                              ]}
+                            />
+                            <ZAxis range={[50, 50]} />
+                            <Scatter 
+                              data={(() => {
+                                // All possible villain positions
+                                const allPositions = ['BB', 'SB', 'BTN', 'CO', 'HJ', 'MP', 'EP', 'UTG'];
+                                const villainPositions = allPositions.filter(p => p !== heroPosition);
+                                
+                                // Position strength for realistic data
+                                const positionStrength: Record<string, number> = {
+                                  'BTN': 20, 'CO': 15, 'HJ': 10, 'MP': 5, 
+                                  'EP': 0, 'UTG': -5, 'SB': -8, 'BB': -10
+                                };
+                                
+                                const heroStrength = positionStrength[heroPosition] || 0;
+                                
+                                return villainPositions.map((villain) => {
+                                  const villainStrength = positionStrength[villain] || 0;
+                                  // Hero vs Villain advantage
+                                  const baseWinrate = heroStrength - villainStrength;
+                                  const variance = 8;
+                                  const winrate = baseWinrate + (Math.random() * variance * 2 - variance);
+                                  
+                                  // Calculate color based on winrate (gradient from red to green)
+                                  const getColor = (wr: number) => {
+                                    if (wr >= 20) return '#10b981'; // green-500
+                                    if (wr >= 10) return '#22c55e'; // green-400
+                                    if (wr >= 5) return '#84cc16'; // lime-500
+                                    if (wr >= 0) return '#eab308'; // yellow-500
+                                    if (wr >= -5) return '#f97316'; // orange-500
+                                    if (wr >= -10) return '#f87171'; // red-400
+                                    return '#ef4444'; // red-500
+                                  };
+                                  
+                                  return {
+                                    villain,
+                                    x: 0.5 + (Math.random() * 0.1 - 0.05), // Slight horizontal jitter
+                                    winrate,
+                                    fill: getColor(winrate)
+                                  };
+                                });
+                              })()}
+                              shape={(props: any) => {
+                                const { cx, cy, fill } = props;
+                                return (
+                                  <circle
+                                    cx={cx}
+                                    cy={cy}
+                                    r={4}
+                                    fill={fill}
+                                    opacity={0.8}
+                                  />
+                                );
+                              }}
+                            />
+                          </ScatterChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {/* Average winrate vs all positions */}
+                      <div className="text-center mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-[9px] text-gray-500">Avg vs All</div>
+                        <div className="text-xs font-bold text-gray-900">
+                          {(() => {
+                            const posStrength: Record<string, number> = {
+                              'BTN': 12, 'CO': 8, 'HJ': 5, 'MP': 2, 
+                              'EP': -1, 'UTG': -3, 'SB': -6, 'BB': -8
+                            };
+                            const avg = posStrength[heroPosition] || 0;
+                            return `${avg > 0 ? '+' : ''}${avg.toFixed(1)} bb/100`;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  </div>
+                  
+                  {/* Scroll indicator at bottom */}
+                  <div className="sticky bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent pointer-events-none -mb-4 mt-2"></div>
+                </div>
               </div>
             </div>
 
             {/* Start Session CTA */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-sm p-6 border border-blue-500">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 border-2 border-blue-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-white text-lg font-semibold mb-1">Ready to Play?</h3>
-                  <p className="text-blue-100 text-sm">Start a new session to track your performance</p>
+                  <h3 className="text-white text-base font-bold mb-1">Ready to Play?</h3>
+                  <p className="text-blue-100 text-xs">Start a new session to track your performance</p>
                 </div>
                 <button
                   onClick={startSession}
-                  className="bg-white hover:bg-gray-50 text-blue-600 font-semibold px-6 py-3 rounded-lg transition-all shadow-sm flex items-center gap-2"
+                  className="bg-white hover:bg-gray-50 text-blue-600 font-bold px-5 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm"
                 >
-                  <PlayCircle className="w-5 h-5" />
+                  <PlayCircle className="w-4 h-4" />
                   Start Session
                 </button>
               </div>
@@ -345,20 +1162,20 @@ export function PlayerView() {
 
             {/* Sessions Table */}
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h3 className="text-lg font-semibold text-gray-900">Session History</h3>
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session History</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Duration</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Hands</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">P/L</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Buy-in</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">ROI</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Win/Loss</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Date</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Duration</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Hands</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">P/L</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Balance</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">ROI</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Win/Loss</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -368,40 +1185,40 @@ export function PlayerView() {
                       
                       return (
                         <tr key={session.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2 text-gray-500 text-sm">
-                              <Calendar className="w-4 h-4" />
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1.5 text-gray-500 text-xs">
+                              <Calendar className="w-3.5 h-3.5" />
                               {formatDate(session.date)}
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="text-sm font-medium text-gray-900">{formatTime(session.duration)}</div>
+                          <td className="px-3 py-2.5">
+                            <div className="text-xs font-semibold text-gray-900">{formatTime(session.duration)}</div>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="text-sm font-medium text-gray-900">{session.handsPlayed}</div>
+                          <td className="px-3 py-2.5">
+                            <div className="text-xs font-semibold text-gray-900">{session.handsPlayed}</div>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-2.5">
                             <div className={`text-sm font-bold ${sessionProfit ? 'text-green-600' : 'text-red-600'}`}>
                               {formatPL(session.profitLoss)}
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="text-sm text-gray-900">${session.buyIn}</div>
+                          <td className="px-3 py-2.5">
+                            <div className="text-xs font-semibold text-gray-900">${session.buyIn}</div>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className={`text-sm font-semibold ${parseFloat(roi) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <td className="px-3 py-2.5">
+                            <div className={`text-xs font-bold ${parseFloat(roi) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {roi}%
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-1 text-xs">
-                                <span className="text-gray-500">Win:</span>
-                                <span className="text-green-600 font-medium">${session.biggestWin}</span>
+                          <td className="px-3 py-2.5">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1 text-[10px]">
+                                <span className="text-gray-500">W:</span>
+                                <span className="text-green-600 font-bold">${session.biggestWin}</span>
                               </div>
-                              <div className="flex items-center gap-1 text-xs">
-                                <span className="text-gray-500">Loss:</span>
-                                <span className="text-red-600 font-medium">${Math.abs(session.biggestLoss)}</span>
+                              <div className="flex items-center gap-1 text-[10px]">
+                                <span className="text-gray-500">L:</span>
+                                <span className="text-red-600 font-bold">${Math.abs(session.biggestLoss)}</span>
                               </div>
                             </div>
                           </td>
@@ -413,20 +1230,418 @@ export function PlayerView() {
               </div>
 
               {sessionHistory.length === 0 && (
-                <div className="text-center py-12 text-gray-400">
-                  <History className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                  <p>No sessions yet. Start your first session above!</p>
+                <div className="text-center py-8 text-gray-400">
+                  <History className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p className="text-xs">No sessions yet. Start your first session above!</p>
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Right Column (30%) - Stakes Roadmap & Hand Range Heatmap */}
+          <div className="lg:col-span-3 space-y-3">
+            {/* Stakes Progression Timeline */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-gray-600" />
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Stakes Roadmap</h3>
+                </div>
+              </div>
+              
+              <div className="p-3">
+                {/* Current Stakes Info */}
+                <div className="text-center mb-4 pb-4 border-b border-gray-200">
+                  <div className="text-[10px] text-gray-500 mb-1">Current Stakes</div>
+                  <div className="text-2xl font-bold text-gray-900">NL50</div>
+                  <div className="text-[9px] text-gray-500">$3,050 bankroll</div>
+                </div>
+
+                {/* Timeline */}
+                <div className="relative">
+                  {/* Timeline Line */}
+                  <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-gray-300"></div>
+                  
+                  {/* Timeline Items */}
+                  <div className="space-y-4">
+                    {/* Move Down Threshold */}
+                    <div className="relative flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-gray-400 flex items-center justify-center flex-shrink-0 z-10">
+                        <TrendingDown className="w-4 h-4 text-gray-600" />
+                      </div>
+                      <div className="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-3">
+                        <div className="mb-1">
+                          <div className="font-bold text-xs text-gray-900">NL25</div>
+                          <div className="text-[10px] text-gray-600">$2,000 bankroll</div>
+                        </div>
+                        <div className="text-[9px] text-gray-600">
+                          $1,050 above threshold
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Current Position */}
+                    <div className="relative flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-800 border-2 border-gray-900 flex items-center justify-center flex-shrink-0 z-10 shadow-md">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
+                      <div className="flex-1 bg-gray-800 border-2 border-gray-900 rounded-lg p-3 shadow-md">
+                        <div className="mb-1">
+                          <div className="font-bold text-xs text-white">NL50 • Current</div>
+                          <div className="text-[10px] text-gray-300">$3,050 bankroll</div>
+                        </div>
+                        <div className="flex items-center gap-2 text-[9px] text-gray-400">
+                          <span>61 buy-ins</span>
+                          <span>•</span>
+                          <span>5.2 bb/100</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Move Up Target */}
+                    <div className="relative flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-gray-400 flex items-center justify-center flex-shrink-0 z-10">
+                        <TrendingUp className="w-4 h-4 text-gray-600" />
+                      </div>
+                      <div className="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-3">
+                        <div className="mb-1">
+                          <div className="font-bold text-xs text-gray-900">NL100 • Target</div>
+                          <div className="text-[10px] text-gray-600">$5,000 bankroll</div>
+                        </div>
+                        <div className="text-[9px] text-gray-600">
+                          $1,950 needed • 2-3 weeks
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Future Milestone */}
+                    <div className="relative flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0 z-10">
+                        <TrendingUp className="w-4 h-4 text-gray-400" />
+                      </div>
+                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-3 opacity-60">
+                        <div className="mb-1">
+                          <div className="font-bold text-xs text-gray-700">NL200</div>
+                          <div className="text-[10px] text-gray-500">$10,000 bankroll</div>
+                        </div>
+                        <div className="text-[9px] text-gray-500">
+                          2-3 months
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-medium text-gray-600">Progress to NL100</span>
+                    <span className="text-[9px] font-bold text-gray-900">61%</span>
+                  </div>
+                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gray-800 rounded-full transition-all duration-500"
+                      style={{ width: '61%' }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Key Metrics */}
+                <div className="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] text-gray-500">Est. Sessions</span>
+                    <span className="text-xs font-bold text-gray-900">12-15</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] text-gray-500">Safety Buffer</span>
+                    <span className="text-xs font-bold text-gray-900">21 BI</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] text-gray-500">Win Rate</span>
+                    <span className="text-xs font-bold text-gray-900">5.2 bb/100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Hand Range Heatmap Section */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Hand Performance</h3>
+                    <p className="text-[10px] text-gray-500 mt-0.5">Color-coded by P/L</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-800 rounded"></div>
+                    <span className="text-[9px] text-gray-600">High</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded"></div>
+                    <span className="text-[9px] text-gray-600">Medium</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-gray-200 rounded"></div>
+                    <span className="text-[9px] text-gray-600">Low</span>
+                  </div>
+                </div>
+
+              {/* Poker Hand Grid (13x13) */}
+              <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
+                {(() => {
+                  const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+                  const handData: Record<string, number> = {
+                    'AA': 450, 'KK': 380, 'QQ': 320, 'JJ': 280, 'TT': 210, '99': 180, '88': 150, '77': 120, '66': 90, '55': 60, '44': 30, '33': -10, '22': -20,
+                    'AKs': 250, 'AQs': 200, 'AJs': 180, 'ATs': 150, 'A9s': 80, 'A8s': 50, 'A7s': 20, 'A6s': 10, 'A5s': 40, 'A4s': 30, 'A3s': 10, 'A2s': 0,
+                    'AKo': 180, 'KQs': 170, 'KJs': 140, 'KTs': 110, 'K9s': 50, 'K8s': 20, 'K7s': -10, 'K6s': -20, 'K5s': -30, 'K4s': -40, 'K3s': -50, 'K2s': -60,
+                    'AQo': 150, 'KQo': 120, 'QJs': 130, 'QTs': 100, 'Q9s': 40, 'Q8s': 10, 'Q7s': -20, 'Q6s': -30, 'Q5s': -40, 'Q4s': -50, 'Q3s': -60, 'Q2s': -70,
+                    'AJo': 130, 'KJo': 90, 'QJo': 80, 'JTs': 110, 'J9s': 50, 'J8s': 20, 'J7s': -10, 'J6s': -30, 'J5s': -40, 'J4s': -50, 'J3s': -60, 'J2s': -70,
+                    'ATo': 100, 'KTo': 70, 'QTo': 60, 'JTo': 80, 'T9s': 80, 'T8s': 50, 'T7s': 20, 'T6s': -10, 'T5s': -20, 'T4s': -40, 'T3s': -50, 'T2s': -60,
+                    'A9o': 50, 'K9o': 30, 'Q9o': 20, 'J9o': 30, 'T9o': 50, '98s': 70, '97s': 40, '96s': 10, '95s': -10, '94s': -30, '93s': -40, '92s': -50,
+                    'A8o': 30, 'K8o': 10, 'Q8o': 0, 'J8o': 10, 'T8o': 30, '98o': 40, '87s': 60, '86s': 30, '85s': 10, '84s': -20, '83s': -30, '82s': -40,
+                    'A7o': 10, 'K7o': -10, 'Q7o': -20, 'J7o': -10, 'T7o': 10, '97o': 20, '87o': 30, '76s': 50, '75s': 30, '74s': 0, '73s': -20, '72s': -50,
+                    'A6o': 0, 'K6o': -20, 'Q6o': -30, 'J6o': -20, 'T6o': -10, '96o': 0, '86o': 10, '76o': 20, '65s': 40, '64s': 20, '63s': -10, '62s': -40,
+                    'A5o': 20, 'K5o': -30, 'Q5o': -40, 'J5o': -30, 'T5o': -20, '95o': -10, '85o': 0, '75o': 10, '65o': 20, '54s': 40, '53s': 10, '52s': -30,
+                    'A4o': 10, 'K4o': -40, 'Q4o': -50, 'J4o': -40, 'T4o': -30, '94o': -20, '84o': -10, '74o': 0, '64o': 10, '54o': 20, '43s': 20, '42s': -20,
+                    'A3o': 0, 'K3o': -50, 'Q3o': -60, 'J3o': -50, 'T3o': -40, '93o': -30, '83o': -20, '73o': -10, '63o': 0, '53o': 10, '43o': 10, '32s': 0
+                  };
+
+                  return ranks.map((rank1, i) => 
+                    ranks.map((rank2, j) => {
+                      let handLabel = '';
+                      let handKey = '';
+                      
+                      if (i === j) {
+                        // Pocket pairs (diagonal)
+                        handLabel = `${rank1}${rank2}`;
+                        handKey = handLabel;
+                      } else if (i < j) {
+                        // Suited hands (above diagonal)
+                        handLabel = `${rank1}${rank2}s`;
+                        handKey = handLabel;
+                      } else {
+                        // Offsuit hands (below diagonal)
+                        handLabel = `${rank2}${rank1}o`;
+                        handKey = handLabel;
+                      }
+
+                      const plValue = handData[handKey] || 0;
+                      
+                      // Determine background color based on P/L - Neutral grayscale
+                      let bgColor = '';
+                      let textColor = 'text-white';
+                      
+                      if (plValue > 150) {
+                        bgColor = 'bg-gray-900';
+                      } else if (plValue > 50) {
+                        bgColor = 'bg-gray-800';
+                      } else if (plValue > 0) {
+                        bgColor = 'bg-gray-700';
+                      } else if (plValue === 0) {
+                        bgColor = 'bg-gray-400';
+                      } else if (plValue > -50) {
+                        bgColor = 'bg-gray-300';
+                        textColor = 'text-gray-700';
+                      } else if (plValue > -100) {
+                        bgColor = 'bg-gray-200';
+                        textColor = 'text-gray-700';
+                      } else {
+                        bgColor = 'bg-gray-100';
+                        textColor = 'text-gray-700';
+                      }
+
+                      return (
+                        <div
+                          key={`${i}-${j}`}
+                          className={`${bgColor} ${textColor} aspect-square flex flex-col items-center justify-center rounded text-[10px] font-bold hover:scale-110 transition-transform cursor-pointer relative group`}
+                        >
+                          <span>{handLabel}</span>
+                          {/* Tooltip */}
+                          <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
+                            {handLabel}: {plValue >= 0 ? '+' : ''}{plValue > 0 ? `$${plValue}` : plValue === 0 ? '$0' : `-$${Math.abs(plValue)}`}
+                          </div>
+                        </div>
+                      );
+                    })
+                  );
+                })()}
+              </div>
+
+              <div className="mt-3 text-[10px] text-gray-500 text-center">
+                <p>Hover for P/L • s=suited, o=offsuit</p>
+              </div>
+
+              {/* Hand Range Stats Summary - Inside Hand Performance Section */}
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200">
+                <div className="text-center">
+                  <div className="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-1">Best</div>
+                  <div className="text-base font-bold text-gray-900">AA</div>
+                  <div className="text-[9px] text-gray-500">+$450</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-1">Worst</div>
+                  <div className="text-base font-bold text-gray-900">72o</div>
+                  <div className="text-[9px] text-gray-500">-$50</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-1">Hands</div>
+                  <div className="text-base font-bold text-gray-900">169</div>
+                  <div className="text-[9px] text-gray-500">combos</div>
+                </div>
+              </div>
+              </div>
+            </div>
+            </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="balance" className="space-y-3 mt-6">
+            {/* Balance Overview Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded shadow-sm border-2 border-blue-500">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wide">Current Balance</span>
+                  <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center">
+                    <Wallet className="w-4 h-4 text-blue-100" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-white mb-1">
+                  ${(buyIn + sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0)).toLocaleString()}
+                </div>
+                <div className="text-[10px] text-blue-200">Available funds</div>
+              </div>
+
+              <div className="bg-white border border-gray-200 p-4 rounded hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Total Deposits</span>
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <ArrowDownRight className="w-4 h-4 text-green-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 mb-1">
+                  ${(sessionHistory.reduce((sum, s) => sum + s.buyIn, 0) + buyIn).toLocaleString()}
+                </div>
+                <div className="text-[10px] text-gray-500">All time</div>
+              </div>
+
+              <div className="bg-white border border-gray-200 p-4 rounded hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Total Winnings</span>
+                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                    {sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? (
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <TrendingDown className="w-4 h-4 text-red-600" />
+                    )}
+                  </div>
+                </div>
+                <div className={`text-2xl font-bold mb-1 ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
+                </div>
+                <div className="text-[10px] text-gray-500">Net profit/loss</div>
+              </div>
+            </div>
+
+            {/* Recent Transactions */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Recent Transactions</h3>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {sessionHistory.slice(0, 10).map((session) => {
+                  const isProfit = session.profitLoss >= 0;
+                  return (
+                    <div key={session.id} className="p-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            isProfit ? 'bg-green-100' : 'bg-red-100'
+                          }`}>
+                            {isProfit ? (
+                              <TrendingUp className="w-4 h-4 text-green-600" />
+                            ) : (
+                              <TrendingDown className="w-4 h-4 text-red-600" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-900 text-sm">Session Payout</div>
+                            <div className="text-[10px] text-gray-500">
+                              {formatDate(session.date)} • {formatTime(session.duration)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-base font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                            {formatPL(session.profitLoss)}
+                          </div>
+                          <div className="text-[10px] text-gray-500">
+                            {session.handsPlayed} hands
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {sessionHistory.length === 0 && (
+                  <div className="p-8 text-center text-gray-400">
+                    <DollarSign className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                    <p className="text-xs">No transactions yet. Start playing to see your balance activity!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Balance Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <ArrowDownRight className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Deposit Funds</h4>
+                    <p className="text-[10px] text-gray-500">Add money to your balance</p>
+                  </div>
+                </div>
+                <button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg transition-all text-sm">
+                  Deposit
+                </button>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <ArrowUpRight className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 text-sm">Withdraw Funds</h4>
+                    <p className="text-[10px] text-gray-500">Transfer money out</p>
+                  </div>
+                </div>
+                <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg transition-all text-sm">
+                  Withdraw
+                </button>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-0 relative">
+      {renderAiModal()}
+      
+      <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
       {/* Session Header */}
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
         <div className="flex items-center justify-between mb-4">
@@ -553,9 +1768,21 @@ export function PlayerView() {
           )}
         </div>
 
-        {/* P/L Graph */}
+        {/* P/L & EV Graph */}
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <h3 className="font-semibold text-gray-900 mb-4">Session Performance</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-900">Session Performance</h3>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-600 rounded-full"></div>
+                <span className="text-xs text-gray-600">Actual P/L</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
+                <span className="text-xs text-gray-600">EV</span>
+              </div>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={sessionData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -577,14 +1804,24 @@ export function PlayerView() {
                   padding: '12px',
                   color: '#111827'
                 }}
-                formatter={(value: number) => [`$${value.toLocaleString()}`, 'P/L']}
+                formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === 'pl' ? 'Actual P/L' : 'EV']}
               />
               <Line
                 type="monotone"
                 dataKey="pl"
-                name="P/L"
+                name="pl"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={{ r: 3, fill: '#10b981' }}
+                activeDot={{ r: 5 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="ev"
+                name="ev"
                 stroke="#3b82f6"
                 strokeWidth={2}
+                strokeDasharray="5 5"
                 dot={{ r: 3, fill: '#3b82f6' }}
                 activeDot={{ r: 5 }}
               />
@@ -614,6 +1851,7 @@ export function PlayerView() {
             <div className="text-red-600 font-semibold">${biggestLoss}</div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
