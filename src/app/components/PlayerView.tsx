@@ -28,6 +28,23 @@ interface SavedSession {
   biggestLoss: number;
 }
 
+interface PokerAccount {
+  id: string;
+  platform: string;
+  platformColor: string;
+  chartColor: string;
+  status: 'active' | 'inactive' | 'restricted';
+  makeup: number;
+  balance: number;
+  deposits: number;
+  totalPL: number;
+}
+
+interface AccountDataPoint {
+  date: string;
+  value: number;
+}
+
 export function PlayerView() {
   // Mock player data
   const currentPlayer = {
@@ -38,7 +55,7 @@ export function PlayerView() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | null>(null);
   const [aiQuery, setAiQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
@@ -93,6 +110,57 @@ export function PlayerView() {
       biggestLoss: -220
     }
   ]);
+
+  // Poker accounts state
+  const [pokerAccounts] = useState<PokerAccount[]>([
+    {
+      id: '1',
+      platform: 'PokerStars',
+      platformColor: 'bg-red-500',
+      chartColor: '#ef4444',
+      status: 'active',
+      makeup: -450,
+      balance: 3250,
+      deposits: 5000,
+      totalPL: -1750
+    },
+    {
+      id: '2',
+      platform: 'GGPoker',
+      platformColor: 'bg-blue-500',
+      chartColor: '#3b82f6',
+      status: 'active',
+      makeup: 0,
+      balance: 1850,
+      deposits: 2000,
+      totalPL: -150
+    },
+    {
+      id: '3',
+      platform: '888Poker',
+      platformColor: 'bg-green-500',
+      chartColor: '#22c55e',
+      status: 'inactive',
+      makeup: -120,
+      balance: 450,
+      deposits: 1000,
+      totalPL: -550
+    },
+    {
+      id: '4',
+      platform: 'PartyPoker',
+      platformColor: 'bg-purple-500',
+      chartColor: '#a855f7',
+      status: 'active',
+      makeup: -80,
+      balance: 920,
+      deposits: 1500,
+      totalPL: -580
+    }
+  ]);
+
+  const [accountPerformanceData, setAccountPerformanceData] = useState<Record<string, AccountDataPoint[]>>({});
+  const [selectedAccount, setSelectedAccount] = useState<PokerAccount | null>(null);
 
   // Operations state for infinite scroll
   const [operations, setOperations] = useState<any[]>([]);
@@ -310,6 +378,35 @@ export function PlayerView() {
       videoRef.current.srcObject = stream;
     }
   }, [stream]);
+
+  // Generate account performance data
+  useEffect(() => {
+    const data: Record<string, AccountDataPoint[]> = {};
+    const days = 30;
+    
+    pokerAccounts.forEach((account) => {
+      const accountData: AccountDataPoint[] = [];
+      let currentValue = account.balance - Math.abs(account.totalPL);
+      
+      for (let i = days; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        
+        // Simulate daily variance
+        const dailyChange = (Math.random() - 0.45) * 150; // Slight negative drift
+        currentValue += dailyChange;
+        
+        accountData.push({
+          date: date.toISOString().split('T')[0],
+          value: Math.round(currentValue)
+        });
+      }
+      
+      data[account.id] = accountData;
+    });
+    
+    setAccountPerformanceData(data);
+  }, [pokerAccounts]);
 
   // Update session data when active
   useEffect(() => {
@@ -870,6 +967,101 @@ export function PlayerView() {
         >
           <HandHistoryForm onClose={() => setActiveSlideIn(null)} />
         </SlideInPanel>
+
+        <SlideInPanel 
+          isOpen={activeSlideIn === 'accountdetails'} 
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedAccount(null);
+          }}
+          title={selectedAccount ? `${selectedAccount.platform} Details` : 'Account Details'}
+        >
+          {selectedAccount && (
+            <div className="space-y-4">
+              {/* Account Header */}
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="bg-gray-700 text-white text-lg font-bold px-4 py-3 rounded-lg">
+                  {selectedAccount.platform.substring(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <div className="text-lg font-bold text-gray-900">{selectedAccount.platform}</div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${selectedAccount.status === 'active' ? 'bg-gray-600' : 'bg-gray-400'}`}></div>
+                    <span className="text-sm text-gray-600 capitalize">{selectedAccount.status}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="text-xs text-gray-500 mb-1">Makeup</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    ${Math.abs(selectedAccount.makeup).toLocaleString()}
+                  </div>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="text-xs text-gray-500 mb-1">Current Balance</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    ${selectedAccount.balance.toLocaleString()}
+                  </div>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="text-xs text-gray-500 mb-1">Net Deposits</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    ${selectedAccount.deposits.toLocaleString()}
+                  </div>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="text-xs text-gray-500 mb-1">Total P/L</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {selectedAccount.totalPL >= 0 ? '+' : ''}${selectedAccount.totalPL.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance Chart */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div className="text-sm font-bold text-gray-900 mb-3">Performance Trend</div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={accountPerformanceData[selectedAccount.id] || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="date"
+                      stroke="#6b7280"
+                      style={{ fontSize: '10px' }}
+                      tickFormatter={(value) => {
+                        const date = new Date(value);
+                        return `${date.getMonth() + 1}/${date.getDate()}`;
+                      }}
+                    />
+                    <YAxis 
+                      stroke="#6b7280"
+                      style={{ fontSize: '10px' }}
+                      tickFormatter={(value) => `$${value}`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value: any) => [`$${value}`, 'Balance']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="#6b7280"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </SlideInPanel>
         
         <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
         {/* Player Header */}
@@ -1030,8 +1222,8 @@ export function PlayerView() {
             <div className="grid grid-cols-1 lg:grid-cols-10 gap-3">
               {/* Left Column (70%) - Chart and Sessions */}
               <div className="lg:col-span-7 space-y-3">
-                {/* P/L & EV Chart */}
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                {/* Performance Chart */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1053,56 +1245,141 @@ export function PlayerView() {
                   </div>
                 </div>
               </div>
+
               <div className="p-4">
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={sessionHistory.slice().reverse().map((s, i) => ({
-                    session: `S${i + 1}`,
-                    pl: s.profitLoss,
-                    ev: s.ev,
-                    date: s.date
-                  }))}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      dataKey="session" 
-                      stroke="#6b7280"
-                      style={{ fontSize: '12px' }}
-                    />
-                    <YAxis 
-                      stroke="#6b7280"
-                      style={{ fontSize: '12px' }}
-                      tickFormatter={(value) => `$${value.toLocaleString()}`}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        padding: '12px',
-                        color: '#111827'
-                      }}
-                      formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === 'pl' ? 'Actual P/L' : 'EV']}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="pl"
-                      name="pl"
-                      stroke="#10b981"
-                      strokeWidth={2}
-                      dot={{ r: 4, fill: '#10b981' }}
-                      activeDot={{ r: 6 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="ev"
-                      name="ev"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={{ r: 4, fill: '#3b82f6' }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {/* P/L & EV Chart */}
+                <div className="mb-4">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={sessionHistory.slice().reverse().map((s, i) => ({
+                      session: `S${i + 1}`,
+                      pl: s.profitLoss,
+                      ev: s.ev,
+                      date: s.date
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="session" 
+                        stroke="#6b7280"
+                        style={{ fontSize: '12px' }}
+                      />
+                      <YAxis 
+                        stroke="#6b7280"
+                        style={{ fontSize: '12px' }}
+                        tickFormatter={(value) => `$${value.toLocaleString()}`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px',
+                          padding: '12px',
+                          color: '#111827'
+                        }}
+                        formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === 'pl' ? 'Actual P/L' : 'EV']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="pl"
+                        name="pl"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        dot={{ r: 4, fill: '#10b981' }}
+                        activeDot={{ r: 6 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="ev"
+                        name="ev"
+                        stroke="#3b82f6"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={{ r: 4, fill: '#3b82f6' }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Summary Metrics */}
+                <div className="grid grid-cols-4 gap-3 mb-4 pb-4 border-b border-gray-200">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Makeup</div>
+                    <div className={`text-lg font-bold ${pokerAccounts.reduce((sum, a) => sum + a.makeup, 0) < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      ${Math.abs(pokerAccounts.reduce((sum, a) => sum + a.makeup, 0)).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Current Balance</div>
+                    <div className="text-lg font-bold text-gray-900">
+                      ${pokerAccounts.reduce((sum, a) => sum + a.balance, 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Net Deposits</div>
+                    <div className="text-lg font-bold text-gray-900">
+                      ${pokerAccounts.reduce((sum, a) => sum + a.deposits, 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">Total P/L</div>
+                    <div className={`text-lg font-bold ${pokerAccounts.reduce((sum, a) => sum + a.totalPL, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {pokerAccounts.reduce((sum, a) => sum + a.totalPL, 0) >= 0 ? '+' : ''}${pokerAccounts.reduce((sum, a) => sum + a.totalPL, 0).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Account Cards Grid */}
+                <div className="grid grid-cols-2 gap-3">
+                  {pokerAccounts.map((account) => (
+                    <div key={account.id} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`${account.platformColor} text-white text-[10px] font-bold px-2 py-1 rounded`}>
+                            {account.platform.substring(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-gray-900">{account.platform}</div>
+                            <div className="flex items-center gap-1">
+                              <div className={`w-1.5 h-1.5 rounded-full ${account.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                              <span className="text-[9px] text-gray-500 capitalize">{account.status}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`text-right ${account.totalPL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <div className="text-sm font-bold">
+                            {account.totalPL >= 0 ? '+' : ''}${account.totalPL.toLocaleString()}
+                          </div>
+                          <div className="text-[9px]">P/L</div>
+                        </div>
+                      </div>
+                      
+                      {/* Mini Chart */}
+                      <div className="h-16 mb-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={accountPerformanceData[account.id] || []}>
+                            <Line
+                              type="monotone"
+                              dataKey="value"
+                              stroke={account.chartColor}
+                              strokeWidth={1.5}
+                              dot={false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setSelectedAccount(account);
+                          setActiveSlideIn('accountdetails');
+                        }}
+                        className="w-full text-[10px] font-medium text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded py-1.5 transition-colors"
+                      >
+                        View Details
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1637,6 +1914,161 @@ export function PlayerView() {
                   <div className="flex justify-between items-center">
                     <span className="text-[8px] text-gray-500">Win Rate</span>
                     <span className="text-[10px] font-semibold text-gray-700">5.2 bb/100</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Calendar View */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Last 30 Days</h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">Win/Loss calendar</p>
+              </div>
+              
+              <div className="p-3">
+                {/* Calendar Grid */}
+                <div className="mb-3">
+                  {/* Day Headers */}
+                  <div className="grid grid-cols-7 gap-1 mb-1">
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                      <div key={i} className="text-center text-[9px] font-bold text-gray-500">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Calendar Days */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {(() => {
+                      const days = [];
+                      const today = new Date();
+                      const thirtyDaysAgo = new Date(today);
+                      thirtyDaysAgo.setDate(today.getDate() - 29);
+                      
+                      // Find the starting day of week for 30 days ago
+                      const startDayOfWeek = thirtyDaysAgo.getDay();
+                      
+                      // Add empty cells for days before our 30-day range
+                      for (let i = 0; i < startDayOfWeek; i++) {
+                        days.push(
+                          <div key={`empty-${i}`} className="aspect-square"></div>
+                        );
+                      }
+                      
+                      // Generate 30 days
+                      for (let i = 0; i < 30; i++) {
+                        const date = new Date(thirtyDaysAgo);
+                        date.setDate(thirtyDaysAgo.getDate() + i);
+                        const dayNum = date.getDate();
+                        const isToday = date.toDateString() === today.toDateString();
+                        
+                        // Simulate session data (random wins/losses)
+                        const hasSession = Math.random() > 0.3;
+                        const pl = hasSession ? (Math.random() - 0.4) * 500 : 0;
+                        const isWin = pl > 0;
+                        const isLoss = pl < 0;
+                        const magnitude = Math.abs(pl);
+                        
+                        // Determine color intensity
+                        let bgColor = 'bg-gray-100';
+                        if (isWin) {
+                          if (magnitude > 300) bgColor = 'bg-green-600';
+                          else if (magnitude > 150) bgColor = 'bg-green-500';
+                          else bgColor = 'bg-green-300';
+                        } else if (isLoss) {
+                          if (magnitude > 300) bgColor = 'bg-red-600';
+                          else if (magnitude > 150) bgColor = 'bg-red-500';
+                          else bgColor = 'bg-red-300';
+                        }
+                        
+                        days.push(
+                          <UITooltip key={`day-${i}`}>
+                            <TooltipTrigger asChild>
+                              <div
+                                className={`aspect-square rounded ${bgColor} ${isToday ? 'ring-2 ring-blue-500' : ''} flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity`}
+                              >
+                                <span className={`text-[9px] font-medium ${isWin || isLoss ? 'text-white' : 'text-gray-600'}`}>
+                                  {dayNum}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-xs">
+                                <div className="font-bold">{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                {hasSession ? (
+                                  <>
+                                    <div className={isWin ? 'text-green-600' : 'text-red-600'}>
+                                      {isWin ? '+' : ''}{formatPL(pl)}
+                                    </div>
+                                    <div className="text-gray-500 text-[10px]">1 session</div>
+                                  </>
+                                ) : (
+                                  <div className="text-gray-500">No session</div>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </UITooltip>
+                        );
+                      }
+                      
+                      return days;
+                    })()}
+                  </div>
+                </div>
+
+                {/* Legend */}
+                <div className="border-t border-gray-200 pt-2 mb-2">
+                  <div className="text-[9px] font-bold text-gray-600 mb-1.5">Legend</div>
+                  <div className="grid grid-cols-2 gap-1 text-[8px] text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-green-600"></div>
+                      <span>Big Win (&gt;$300)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-red-600"></div>
+                      <span>Big Loss (&gt;$300)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-green-500"></div>
+                      <span>Win ($150-300)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-red-500"></div>
+                      <span>Loss ($150-300)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-green-300"></div>
+                      <span>Small Win (&lt;$150)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-red-300"></div>
+                      <span>Small Loss (&lt;$150)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded bg-gray-100 border border-gray-300"></div>
+                      <span>No Session</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 rounded ring-2 ring-blue-500 bg-gray-100"></div>
+                      <span>Today</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Summary Stats */}
+                <div className="border-t border-gray-200 pt-2 grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <div className="text-[9px] text-gray-500">Win Days</div>
+                    <div className="text-sm font-bold text-green-600">12</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-gray-500">Loss Days</div>
+                    <div className="text-sm font-bold text-red-600">9</div>
+                  </div>
+                  <div>
+                    <div className="text-[9px] text-gray-500">Win Rate</div>
+                    <div className="text-sm font-bold text-gray-900">57%</div>
                   </div>
                 </div>
               </div>

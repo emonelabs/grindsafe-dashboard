@@ -54,7 +54,7 @@ export default function SlideInPanel({
 
       {/* Slide-in Panel */}
       <div
-        className="fixed right-0 top-0 h-full w-[480px] bg-white shadow-2xl border-l border-gray-200 z-50 animate-slideInRight flex flex-col"
+        className="fixed right-0 top-0 h-full w-[800px] bg-white shadow-2xl border-l border-gray-200 z-50 animate-slideInRight flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
