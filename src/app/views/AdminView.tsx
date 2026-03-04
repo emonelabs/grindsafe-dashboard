@@ -256,6 +256,160 @@ export function AdminView() {
   const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
   const [activeSlideIn, setActiveSlideIn] = useState<'paymentwallet' | null>(null);
 
+  // Members state - Backoffice/Management personnel (max 15)
+  const [members] = useState([
+    {
+      id: 'member1',
+      name: 'John Anderson',
+      avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'CEO',
+      department: 'Executive',
+      email: 'john.anderson@company.com',
+      phone: '+1 (555) 123-4567',
+      joinDate: new Date('2022-01-15')
+    },
+    {
+      id: 'member2',
+      name: 'Sarah Williams',
+      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'CFO',
+      department: 'Finance',
+      email: 'sarah.williams@company.com',
+      phone: '+1 (555) 234-5678',
+      joinDate: new Date('2022-02-20')
+    },
+    {
+      id: 'member3',
+      name: 'Michael Brown',
+      avatar: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Operations Manager',
+      department: 'Operations',
+      email: 'michael.brown@company.com',
+      phone: '+1 (555) 345-6789',
+      joinDate: new Date('2022-03-10')
+    },
+    {
+      id: 'member4',
+      name: 'Emily Davis',
+      avatar: 'https://images.unsplash.com/photo-1607746882042-944635dfe10e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Finance Director',
+      department: 'Finance',
+      email: 'emily.davis@company.com',
+      phone: '+1 (555) 456-7890',
+      joinDate: new Date('2022-04-05')
+    },
+    {
+      id: 'member5',
+      name: 'David Martinez',
+      avatar: 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Compliance Officer',
+      department: 'Legal',
+      email: 'david.martinez@company.com',
+      phone: '+1 (555) 567-8901',
+      joinDate: new Date('2022-05-12')
+    },
+    {
+      id: 'member6',
+      name: 'Jessica Taylor',
+      avatar: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'HR Manager',
+      department: 'Human Resources',
+      email: 'jessica.taylor@company.com',
+      phone: '+1 (555) 678-9012',
+      joinDate: new Date('2022-06-18')
+    },
+    {
+      id: 'member7',
+      name: 'Robert Johnson',
+      avatar: 'https://images.unsplash.com/photo-1556157382-97eda2d62296?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'IT Director',
+      department: 'Technology',
+      email: 'robert.johnson@company.com',
+      phone: '+1 (555) 789-0123',
+      joinDate: new Date('2022-07-22')
+    },
+    {
+      id: 'member8',
+      name: 'Amanda White',
+      avatar: 'https://images.unsplash.com/photo-1598550874175-4d0ef436c909?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Marketing Director',
+      department: 'Marketing',
+      email: 'amanda.white@company.com',
+      phone: '+1 (555) 890-1234',
+      joinDate: new Date('2022-08-30')
+    },
+    {
+      id: 'member9',
+      name: 'Christopher Lee',
+      avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Customer Support Lead',
+      department: 'Support',
+      email: 'christopher.lee@company.com',
+      phone: '+1 (555) 901-2345',
+      joinDate: new Date('2022-09-14')
+    },
+    {
+      id: 'member10',
+      name: 'Michelle Garcia',
+      avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Accountant',
+      department: 'Finance',
+      email: 'michelle.garcia@company.com',
+      phone: '+1 (555) 012-3456',
+      joinDate: new Date('2022-10-08')
+    },
+    {
+      id: 'member11',
+      name: 'Kevin Rodriguez',
+      avatar: 'https://images.unsplash.com/photo-1621784563330-caee0b138a00?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Legal Advisor',
+      department: 'Legal',
+      email: 'kevin.rodriguez@company.com',
+      phone: '+1 (555) 123-4568',
+      joinDate: new Date('2022-11-20')
+    },
+    {
+      id: 'member12',
+      name: 'Laura Martinez',
+      avatar: 'https://images.unsplash.com/photo-1609505848912-b7c3b8b4beda?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Team Coordinator',
+      department: 'Operations',
+      email: 'laura.martinez@company.com',
+      phone: '+1 (555) 234-5679',
+      joinDate: new Date('2023-01-11')
+    },
+    {
+      id: 'member13',
+      name: 'Daniel Kim',
+      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Data Analyst',
+      department: 'Analytics',
+      email: 'daniel.kim@company.com',
+      phone: '+1 (555) 345-6780',
+      joinDate: new Date('2023-02-25')
+    },
+    {
+      id: 'member14',
+      name: 'Rachel Green',
+      avatar: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Office Manager',
+      department: 'Administration',
+      email: 'rachel.green@company.com',
+      phone: '+1 (555) 456-7891',
+      joinDate: new Date('2023-03-17')
+    },
+    {
+      id: 'member15',
+      name: 'Thomas Wright',
+      avatar: 'https://images.unsplash.com/photo-1552058544-f2b08422138a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
+      role: 'Security Officer',
+      department: 'Security',
+      email: 'thomas.wright@company.com',
+      phone: '+1 (555) 567-8902',
+      joinDate: new Date('2023-04-29')
+    }
+  ]);
+
   // Operations state for infinite scroll
   const [operations, setOperations] = useState<any[]>([]);
   const [operationsPage, setOperationsPage] = useState(1);
@@ -666,6 +820,10 @@ export function AdminView() {
               <User className="w-4 h-4" />
               Players
             </TabsTrigger>
+            <TabsTrigger value="members" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Users className="w-4 h-4" />
+              Members
+            </TabsTrigger>
             <TabsTrigger value="sessions" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <Play className="w-4 h-4" />
               Sessions
@@ -1053,7 +1211,7 @@ export function AdminView() {
                               <img 
                                 src={operation.player.avatar} 
                                 alt={operation.player.name}
-                                className="w-8 h-8 rounded-full border border-gray-200"
+                                className="w-8 h-8 rounded-full border border-gray-200 object-cover"
                               />
                               <div>
                                 <div className="text-sm font-medium text-gray-900">{operation.player.name}</div>
@@ -1163,19 +1321,19 @@ export function AdminView() {
                     const team = teams.find(t => t.id === player.teamId);
                     return (
                       <tr key={player.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <img 
-                              src={player.avatar} 
-                              alt={player.name}
-                              className="w-10 h-10 rounded-full border border-gray-200"
-                            />
-                            <div>
-                              <div className="text-sm font-semibold text-gray-900">{player.name}</div>
-                              <div className="text-xs text-gray-500">ID: {player.id}</div>
-                            </div>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={player.avatar} 
+                            alt={player.name}
+                            className="w-10 h-10 rounded-full border border-gray-200 object-cover"
+                          />
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">{player.name}</div>
+                            <div className="text-xs text-gray-500">ID: {player.id}</div>
                           </div>
-                        </td>
+                        </div>
+                      </td>
                         <td className="px-4 py-3">
                           {team && (
                             <div className="flex items-center gap-2">
@@ -1209,6 +1367,71 @@ export function AdminView() {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="members">
+          {/* Members Table - For backoffice/management */}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Team Members</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Role</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Department</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Phone</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Join Date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {members.map(member => (
+                    <tr key={member.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={member.avatar} 
+                            alt={member.name}
+                            className="w-10 h-10 rounded-full border border-gray-200 object-cover"
+                          />
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">{member.name}</div>
+                            <div className="text-xs text-gray-500">ID: {member.id}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
+                          {member.role}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">{member.department}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-700">{member.email}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-700">{member.phone}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">
+                          {member.joinDate.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            year: 'numeric' 
+                          })}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -1252,7 +1475,7 @@ export function AdminView() {
                               <img 
                                 src={player.avatar} 
                                 alt={player.name}
-                                className="w-10 h-10 rounded-full border border-gray-200"
+                                className="w-10 h-10 rounded-full border border-gray-200 object-cover"
                               />
                               <div>
                                 <div className="text-sm font-semibold text-gray-900">{player.name}</div>
