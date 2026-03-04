@@ -9,6 +9,8 @@ import WithdrawalForm from './forms/WithdrawalForm';
 import SplitForm from './forms/SplitForm';
 import SwapForm from './forms/SwapForm';
 import HandHistoryForm from './forms/HandHistoryForm';
+import PaymentWalletForm, { PaymentWallet } from './forms/PokerWalletForm';
+import { PaymentWalletsContent } from './PokerWalletsContent';
 
 interface SessionData {
   time: string;
@@ -55,7 +57,7 @@ export function PlayerView() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | null>(null);
   const [aiQuery, setAiQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
@@ -169,6 +171,49 @@ export function PlayerView() {
   const [hasMoreOperations, setHasMoreOperations] = useState(true);
   const [expandedOperations, setExpandedOperations] = useState<Set<string>>(new Set());
   const operationsScrollRef = useRef<HTMLDivElement>(null);
+
+  // Payment Wallets state
+  const [paymentWallets, setPaymentWallets] = useState<PaymentWallet[]>([
+    {
+      id: 'w1',
+      provider: 'Skrill',
+      username: 'marcus_skrill',
+      email: 'marcus.chen@example.com',
+      balance: 5420.50,
+      status: 'active',
+      createdAt: new Date('2026-03-01'),
+      notes: 'Main payment account'
+    },
+    {
+      id: 'w2',
+      provider: 'Neteller',
+      username: 'marcus_neteller',
+      email: 'marcus.chen@example.com',
+      balance: 2150.00,
+      status: 'active',
+      createdAt: new Date('2026-02-28')
+    },
+    {
+      id: 'w3',
+      provider: 'Pix',
+      username: '+55-11-98765-4321',
+      email: 'marcus@pix.com',
+      balance: 0.00,
+      status: 'inactive',
+      createdAt: new Date('2026-02-15')
+    },
+    {
+      id: 'w4',
+      provider: 'LuxonPay',
+      username: 'marcus_luxon',
+      email: 'marcus.alt@example.com',
+      balance: 1875.25,
+      status: 'active',
+      createdAt: new Date('2026-01-10'),
+      notes: 'Secondary payment method'
+    }
+  ]);
+  const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
 
   // Generate mock operations
   const generateOperations = (page: number, count: number = 10) => {
@@ -322,6 +367,42 @@ export function PlayerView() {
       }, 500);
     }
   }, [isLoadingOperations, hasMoreOperations, operationsPage]);
+
+  // Payment Wallet handlers
+  const handleAddWallet = () => {
+    setSelectedWalletForEdit(null);
+    setActiveSlideIn('paymentwallet');
+  };
+
+  const handleEditWallet = (wallet: PaymentWallet) => {
+    setSelectedWalletForEdit(wallet);
+    setActiveSlideIn('paymentwallet');
+  };
+
+  const handleDeleteWallet = (walletId: string) => {
+    setPaymentWallets(prev => prev.filter(w => w.id !== walletId));
+  };
+
+  const handleWalletSubmit = (walletData: Omit<PaymentWallet, 'id' | 'createdAt'>) => {
+    if (selectedWalletForEdit) {
+      // Edit existing wallet
+      setPaymentWallets(prev => 
+        prev.map(w => 
+          w.id === selectedWalletForEdit.id 
+            ? { ...walletData, id: w.id, createdAt: w.createdAt }
+            : w
+        )
+      );
+    } else {
+      // Add new wallet
+      const newWallet: PaymentWallet = {
+        ...walletData,
+        id: `w${Date.now()}`,
+        createdAt: new Date()
+      };
+      setPaymentWallets(prev => [...prev, newWallet]);
+    }
+  };
 
   // Initialize video stream only when screen sharing is enabled
   useEffect(() => {
@@ -969,6 +1050,24 @@ export function PlayerView() {
         </SlideInPanel>
 
         <SlideInPanel 
+          isOpen={activeSlideIn === 'paymentwallet'} 
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedWalletForEdit(null);
+          }}
+          title={selectedWalletForEdit ? 'Edit Payment Wallet' : 'Add Payment Wallet'}
+        >
+          <PaymentWalletForm 
+            onClose={() => {
+              setActiveSlideIn(null);
+              setSelectedWalletForEdit(null);
+            }}
+            onSubmit={handleWalletSubmit}
+            editWallet={selectedWalletForEdit}
+          />
+        </SlideInPanel>
+
+        <SlideInPanel 
           isOpen={activeSlideIn === 'accountdetails'} 
           onClose={() => {
             setActiveSlideIn(null);
@@ -1108,116 +1207,13 @@ export function PlayerView() {
               <ArrowLeftRight className="w-4 h-4 mr-2" />
               Operations
             </TabsTrigger>
+            <TabsTrigger value="wallets">
+              <Wallet className="w-4 h-4 mr-2" />
+              Wallets
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-3 mt-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-3 rounded shadow-sm border border-blue-500">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-bold text-blue-100 uppercase tracking-wide">Current Balance</span>
-                  <div className="w-8 h-8 bg-blue-500/30 rounded-lg flex items-center justify-center">
-                    <Wallet className="w-4 h-4 text-blue-100" />
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-2xl font-bold text-white">
-                    ${(buyIn + sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0)).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-gray-200 p-3 rounded">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Deposits</span>
-                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                    <ArrowDownRight className="w-4 h-4 text-green-600" />
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-2xl font-bold text-gray-900">
-                    ${(sessionHistory.reduce((sum, s) => sum + s.buyIn, 0) + buyIn).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-gray-200 p-3 rounded">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Winnings</span>
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    {sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? (
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-red-600" />
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className={`text-2xl font-bold ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-gray-200 p-3 rounded">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Sessions</span>
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <History className="w-4 h-4 text-gray-600" />
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-2xl font-bold text-gray-900">{sessionHistory.length}</span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-gray-200 p-3 rounded">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total P/L</span>
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    {sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? (
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-red-600" />
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className={`text-2xl font-bold ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-gray-200 p-3 rounded">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Total Hands</span>
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <PlayCircle className="w-4 h-4 text-blue-600" />
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-2xl font-bold text-gray-900">
-                    {sessionHistory.reduce((sum, s) => sum + s.handsPlayed, 0).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-white border border-gray-200 p-3 rounded">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Avg Session</span>
-                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-purple-600" />
-                  </div>
-                </div>
-                <div className="flex items-end justify-between">
-                  <span className="text-2xl font-bold text-gray-900">
-                    {sessionHistory.length > 0 ? formatTime(Math.round(sessionHistory.reduce((sum, s) => sum + s.duration, 0) / sessionHistory.length)) : '0h 0m'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* 70/30 Split Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-10 gap-3">
               {/* Left Column (70%) - Chart and Sessions */}
@@ -2436,6 +2432,15 @@ export function PlayerView() {
               </div>
             </div>
           </TabsContent>
+
+          <TabsContent value="wallets" className="mt-6">
+            <PaymentWalletsContent
+              wallets={paymentWallets}
+              onAdd={handleAddWallet}
+              onEdit={handleEditWallet}
+              onDelete={handleDeleteWallet}
+            />
+          </TabsContent>
         </Tabs>
         </div>
       </div>
@@ -2596,6 +2601,24 @@ export function PlayerView() {
         title="Upload Hand History"
       >
         <HandHistoryForm onClose={() => setActiveSlideIn(null)} />
+      </SlideInPanel>
+
+      <SlideInPanel 
+        isOpen={activeSlideIn === 'paymentwallet'} 
+        onClose={() => {
+          setActiveSlideIn(null);
+          setSelectedWalletForEdit(null);
+        }}
+        title={selectedWalletForEdit ? 'Edit Payment Wallet' : 'Add Payment Wallet'}
+      >
+        <PaymentWalletForm 
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedWalletForEdit(null);
+          }}
+          onSubmit={handleWalletSubmit}
+          editWallet={selectedWalletForEdit}
+        />
       </SlideInPanel>
       
       <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
