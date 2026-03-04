@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from 'recharts';
-import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle, Upload } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
+import SlideInPanel from './SlideInPanel';
+import DepositForm from './forms/DepositForm';
+import WithdrawalForm from './forms/WithdrawalForm';
+import SplitForm from './forms/SplitForm';
+import SwapForm from './forms/SwapForm';
+import HandHistoryForm from './forms/HandHistoryForm';
 
 interface SessionData {
   time: string;
@@ -32,6 +38,7 @@ export function PlayerView() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | null>(null);
   const [aiQuery, setAiQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
@@ -741,8 +748,7 @@ export function PlayerView() {
                   <button
                     onClick={() => {
                       setShowCommandPalette(false);
-                      setActiveTab('balance');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      setActiveSlideIn('deposit');
                     }}
                     className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
                   >
@@ -758,8 +764,7 @@ export function PlayerView() {
                   <button
                     onClick={() => {
                       setShowCommandPalette(false);
-                      setActiveTab('balance');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      setActiveSlideIn('withdrawal');
                     }}
                     className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
                   >
@@ -775,8 +780,7 @@ export function PlayerView() {
                   <button
                     onClick={() => {
                       setShowCommandPalette(false);
-                      setActiveTab('balance');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      setActiveSlideIn('split');
                     }}
                     className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
                   >
@@ -792,8 +796,7 @@ export function PlayerView() {
                   <button
                     onClick={() => {
                       setShowCommandPalette(false);
-                      setActiveTab('balance');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      setActiveSlideIn('swap');
                     }}
                     className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
                   >
@@ -805,11 +808,68 @@ export function PlayerView() {
                       <div className="text-xs text-gray-500">Swap stakes with another player</div>
                     </div>
                   </button>
+
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setActiveSlideIn('handhistory');
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-gray-100 transition-colors">
+                      <Upload className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Upload Hand History</div>
+                      <div className="text-xs text-gray-500">Import and parse hand history files</div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
           </>
         )}
+
+        {/* Slide-In Panels */}
+        <SlideInPanel 
+          isOpen={activeSlideIn === 'deposit'} 
+          onClose={() => setActiveSlideIn(null)}
+          title="Request Deposit"
+        >
+          <DepositForm onClose={() => setActiveSlideIn(null)} />
+        </SlideInPanel>
+
+        <SlideInPanel 
+          isOpen={activeSlideIn === 'withdrawal'} 
+          onClose={() => setActiveSlideIn(null)}
+          title="Request Withdrawal"
+        >
+          <WithdrawalForm onClose={() => setActiveSlideIn(null)} />
+        </SlideInPanel>
+
+        <SlideInPanel 
+          isOpen={activeSlideIn === 'split'} 
+          onClose={() => setActiveSlideIn(null)}
+          title="Split Balance"
+        >
+          <SplitForm onClose={() => setActiveSlideIn(null)} />
+        </SlideInPanel>
+
+        <SlideInPanel 
+          isOpen={activeSlideIn === 'swap'} 
+          onClose={() => setActiveSlideIn(null)}
+          title="Swap Stakes"
+        >
+          <SwapForm onClose={() => setActiveSlideIn(null)} />
+        </SlideInPanel>
+
+        <SlideInPanel 
+          isOpen={activeSlideIn === 'handhistory'} 
+          onClose={() => setActiveSlideIn(null)}
+          title="Upload Hand History"
+        >
+          <HandHistoryForm onClose={() => setActiveSlideIn(null)} />
+        </SlideInPanel>
         
         <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
         {/* Player Header */}
@@ -1953,6 +2013,158 @@ export function PlayerView() {
   return (
     <div className="space-y-0 relative">
       {renderAiModal()}
+      
+      {/* Command Palette */}
+      {showCommandPalette && (
+        <>
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 z-50 animate-fadeIn"
+            onClick={() => setShowCommandPalette(false)}
+          />
+          
+          {/* Command Palette Modal */}
+          <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-xl z-50 animate-fadeIn">
+            <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+              {/* Header */}
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <div className="flex items-center gap-2">
+                  <Command className="w-4 h-4 text-gray-600" />
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Quick Actions</h3>
+                  <div className="ml-auto flex items-center gap-2">
+                    <kbd className="px-2 py-0.5 text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-300 rounded">ESC</kbd>
+                    <span className="text-xs text-gray-500">to close</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions List */}
+              <div className="p-2">
+                <button
+                  onClick={() => {
+                    setShowCommandPalette(false);
+                    setActiveSlideIn('deposit');
+                  }}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                >
+                  <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                    <ArrowDownRight className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-gray-900">Request Deposit</div>
+                    <div className="text-xs text-gray-500">Add funds to your balance</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowCommandPalette(false);
+                    setActiveSlideIn('withdrawal');
+                  }}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                >
+                  <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                    <ArrowUpRight className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-gray-900">Request Withdraw</div>
+                    <div className="text-xs text-gray-500">Withdraw funds from your balance</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowCommandPalette(false);
+                    setActiveSlideIn('split');
+                  }}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                >
+                  <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                    <Split className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-gray-900">Request Split</div>
+                    <div className="text-xs text-gray-500">Split balance with another player</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowCommandPalette(false);
+                    setActiveSlideIn('swap');
+                  }}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                >
+                  <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors">
+                    <Repeat2 className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-gray-900">Request Swap</div>
+                    <div className="text-xs text-gray-500">Swap stakes with another player</div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowCommandPalette(false);
+                    setActiveSlideIn('handhistory');
+                  }}
+                  className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                >
+                  <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center group-hover:bg-gray-100 transition-colors">
+                    <Upload className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-gray-900">Upload Hand History</div>
+                    <div className="text-xs text-gray-500">Import and parse hand history files</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Slide-In Panels */}
+      <SlideInPanel 
+        isOpen={activeSlideIn === 'deposit'} 
+        onClose={() => setActiveSlideIn(null)}
+        title="Request Deposit"
+      >
+        <DepositForm onClose={() => setActiveSlideIn(null)} />
+      </SlideInPanel>
+
+      <SlideInPanel 
+        isOpen={activeSlideIn === 'withdrawal'} 
+        onClose={() => setActiveSlideIn(null)}
+        title="Request Withdrawal"
+      >
+        <WithdrawalForm onClose={() => setActiveSlideIn(null)} />
+      </SlideInPanel>
+
+      <SlideInPanel 
+        isOpen={activeSlideIn === 'split'} 
+        onClose={() => setActiveSlideIn(null)}
+        title="Split Balance"
+      >
+        <SplitForm onClose={() => setActiveSlideIn(null)} />
+      </SlideInPanel>
+
+      <SlideInPanel 
+        isOpen={activeSlideIn === 'swap'} 
+        onClose={() => setActiveSlideIn(null)}
+        title="Swap Stakes"
+      >
+        <SwapForm onClose={() => setActiveSlideIn(null)} />
+      </SlideInPanel>
+
+      <SlideInPanel 
+        isOpen={activeSlideIn === 'handhistory'} 
+        onClose={() => setActiveSlideIn(null)}
+        title="Upload Hand History"
+      >
+        <HandHistoryForm onClose={() => setActiveSlideIn(null)} />
+      </SlideInPanel>
       
       <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
       {/* Session Header */}
