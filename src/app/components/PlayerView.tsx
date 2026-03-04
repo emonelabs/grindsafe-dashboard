@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from 'recharts';
-import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
+import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 
 interface SessionData {
   time: string;
@@ -85,6 +86,167 @@ export function PlayerView() {
       biggestLoss: -220
     }
   ]);
+
+  // Operations state for infinite scroll
+  const [operations, setOperations] = useState<any[]>([]);
+  const [operationsPage, setOperationsPage] = useState(1);
+  const [isLoadingOperations, setIsLoadingOperations] = useState(false);
+  const [hasMoreOperations, setHasMoreOperations] = useState(true);
+  const [expandedOperations, setExpandedOperations] = useState<Set<string>>(new Set());
+  const operationsScrollRef = useRef<HTMLDivElement>(null);
+
+  // Generate mock operations
+  const generateOperations = (page: number, count: number = 10) => {
+    const types = ['Deposit', 'Withdrawal', 'Split', 'Swap'];
+    const wallets = ['Main Wallet', 'PokerStars', 'GGPoker', 'Bank Account', 'Credit Card'];
+    const operations = [];
+    
+    for (let i = 0; i < count; i++) {
+      const type = types[Math.floor(Math.random() * types.length)];
+      const daysAgo = (page - 1) * count + i;
+      const date = new Date();
+      date.setDate(date.getDate() - daysAgo);
+      date.setHours(Math.floor(Math.random() * 12) + 8);
+      date.setMinutes(Math.floor(Math.random() * 60));
+      
+      const opNumber = 1234 - ((page - 1) * count + i);
+      let transactions: any[] = [];
+      let amount = 0;
+      
+      if (type === 'Deposit') {
+        const txCount = Math.floor(Math.random() * 2) + 1;
+        for (let j = 0; j < txCount; j++) {
+          const txAmount = Math.floor(Math.random() * 2000) + 500;
+          amount += txAmount;
+          const sources = ['Bank Transfer', 'Credit Card', 'Wire Transfer'];
+          transactions.push({
+            from: sources[Math.floor(Math.random() * sources.length)],
+            fromType: 'external',
+            to: 'Main Wallet',
+            toType: 'wallet',
+            amount: txAmount
+          });
+        }
+      } else if (type === 'Withdrawal') {
+        const txAmount = Math.floor(Math.random() * 3000) + 500;
+        amount = txAmount;
+        transactions.push({
+          from: 'Main Wallet',
+          fromType: 'wallet',
+          to: 'Bank Account',
+          toType: 'external',
+          amount: txAmount
+        });
+      } else if (type === 'Split') {
+        const profit = Math.floor(Math.random() * 4000) + 1000;
+        amount = profit;
+        const playerShare = Math.floor(profit * 0.5);
+        const houseShare = profit - playerShare;
+        transactions.push({
+          from: 'Session Profit',
+          fromType: 'profit',
+          to: 'Player Share (50%)',
+          toType: 'player',
+          amount: playerShare
+        });
+        transactions.push({
+          from: 'Session Profit',
+          fromType: 'profit',
+          to: 'House Share (50%)',
+          toType: 'house',
+          amount: houseShare
+        });
+      } else if (type === 'Swap') {
+        const txCount = Math.floor(Math.random() * 2) + 1;
+        for (let j = 0; j < txCount; j++) {
+          const txAmount = Math.floor(Math.random() * 1000) + 100;
+          amount += txAmount;
+          const platforms = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'];
+          transactions.push({
+            from: 'Main Wallet',
+            fromType: 'wallet',
+            to: platforms[Math.floor(Math.random() * platforms.length)],
+            toType: 'platform',
+            amount: txAmount
+          });
+        }
+      }
+      
+      operations.push({
+        id: `OP-${opNumber.toString().padStart(6, '0')}`,
+        type,
+        date,
+        amount,
+        transactions,
+        status: 'Completed'
+      });
+    }
+    
+    return operations;
+  };
+
+  // Initialize operations
+  useEffect(() => {
+    if (activeTab === 'operations' && operations.length === 0) {
+      const initialOps = generateOperations(1, 15);
+      setOperations(initialOps);
+      // Expand only the first (latest) operation
+      if (initialOps.length > 0) {
+        setExpandedOperations(new Set([initialOps[0].id]));
+      }
+    }
+  }, [activeTab]);
+
+  // Toggle operation expansion
+  const toggleOperation = (operationId: string) => {
+    setExpandedOperations(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(operationId)) {
+        newSet.delete(operationId);
+      } else {
+        newSet.add(operationId);
+      }
+      return newSet;
+    });
+  };
+
+  // Infinite scroll handler
+  const handleOperationsScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (isLoadingOperations || !hasMoreOperations) {
+      return;
+    }
+    
+    const target = e.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = target;
+    
+    // Calculate how close we are to the bottom
+    const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+    
+    // Load more when scrolled 90% down
+    if (scrollPercentage > 0.9) {
+      setIsLoadingOperations(true);
+      
+      // Simulate loading delay
+      setTimeout(() => {
+        const nextPage = operationsPage + 1;
+        const newOperations = generateOperations(nextPage, 10);
+        
+        setOperations(prev => {
+          const updatedOps = [...prev, ...newOperations];
+          
+          // Stop loading more after 50 operations
+          if (updatedOps.length >= 50) {
+            setHasMoreOperations(false);
+          }
+          
+          return updatedOps;
+        });
+        
+        setOperationsPage(nextPage);
+        setIsLoadingOperations(false);
+      }, 500);
+    }
+  }, [isLoadingOperations, hasMoreOperations, operationsPage]);
 
   // Initialize video stream only when screen sharing is enabled
   useEffect(() => {
@@ -694,6 +856,10 @@ export function PlayerView() {
               <Wallet className="w-4 h-4 mr-2" />
               Balance
             </TabsTrigger>
+            <TabsTrigger value="operations">
+              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              Operations
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-3 mt-6">
@@ -852,36 +1018,36 @@ export function PlayerView() {
                       <p className="text-[10px] text-gray-500 mt-0.5">Performance across board textures</p>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      <ChevronDown className="w-3 h-3 animate-bounce" />
+                      <ChevronRight className="w-3 h-3 animate-pulse" />
                       <span>Scroll</span>
                     </div>
                   </div>
                 </div>
               
-                <div className="p-4 max-h-[600px] overflow-y-auto scrollbar-thin relative">
-                  {/* Scroll indicator at top */}
-                  <div className="sticky top-0 left-0 right-0 h-4 bg-gradient-to-b from-white to-transparent pointer-events-none z-10 -mt-4 mb-2"></div>
+                <div className="p-4 overflow-x-auto scrollbar-thin relative">
+                  {/* Scroll indicator at left */}
+                  <div className="absolute top-0 left-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
                   
                   {/* Legend */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 min-w-max">
                     <div className="text-[10px] font-bold text-gray-700 mb-2">Board Textures & Streets</div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[9px] text-gray-600">
+                    <div className="grid grid-cols-4 gap-2 text-[9px] text-gray-600">
                       <div><span className="font-semibold">Rainbow:</span> No flush draw</div>
                       <div><span className="font-semibold">Monotone:</span> All same suit</div>
                       <div><span className="font-semibold">Middle Pair:</span> Connected board</div>
                       <div><span className="font-semibold">Paired:</span> Board has pair</div>
-                      <div className="col-span-2 md:col-span-4 text-gray-500 mt-1">
+                      <div className="col-span-4 text-gray-500 mt-1">
                         Each dot represents performance on specific texture at Flop, Turn, or River
                       </div>
                     </div>
                   </div>
                   
                   {/* Position Grid */}
-                  <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="flex gap-2 pb-4 min-w-max">
                   {['BB (IP)', 'BB (OOP)', 'BTN (IP)', 'CO (IP)', 'CO (OOP)', 'EP (IP)', 'EP (OOP)', 'MP (IP)', 'MP (OOP)', 'SB (OOP)'].map((position) => (
-                    <div key={position} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div key={position} className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-shrink-0 w-48">
                       <div className="text-[10px] font-bold text-gray-700 mb-2 text-center">{position}</div>
-                      <div className="h-32">
+                      <div className="h-32 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <ScatterChart
                             margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
@@ -979,8 +1145,8 @@ export function PlayerView() {
                   ))}
                 </div>
                 
-                  {/* Scroll indicator at bottom */}
-                  <div className="sticky bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent pointer-events-none -mb-4 mt-2"></div>
+                  {/* Scroll indicator at right */}
+                  <div className="absolute top-0 right-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
                 </div>
               </div>
 
@@ -996,20 +1162,20 @@ export function PlayerView() {
                       <p className="text-[10px] text-gray-500 mt-0.5">Performance vs positions</p>
                     </div>
                     <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      <ChevronDown className="w-3 h-3 animate-bounce" />
+                      <ChevronRight className="w-3 h-3 animate-pulse" />
                       <span>Scroll</span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="p-4 max-h-[600px] overflow-y-auto scrollbar-thin relative">
-                  {/* Scroll indicator at top */}
-                  <div className="sticky top-0 left-0 right-0 h-4 bg-gradient-to-b from-white to-transparent pointer-events-none z-10 -mt-4 mb-2"></div>
+                <div className="p-4 overflow-x-auto scrollbar-thin relative">
+                  {/* Scroll indicator at left */}
+                  <div className="absolute top-0 left-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
                   
                   {/* Legend */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 min-w-max">
                     <div className="text-[10px] font-bold text-gray-700 mb-2">Positions</div>
-                    <div className="grid grid-cols-2 gap-1 text-[9px] text-gray-600">
+                    <div className="grid grid-cols-4 gap-1 text-[9px] text-gray-600">
                       <div><span className="font-semibold">BTN:</span> Button</div>
                       <div><span className="font-semibold">CO:</span> Cutoff</div>
                       <div><span className="font-semibold">HJ:</span> Hijack</div>
@@ -1022,11 +1188,11 @@ export function PlayerView() {
                   </div>
                   
                   {/* Position vs Position Grid */}
-                  <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="flex gap-2 pb-4 min-w-max">
                   {['BB', 'SB', 'BTN', 'CO', 'HJ', 'MP', 'EP', 'UTG'].map((heroPosition) => (
-                    <div key={heroPosition} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div key={heroPosition} className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-shrink-0 w-48">
                       <div className="text-[10px] font-bold text-gray-700 mb-2 text-center">{heroPosition} vs All</div>
-                      <div className="h-32">
+                      <div className="h-32 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <ScatterChart
                             margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
@@ -1137,8 +1303,8 @@ export function PlayerView() {
                   ))}
                   </div>
                   
-                  {/* Scroll indicator at bottom */}
-                  <div className="sticky bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-white to-transparent pointer-events-none -mb-4 mt-2"></div>
+                  {/* Scroll indicator at right */}
+                  <div className="absolute top-0 right-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
                 </div>
               </div>
             </div>
@@ -1246,51 +1412,61 @@ export function PlayerView() {
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-gray-600" />
                   <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Stakes Roadmap</h3>
+                  <UITooltip>
+                    <TooltipTrigger asChild>
+                      <button className="inline-flex items-center justify-center">
+                        <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 transition-colors" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      <p className="text-xs">Projections are based on the player's historical data and AI predictions</p>
+                    </TooltipContent>
+                  </UITooltip>
                 </div>
               </div>
               
               <div className="p-3">
                 {/* Current Stakes Info */}
-                <div className="text-center mb-4 pb-4 border-b border-gray-200">
-                  <div className="text-[10px] text-gray-500 mb-1">Current Stakes</div>
-                  <div className="text-2xl font-bold text-gray-900">NL50</div>
+                <div className="text-center mb-3 pb-3 border-b border-gray-200">
+                  <div className="text-[9px] text-gray-400 mb-0.5">Current Stakes</div>
+                  <div className="text-lg font-bold text-gray-900">NL50</div>
                   <div className="text-[9px] text-gray-500">$3,050 bankroll</div>
                 </div>
 
                 {/* Timeline */}
                 <div className="relative">
                   {/* Timeline Line */}
-                  <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-gray-300"></div>
+                  <div className="absolute left-[11px] top-0 bottom-0 w-px bg-gray-200"></div>
                   
                   {/* Timeline Items */}
-                  <div className="space-y-4">
+                  <div className="space-y-2.5">
                     {/* Move Down Threshold */}
-                    <div className="relative flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-gray-400 flex items-center justify-center flex-shrink-0 z-10">
-                        <TrendingDown className="w-4 h-4 text-gray-600" />
+                    <div className="relative flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center flex-shrink-0 z-10">
+                        <TrendingDown className="w-3 h-3 text-gray-500" />
                       </div>
-                      <div className="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-3">
-                        <div className="mb-1">
-                          <div className="font-bold text-xs text-gray-900">NL25</div>
-                          <div className="text-[10px] text-gray-600">$2,000 bankroll</div>
+                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded p-2">
+                        <div className="mb-0.5">
+                          <div className="font-semibold text-[10px] text-gray-700">NL25</div>
+                          <div className="text-[9px] text-gray-500">$2,000 bankroll</div>
                         </div>
-                        <div className="text-[9px] text-gray-600">
+                        <div className="text-[8px] text-gray-500">
                           $1,050 above threshold
                         </div>
                       </div>
                     </div>
 
                     {/* Current Position */}
-                    <div className="relative flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-800 border-2 border-gray-900 flex items-center justify-center flex-shrink-0 z-10 shadow-md">
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                    <div className="relative flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-gray-700 border border-gray-800 flex items-center justify-center flex-shrink-0 z-10">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
                       </div>
-                      <div className="flex-1 bg-gray-800 border-2 border-gray-900 rounded-lg p-3 shadow-md">
-                        <div className="mb-1">
-                          <div className="font-bold text-xs text-white">NL50 • Current</div>
-                          <div className="text-[10px] text-gray-300">$3,050 bankroll</div>
+                      <div className="flex-1 bg-gray-700 border border-gray-800 rounded p-2">
+                        <div className="mb-0.5">
+                          <div className="font-semibold text-[10px] text-white">NL50 • Current</div>
+                          <div className="text-[9px] text-gray-300">$3,050 bankroll</div>
                         </div>
-                        <div className="flex items-center gap-2 text-[9px] text-gray-400">
+                        <div className="flex items-center gap-1.5 text-[8px] text-gray-400">
                           <span>61 buy-ins</span>
                           <span>•</span>
                           <span>5.2 bb/100</span>
@@ -1299,32 +1475,32 @@ export function PlayerView() {
                     </div>
 
                     {/* Move Up Target */}
-                    <div className="relative flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-gray-400 flex items-center justify-center flex-shrink-0 z-10">
-                        <TrendingUp className="w-4 h-4 text-gray-600" />
+                    <div className="relative flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center flex-shrink-0 z-10">
+                        <TrendingUp className="w-3 h-3 text-gray-500" />
                       </div>
-                      <div className="flex-1 bg-gray-50 border border-gray-300 rounded-lg p-3">
-                        <div className="mb-1">
-                          <div className="font-bold text-xs text-gray-900">NL100 • Target</div>
-                          <div className="text-[10px] text-gray-600">$5,000 bankroll</div>
+                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded p-2">
+                        <div className="mb-0.5">
+                          <div className="font-semibold text-[10px] text-gray-700">NL100 • Target</div>
+                          <div className="text-[9px] text-gray-500">$5,000 bankroll</div>
                         </div>
-                        <div className="text-[9px] text-gray-600">
+                        <div className="text-[8px] text-gray-500">
                           $1,950 needed • 2-3 weeks
                         </div>
                       </div>
                     </div>
 
                     {/* Future Milestone */}
-                    <div className="relative flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0 z-10">
-                        <TrendingUp className="w-4 h-4 text-gray-400" />
+                    <div className="relative flex items-start gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center flex-shrink-0 z-10">
+                        <TrendingUp className="w-3 h-3 text-gray-400" />
                       </div>
-                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-3 opacity-60">
-                        <div className="mb-1">
-                          <div className="font-bold text-xs text-gray-700">NL200</div>
-                          <div className="text-[10px] text-gray-500">$10,000 bankroll</div>
+                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded p-2 opacity-50">
+                        <div className="mb-0.5">
+                          <div className="font-semibold text-[10px] text-gray-600">NL200</div>
+                          <div className="text-[9px] text-gray-500">$10,000 bankroll</div>
                         </div>
-                        <div className="text-[9px] text-gray-500">
+                        <div className="text-[8px] text-gray-500">
                           2-3 months
                         </div>
                       </div>
@@ -1333,32 +1509,32 @@ export function PlayerView() {
                 </div>
 
                 {/* Progress Bar */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="mt-3 pt-3 border-t border-gray-200">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[9px] font-medium text-gray-600">Progress to NL100</span>
-                    <span className="text-[9px] font-bold text-gray-900">61%</span>
+                    <span className="text-[8px] font-medium text-gray-500">Progress to NL100</span>
+                    <span className="text-[8px] font-semibold text-gray-700">61%</span>
                   </div>
-                  <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gray-800 rounded-full transition-all duration-500"
+                      className="h-full bg-gray-600 rounded-full transition-all duration-500"
                       style={{ width: '61%' }}
                     ></div>
                   </div>
                 </div>
 
                 {/* Key Metrics */}
-                <div className="grid grid-cols-1 gap-2 mt-4 pt-4 border-t border-gray-200">
+                <div className="grid grid-cols-1 gap-1.5 mt-3 pt-3 border-t border-gray-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-gray-500">Est. Sessions</span>
-                    <span className="text-xs font-bold text-gray-900">12-15</span>
+                    <span className="text-[8px] text-gray-500">Est. Sessions</span>
+                    <span className="text-[10px] font-semibold text-gray-700">12-15</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-gray-500">Safety Buffer</span>
-                    <span className="text-xs font-bold text-gray-900">21 BI</span>
+                    <span className="text-[8px] text-gray-500">Safety Buffer</span>
+                    <span className="text-[10px] font-semibold text-gray-700">21 BI</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] text-gray-500">Win Rate</span>
-                    <span className="text-xs font-bold text-gray-900">5.2 bb/100</span>
+                    <span className="text-[8px] text-gray-500">Win Rate</span>
+                    <span className="text-[10px] font-semibold text-gray-700">5.2 bb/100</span>
                   </div>
                 </div>
               </div>
@@ -1628,6 +1804,232 @@ export function PlayerView() {
                 <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg transition-all text-sm">
                   Withdraw
                 </button>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="operations" className="mt-6 flex flex-col h-[calc(100vh-280px)]">
+            {/* Operations Table */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col flex-1">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Operations History</h3>
+              </div>
+              <div 
+                ref={operationsScrollRef}
+                onScroll={handleOperationsScroll}
+                className="overflow-x-auto overflow-y-auto flex-1"
+              >
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Amount</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Transactions</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {operations.map((operation) => {
+                      const getOperationIcon = (type: string) => {
+                        switch (type) {
+                          case 'Deposit': return <ArrowDownRight className="w-4 h-4 text-gray-700" />;
+                          case 'Withdrawal': return <ArrowUpRight className="w-4 h-4 text-gray-700" />;
+                          case 'Split': return <Split className="w-4 h-4 text-gray-700" />;
+                          case 'Swap': return <Repeat2 className="w-4 h-4 text-gray-700" />;
+                          default: return <ArrowLeftRight className="w-4 h-4 text-gray-700" />;
+                        }
+                      };
+
+                      const getWalletIcon = (type: string, name: string) => {
+                        if (type === 'external') {
+                          if (name.includes('Bank') || name.includes('Wire')) {
+                            return (
+                              <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                                <DollarSign className="w-3 h-3 text-gray-600" />
+                              </div>
+                            );
+                          }
+                          if (name.includes('Card')) {
+                            return (
+                              <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                                <CreditCard className="w-3 h-3 text-gray-600" />
+                              </div>
+                            );
+                          }
+                        }
+                        if (type === 'wallet') {
+                          return (
+                            <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                              <Wallet className="w-3 h-3 text-blue-600" />
+                            </div>
+                          );
+                        }
+                        if (type === 'profit') {
+                          return (
+                            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+                              <DollarSign className="w-3 h-3 text-purple-600" />
+                            </div>
+                          );
+                        }
+                        if (type === 'player') {
+                          return (
+                            <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                              <Users className="w-3 h-3 text-blue-600" />
+                            </div>
+                          );
+                        }
+                        if (type === 'house') {
+                          return (
+                            <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                              <DollarSign className="w-3 h-3 text-gray-600" />
+                            </div>
+                          );
+                        }
+                        if (type === 'platform') {
+                          if (name === 'PokerStars') {
+                            return (
+                              <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-red-600">PS</span>
+                              </div>
+                            );
+                          }
+                          if (name === 'GGPoker') {
+                            return (
+                              <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-orange-600">GG</span>
+                              </div>
+                            );
+                          }
+                          if (name === '888Poker') {
+                            return (
+                              <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-green-600">888</span>
+                              </div>
+                            );
+                          }
+                          if (name === 'PartyPoker') {
+                            return (
+                              <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-purple-600">PP</span>
+                              </div>
+                            );
+                          }
+                        }
+                        return (
+                          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                            <Wallet className="w-3 h-3 text-gray-600" />
+                          </div>
+                        );
+                      };
+
+                      const formatDate = (date: Date) => {
+                        return date.toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        });
+                      };
+
+                      const formatTime = (date: Date) => {
+                        return date.toLocaleTimeString('en-US', { 
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        });
+                      };
+
+                      const isExpanded = expandedOperations.has(operation.id);
+                      
+                      return (
+                        <>
+                          <tr 
+                            key={operation.id} 
+                            onClick={() => toggleOperation(operation.id)}
+                            className="hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-shrink-0">
+                                  <ChevronRight 
+                                    className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                  />
+                                </div>
+                                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                                  {getOperationIcon(operation.type)}
+                                </div>
+                                <div>
+                                  <div className="text-sm font-semibold text-gray-900">{operation.type}</div>
+                                  <div className="text-xs text-gray-500">{operation.id}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm text-gray-900">{formatDate(operation.date)}</div>
+                              <div className="text-xs text-gray-500">{formatTime(operation.date)}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm font-bold text-gray-900">
+                                {operation.type === 'Withdrawal' ? '-' : operation.type === 'Deposit' ? '+' : ''}${operation.amount.toLocaleString()}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm text-gray-900">{operation.transactions.length} transaction{operation.transactions.length !== 1 ? 's' : ''}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                                <CheckCircle className="w-3 h-3" />
+                                {operation.status}
+                              </span>
+                            </td>
+                          </tr>
+                          
+                          {/* Sub-transactions - Only show when expanded */}
+                          {isExpanded && (
+                            <tr className="bg-gray-50">
+                              <td colSpan={5} className="px-4 py-0">
+                                <div className="pl-12 py-2 space-y-1">
+                                  {operation.transactions.map((tx: any, txIndex: number) => (
+                                    <div key={txIndex} className="flex items-center justify-between py-1.5 px-3 bg-white rounded border border-gray-200">
+                                      <div className="flex items-center gap-2">
+                                        {getWalletIcon(tx.fromType, tx.from)}
+                                        <span className="text-xs text-gray-600">{tx.from}</span>
+                                        <span className="text-xs text-gray-400">→</span>
+                                        {getWalletIcon(tx.toType, tx.to)}
+                                        <span className="text-xs text-gray-600">{tx.to}</span>
+                                      </div>
+                                      <span className="text-xs font-semibold text-gray-900">${tx.amount.toLocaleString()}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      );
+                    })}
+                    
+                    {/* Loading indicator */}
+                    {isLoadingOperations && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center">
+                          <div className="flex items-center justify-center gap-2 text-gray-500">
+                            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                            <span className="text-sm">Loading more operations...</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    
+                    {/* End of list indicator */}
+                    {!hasMoreOperations && operations.length > 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-6 text-center">
+                          <span className="text-xs text-gray-400">No more operations to load</span>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </TabsContent>
