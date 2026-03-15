@@ -9,11 +9,12 @@ import { LiveVideoGrid } from '../components/LiveVideoGrid';
 import { RecentSplits } from '../components/RecentSplits';
 import { WalletPerformance } from '../components/WalletPerformance';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
-import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight } from 'lucide-react';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield } from 'lucide-react';
 import { TeamsView } from './TeamsView';
 import { PaymentWalletsContent } from '../components/PokerWalletsContent';
 import PaymentWalletForm, { PaymentWallet } from '../components/forms/PokerWalletForm';
 import SlideInPanel from '../components/SlideInPanel';
+import { RiskManagement } from '../components/RiskManagement';
 
 interface Player {
   id: string;
@@ -828,6 +829,10 @@ export function AdminView() {
               <Play className="w-4 h-4" />
               Sessions
             </TabsTrigger>
+            <TabsTrigger value="risk" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Shield className="w-4 h-4" />
+              Risk Management
+            </TabsTrigger>
           </TabsList>
           
           {/* Time Period Filter */}
@@ -1530,6 +1535,10 @@ export function AdminView() {
               </table>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="risk">
+          <RiskManagement />
         </TabsContent>
       </Tabs>
 
