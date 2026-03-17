@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from 'recharts';
-import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle, Upload, FileText } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle, Upload, FileText, Shield, ExternalLink } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import SlideInPanel from './SlideInPanel';
@@ -205,6 +205,97 @@ export function PlayerView() {
   const [expandedOperations, setExpandedOperations] = useState<Set<string>>(new Set());
   const operationsScrollRef = useRef<HTMLDivElement>(null);
 
+  // Reconciliation state
+  const [reconciliationItems, setReconciliationItems] = useState<any[]>([]);
+
+  const updateReconciliationItems = useCallback(() => {
+    const items: any[] = [];
+    operations.forEach((op) => {
+      op.transactions.forEach((tx: any, txIndex: number) => {
+        let shouldShow = false;
+        let buttonType: 'confirm' | 'pay' = 'confirm';
+        
+        // Deposit: show transaction going TO poker site
+        if (op.type === 'Deposit' && tx.toType === 'poker_site') {
+          shouldShow = true;
+          buttonType = 'confirm';
+        }
+        // Withdrawal: show transaction going TO player wallet
+        else if (op.type === 'Withdrawal' && tx.toType === 'player_financial') {
+          shouldShow = true;
+          buttonType = 'confirm';
+        }
+        // Split: show transaction going TO house account
+        else if (op.type === 'Split' && tx.toType === 'house_account') {
+          shouldShow = true;
+          buttonType = 'pay';
+        }
+        // Swap: no reconciliation needed
+        
+        if (shouldShow && tx.status === 'pending') {
+          items.push({
+            opId: op.id,
+            opType: op.type,
+            txIndex,
+            amount: tx.amount,
+            from: tx.from,
+            fromType: tx.fromType,
+            to: tx.to,
+            toType: tx.toType,
+            owner: tx.owner,
+            status: tx.status,
+            date: op.date,
+            nickname: tx.nickname,
+            buttonType
+          });
+        }
+      });
+    });
+    setReconciliationItems(items);
+  }, [operations]);
+
+  const approveTransaction = useCallback((opId: string, txIndex: number) => {
+    setOperations(prev => prev.map(op => {
+      if (op.id === opId) {
+        const updatedTransactions = [...op.transactions];
+        updatedTransactions[txIndex] = {
+          ...updatedTransactions[txIndex],
+          status: 'confirmed'
+        };
+        const getOpStatus = (txs: any[]) => {
+          const statuses = txs.map(tx => tx.status);
+          if (statuses.some(s => s === 'pending')) return 'Pending';
+          if (statuses.some(s => s === 'failed')) return 'Failed';
+          return 'Completed';
+        };
+        return { ...op, transactions: updatedTransactions, status: getOpStatus(updatedTransactions) };
+      }
+      return op;
+    }));
+    setReconciliationItems(prev => prev.filter(item => !(item.opId === opId && item.txIndex === txIndex)));
+  }, []);
+
+  const rejectTransaction = useCallback((opId: string, txIndex: number) => {
+    setOperations(prev => prev.map(op => {
+      if (op.id === opId) {
+        const updatedTransactions = [...op.transactions];
+        updatedTransactions[txIndex] = {
+          ...updatedTransactions[txIndex],
+          status: 'failed'
+        };
+        const getOpStatus = (txs: any[]) => {
+          const statuses = txs.map(tx => tx.status);
+          if (statuses.some(s => s === 'pending')) return 'Pending';
+          if (statuses.some(s => s === 'failed')) return 'Failed';
+          return 'Completed';
+        };
+        return { ...op, transactions: updatedTransactions, status: getOpStatus(updatedTransactions) };
+      }
+      return op;
+    }));
+    setReconciliationItems(prev => prev.filter(item => !(item.opId === opId && item.txIndex === txIndex)));
+  }, []);
+
   // Payment Wallets state
   const [paymentWallets, setPaymentWallets] = useState<PaymentWallet[]>([
     {
@@ -354,8 +445,24 @@ export function PlayerView() {
   // Generate mock operations
   const generateOperations = (page: number, count: number = 10) => {
     const types = ['Deposit', 'Withdrawal', 'Split', 'Swap'];
-    const wallets = ['Main Wallet', 'PokerStars', 'GGPoker', 'Bank Account', 'Credit Card'];
+    const pokerSites = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'];
+    const playerFinancialWallets = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'];
     const operations = [];
+    
+    const getOwnerFromTo = (to: string) => {
+      const companyAccounts = ['Main Wallet', 'Bank Account', 'Credit Card'];
+      return companyAccounts.includes(to) ? 'company' : 'player';
+    };
+    
+    const getRandomStatus = () => {
+      const rand = Math.random();
+      if (rand < 0.7) return 'confirmed';
+      if (rand < 0.9) return 'pending';
+      return 'failed';
+    };
+    
+    let hasConfirmPending = false;
+    let hasPayPending = false;
     
     for (let i = 0; i < count; i++) {
       const type = types[Math.floor(Math.random() * types.length)];
@@ -369,64 +476,133 @@ export function PlayerView() {
       let transactions: any[] = [];
       let amount = 0;
       
+      const randomPokerSite = pokerSites[Math.floor(Math.random() * pokerSites.length)];
+      const randomPlayerWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
+      const nickname = currentPlayer.name.split(' ')[0] + 'PS';
+      
+      // Force pending status for specific conditions on page 1
+      const forceConfirmPending = page === 1 && !hasConfirmPending && (i === 0 || i === 1);
+      const forcePayPending = page === 1 && !hasPayPending && (type === 'Split' || (i > 1 && i === 2));
+      
       if (type === 'Deposit') {
-        const txCount = Math.floor(Math.random() * 2) + 1;
-        for (let j = 0; j < txCount; j++) {
-          const txAmount = Math.floor(Math.random() * 2000) + 500;
-          amount += txAmount;
-          const sources = ['Bank Transfer', 'Credit Card', 'Wire Transfer'];
-          transactions.push({
-            from: sources[Math.floor(Math.random() * sources.length)],
-            fromType: 'external',
-            to: 'Main Wallet',
-            toType: 'wallet',
-            amount: txAmount
-          });
-        }
+        const txAmount = Math.floor(Math.random() * 2000) + 500;
+        amount = txAmount;
+        
+        // First transaction: poker_site -> player_financial (needs confirm)
+        const pokerSiteStatus = forceConfirmPending ? 'pending' : getRandomStatus();
+        if (pokerSiteStatus === 'pending') hasConfirmPending = true;
+        
+        transactions.push({
+          from: randomPokerSite,
+          fromType: 'poker_site',
+          to: randomPlayerWallet,
+          toType: 'player_financial',
+          amount: txAmount,
+          owner: getOwnerFromTo(randomPlayerWallet),
+          status: pokerSiteStatus,
+          nickname: nickname
+        });
+        transactions.push({
+          from: randomPlayerWallet,
+          fromType: 'player_financial',
+          to: 'Main Wallet',
+          toType: 'company_wallet',
+          amount: txAmount,
+          owner: getOwnerFromTo('Main Wallet'),
+          status: getRandomStatus()
+        });
       } else if (type === 'Withdrawal') {
         const txAmount = Math.floor(Math.random() * 3000) + 500;
         amount = txAmount;
+        
+        // First transaction: company_wallet -> player_financial (needs confirm)
+        const playerWalletStatus = forceConfirmPending && !hasConfirmPending ? 'pending' : getRandomStatus();
+        if (playerWalletStatus === 'pending') hasConfirmPending = true;
+        
         transactions.push({
           from: 'Main Wallet',
-          fromType: 'wallet',
+          fromType: 'company_wallet',
+          to: randomPlayerWallet,
+          toType: 'player_financial',
+          amount: txAmount,
+          owner: getOwnerFromTo(randomPlayerWallet),
+          status: playerWalletStatus
+        });
+        transactions.push({
+          from: randomPlayerWallet,
+          fromType: 'player_financial',
           to: 'Bank Account',
           toType: 'external',
-          amount: txAmount
+          amount: txAmount,
+          owner: getOwnerFromTo('Bank Account'),
+          status: getRandomStatus()
         });
       } else if (type === 'Split') {
         const profit = Math.floor(Math.random() * 4000) + 1000;
         amount = profit;
         const playerShare = Math.floor(profit * 0.5);
         const houseShare = profit - playerShare;
+        
         transactions.push({
-          from: 'Session Profit',
-          fromType: 'profit',
-          to: 'Player Share (50%)',
-          toType: 'player',
-          amount: playerShare
+          from: randomPokerSite,
+          fromType: 'poker_site',
+          to: randomPlayerWallet,
+          toType: 'player_financial',
+          amount: profit,
+          owner: getOwnerFromTo(randomPlayerWallet),
+          status: getRandomStatus(),
+          nickname: nickname
         });
+        
         transactions.push({
-          from: 'Session Profit',
-          fromType: 'profit',
-          to: 'House Share (50%)',
-          toType: 'house',
-          amount: houseShare
+          from: randomPlayerWallet,
+          fromType: 'player_financial',
+          to: 'Bank Account',
+          toType: 'player_account',
+          amount: playerShare,
+          owner: getOwnerFromTo('Bank Account'),
+          status: getRandomStatus()
+        });
+        
+        // Third transaction: player_financial -> house_account (needs pay)
+        const houseAccountStatus = forcePayPending ? 'pending' : getRandomStatus();
+        if (houseAccountStatus === 'pending') hasPayPending = true;
+        
+        transactions.push({
+          from: randomPlayerWallet,
+          fromType: 'player_financial',
+          to: 'Bank Account',
+          toType: 'house_account',
+          amount: houseShare,
+          owner: getOwnerFromTo('Bank Account'),
+          status: houseAccountStatus
         });
       } else if (type === 'Swap') {
-        const txCount = Math.floor(Math.random() * 2) + 1;
-        for (let j = 0; j < txCount; j++) {
-          const txAmount = Math.floor(Math.random() * 1000) + 100;
-          amount += txAmount;
-          const platforms = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'];
-          transactions.push({
-            from: 'Main Wallet',
-            fromType: 'wallet',
-            to: platforms[Math.floor(Math.random() * platforms.length)],
-            toType: 'platform',
-            amount: txAmount
-          });
+        let fromWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
+        let toWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
+        while (toWallet === fromWallet) {
+          toWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
         }
+        
+        const txAmount = Math.floor(Math.random() * 1000) + 100;
+        amount = txAmount;
+        transactions.push({
+          from: fromWallet,
+          fromType: 'player_financial',
+          to: toWallet,
+          toType: 'player_financial',
+          amount: txAmount,
+          owner: getOwnerFromTo(toWallet),
+          status: getRandomStatus()
+        });
       }
+      
+      const getOperationStatus = (txs: any[]) => {
+        const statuses = txs.map(tx => tx.status);
+        if (statuses.some(s => s === 'pending')) return 'Pending';
+        if (statuses.some(s => s === 'failed')) return 'Failed';
+        return 'Completed';
+      };
       
       operations.push({
         id: `OP-${opNumber.toString().padStart(6, '0')}`,
@@ -434,8 +610,31 @@ export function PlayerView() {
         date,
         amount,
         transactions,
-        status: 'Completed'
+        status: getOperationStatus(transactions)
       });
+    }
+    
+    // Fallback: if still no confirm pending, force first operation to have pending
+    if (!hasConfirmPending && operations.length > 0) {
+      const firstOp = operations[0];
+      if (firstOp.type === 'Deposit' || firstOp.type === 'Withdrawal') {
+        const txIndex = firstOp.type === 'Deposit' ? 0 : 0;
+        firstOp.transactions[txIndex].status = 'pending';
+        firstOp.status = 'Pending';
+      }
+    }
+    
+    // Fallback: if still no pay pending, force a Split to have pending
+    if (!hasPayPending && operations.length > 0) {
+      const splitOp = operations.find(op => op.type === 'Split');
+      if (splitOp) {
+        // Find house_account transaction (last one in Split)
+        const houseTxIndex = splitOp.transactions.findIndex(tx => tx.toType === 'house_account');
+        if (houseTxIndex !== -1) {
+          splitOp.transactions[houseTxIndex].status = 'pending';
+          splitOp.status = 'Pending';
+        }
+      }
     }
     
     return operations;
@@ -443,7 +642,7 @@ export function PlayerView() {
 
   // Initialize operations
   useEffect(() => {
-    if (activeTab === 'operations' && operations.length === 0) {
+    if ((activeTab === 'operations' || activeTab === 'overview') && operations.length === 0) {
       const initialOps = generateOperations(1, 15);
       setOperations(initialOps);
       // Expand only the first (latest) operation
@@ -452,6 +651,13 @@ export function PlayerView() {
       }
     }
   }, [activeTab]);
+
+  // Update reconciliation items when operations change
+  useEffect(() => {
+    if (operations.length > 0) {
+      updateReconciliationItems();
+    }
+  }, [operations, updateReconciliationItems]);
 
   // Toggle operation expansion
   const toggleOperation = (operationId: string) => {
@@ -893,6 +1099,21 @@ export function PlayerView() {
     });
   };
 
+  const formatDateOnly = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatTimeOnly = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   const handleAiQuery = async () => {
     if (!aiQuery.trim()) return;
     
@@ -955,6 +1176,266 @@ export function PlayerView() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showAiModal]);
+
+  const getWalletIcon = (type: string, name: string) => {
+    if (type === 'external') {
+      if (name.includes('Bank') || name.includes('Wire')) {
+        return (
+          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+            <DollarSign className="w-3 h-3 text-gray-600" />
+          </div>
+        );
+      }
+      if (name.includes('Card')) {
+        return (
+          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+            <CreditCard className="w-3 h-3 text-gray-600" />
+          </div>
+        );
+      }
+    }
+    if (type === 'company_wallet') {
+      return (
+        <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+          <Wallet className="w-3 h-3 text-blue-600" />
+        </div>
+      );
+    }
+    if (type === 'player_financial') {
+      if (name === 'Skrill') {
+        return (
+          <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-green-600">SK</span>
+          </div>
+        );
+      }
+      if (name === 'Neteller') {
+        return (
+          <div className="w-5 h-5 bg-teal-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-teal-600">NL</span>
+          </div>
+        );
+      }
+      if (name === 'Pix') {
+        return (
+          <div className="w-5 h-5 bg-yellow-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-yellow-600">PX</span>
+          </div>
+        );
+      }
+      if (name === 'LuxonPay') {
+        return (
+          <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-purple-600">LP</span>
+          </div>
+        );
+      }
+    }
+    if (type === 'poker_site') {
+      if (name === 'PokerStars') {
+        return (
+          <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-red-600">PS</span>
+          </div>
+        );
+      }
+      if (name === 'GGPoker') {
+        return (
+          <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-orange-600">GG</span>
+          </div>
+        );
+      }
+      if (name === '888Poker') {
+        return (
+          <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-green-600">888</span>
+          </div>
+        );
+      }
+      if (name === 'PartyPoker') {
+        return (
+          <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-purple-600">PP</span>
+          </div>
+        );
+      }
+    }
+    if (type === 'wallet') {
+      return (
+        <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+          <Wallet className="w-3 h-3 text-blue-600" />
+        </div>
+      );
+    }
+    if (type === 'profit') {
+      return (
+        <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+          <DollarSign className="w-3 h-3 text-purple-600" />
+        </div>
+      );
+    }
+    if (type === 'player') {
+      return (
+        <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+          <Users className="w-3 h-3 text-blue-600" />
+        </div>
+      );
+    }
+    if (type === 'house') {
+      return (
+        <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+          <DollarSign className="w-3 h-3 text-gray-600" />
+        </div>
+      );
+    }
+    if (type === 'platform') {
+      if (name === 'PokerStars') {
+        return (
+          <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-red-600">PS</span>
+          </div>
+        );
+      }
+      if (name === 'GGPoker') {
+        return (
+          <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-orange-600">GG</span>
+          </div>
+        );
+      }
+      if (name === '888Poker') {
+        return (
+          <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-green-600">888</span>
+          </div>
+        );
+      }
+      if (name === 'PartyPoker') {
+        return (
+          <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+            <span className="text-[8px] font-bold text-purple-600">PP</span>
+          </div>
+        );
+      }
+    }
+    if (type === 'player_account') {
+      return (
+        <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+          <DollarSign className="w-3 h-3 text-green-600" />
+        </div>
+      );
+    }
+    if (type === 'house_account') {
+      return (
+        <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+          <DollarSign className="w-3 h-3 text-gray-600" />
+        </div>
+      );
+    }
+    return (
+      <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+        <Wallet className="w-3 h-3 text-gray-600" />
+      </div>
+    );
+  };
+
+  const getStatusIcon = (status: string) => {
+    if (status === 'confirmed') {
+      return (
+        <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center" title="Confirmed">
+          <CheckCircle className="w-2.5 h-2.5 text-green-600" />
+        </div>
+      );
+    }
+    if (status === 'pending') {
+      return (
+        <div className="w-4 h-4 bg-gray-100 rounded-full flex items-center justify-center" title="Pending">
+          <Clock className="w-2.5 h-2.5 text-gray-600" />
+        </div>
+      );
+    }
+    if (status === 'failed') {
+      return (
+        <div className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center" title="Failed">
+          <svg className="w-2.5 h-2.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const getWalletWithLink = (walletName: string, walletType: string, nickname?: string) => {
+    const isPokerSite = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'].includes(walletName);
+    const isPlayerFinancial = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'].includes(walletName);
+    
+    const getPokerSiteIcon = (site: string) => {
+      if (site === 'PokerStars') {
+        return <span className="text-[8px] font-bold text-red-600">PS</span>;
+      }
+      if (site === 'GGPoker') {
+        return <span className="text-[8px] font-bold text-orange-600">GG</span>;
+      }
+      if (site === '888Poker') {
+        return <span className="text-[8px] font-bold text-green-600">888</span>;
+      }
+      if (site === 'PartyPoker') {
+        return <span className="text-[8px] font-bold text-purple-600">PP</span>;
+      }
+      return null;
+    };
+
+    if (isPokerSite && nickname) {
+      return (
+        <div className="flex items-center gap-1">
+          <div className="w-4 h-4 bg-gray-100 rounded flex items-center justify-center">
+            {getPokerSiteIcon(walletName)}
+          </div>
+          <span className="text-xs text-gray-700 font-medium">{nickname}</span>
+        </div>
+      );
+    }
+
+    if (isPlayerFinancial) {
+      const generatePaymentLink = (provider: string) => {
+        const randomId = Math.random().toString(36).substring(2, 34).toUpperCase();
+        if (provider === 'Skrill') {
+          return `https://payments.skrill.com/v1/checkout?id=${randomId}`;
+        }
+        if (provider === 'Neteller') {
+          return `https://payments.neteller.com/v1/checkout?id=${randomId}`;
+        }
+        if (provider === 'Pix') {
+          return `https://payments.pix.com/v1/checkout?id=${randomId}`;
+        }
+        if (provider === 'LuxonPay') {
+          return `https://payments.luxonpay.com/v1/checkout?id=${randomId}`;
+        }
+        return '#';
+      };
+      
+      return (
+        <UITooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => window.open(generatePaymentLink(walletName), '_blank')}
+              className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
+            >
+              <span className="text-xs text-gray-600">{walletName}</span>
+              <ExternalLink className="w-3 h-3 text-gray-400" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="bg-gray-900 text-white text-xs max-w-xs break-all">
+            <div className="font-mono text-[8px]">{generatePaymentLink(walletName)}</div>
+          </TooltipContent>
+        </UITooltip>
+      );
+    }
+
+    return <span className="text-xs text-gray-600">{walletName}</span>;
+  };
 
   const isProfit = currentPL >= 0;
 
@@ -1448,7 +1929,13 @@ export function PlayerView() {
                 className="w-14 h-14 rounded-full object-cover border border-gray-200 shadow-sm"
               />
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Hi, {currentPlayer.name.split(' ')[0]}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-semibold text-gray-900">Hi, {currentPlayer.name.split(' ')[0]}</h2>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs font-semibold text-gray-700">
+                    <Shield className="w-3 h-3" />
+                    NL50
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Users className="w-4 h-4" />
                   <span className="text-sm">{currentPlayer.team}</span>
@@ -2062,139 +2549,99 @@ export function PlayerView() {
             </div>
           </div>
 
-          {/* Right Column (30%) - Stakes Roadmap & Hand Range Heatmap */}
+          {/* Right Column (30%) - Reconciliations */}
           <div className="lg:col-span-3 space-y-3">
-            {/* Stakes Progression Timeline */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-gray-600" />
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Stakes Roadmap</h3>
-                  <UITooltip>
-                    <TooltipTrigger asChild>
-                      <button className="inline-flex items-center justify-center">
-                        <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600 transition-colors" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs">
-                      <p className="text-xs">Projections are based on the player's historical data and AI predictions</p>
-                    </TooltipContent>
-                  </UITooltip>
+            {/* Reconciliation Sidebar */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-slate-50 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Reconciliation</h3>
+                  {reconciliationItems.length > 0 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      {reconciliationItems.length} pending
+                    </span>
+                  )}
                 </div>
               </div>
-              
-              <div className="p-3">
-                {/* Current Stakes Info */}
-                <div className="text-center mb-3 pb-3 border-b border-gray-200">
-                  <div className="text-[9px] text-gray-400 mb-0.5">Current Stakes</div>
-                  <div className="text-lg font-bold text-gray-900">NL50</div>
-                  <div className="text-[9px] text-gray-500">$3,050 bankroll</div>
-                </div>
-
-                {/* Timeline */}
-                <div className="relative">
-                  {/* Timeline Line */}
-                  <div className="absolute left-[11px] top-0 bottom-0 w-px bg-gray-200"></div>
-                  
-                  {/* Timeline Items */}
-                  <div className="space-y-2.5">
-                    {/* Move Down Threshold */}
-                    <div className="relative flex items-start gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center flex-shrink-0 z-10">
-                        <TrendingDown className="w-3 h-3 text-gray-500" />
-                      </div>
-                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded p-2">
-                        <div className="mb-0.5">
-                          <div className="font-semibold text-[10px] text-gray-700">NL25</div>
-                          <div className="text-[9px] text-gray-500">$2,000 bankroll</div>
-                        </div>
-                        <div className="text-[8px] text-gray-500">
-                          $1,050 above threshold
-                        </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[500px]">
+                {reconciliationItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                    <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
+                    <p className="text-sm font-medium text-gray-900">All caught up!</p>
+                    <p className="text-xs text-gray-500 mt-1">No transactions pending reconciliation</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Summary Card */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                      <div className="text-xs text-gray-600 font-medium">Total Pending</div>
+                      <div className="text-lg font-bold text-gray-900">
+                        ${reconciliationItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
                       </div>
                     </div>
 
-                    {/* Current Position */}
-                    <div className="relative flex items-start gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-gray-700 border border-gray-800 flex items-center justify-center flex-shrink-0 z-10">
-                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-                      </div>
-                      <div className="flex-1 bg-gray-700 border border-gray-800 rounded p-2">
-                        <div className="mb-0.5">
-                          <div className="font-semibold text-[10px] text-white">NL50 • Current</div>
-                          <div className="text-[9px] text-gray-300">$3,050 bankroll</div>
+                    {/* Pending Items List */}
+                    {reconciliationItems.map((item, index) => (
+                      <div key={`${item.opId}-${item.txIndex}`} className="border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow bg-white">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-gray-900">{item.opId}</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              item.opType === 'Deposit' ? 'bg-blue-100 text-blue-700' :
+                              item.opType === 'Withdrawal' ? 'bg-red-100 text-red-700' :
+                              item.opType === 'Split' ? 'bg-purple-100 text-purple-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {item.opType}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-gray-700">${item.amount.toLocaleString()}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[8px] text-gray-400">
-                          <span>61 buy-ins</span>
-                          <span>•</span>
-                          <span>5.2 bb/100</span>
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                          {getWalletIcon(item.fromType, item.from)}
+                          {getWalletWithLink(item.from, item.fromType, item.nickname)}
+                          <span>→</span>
+                          {getWalletIcon(item.toType, item.to)}
+                          {getWalletWithLink(item.to, item.toType, item.nickname)}
+                        </div>
+                        <div className="flex gap-2">
+                          {item.buttonType === 'confirm' ? (
+                            <button
+                              onClick={() => {
+                                approveTransaction(item.opId, item.txIndex);
+                              }}
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              Confirm
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                approveTransaction(item.opId, item.txIndex);
+                              }}
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
+                            >
+                              <DollarSign className="w-3 h-3" />
+                              Pay
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              rejectTransaction(item.opId, item.txIndex);
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Reject
+                          </button>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Move Up Target */}
-                    <div className="relative flex items-start gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-gray-100 border border-gray-300 flex items-center justify-center flex-shrink-0 z-10">
-                        <TrendingUp className="w-3 h-3 text-gray-500" />
-                      </div>
-                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded p-2">
-                        <div className="mb-0.5">
-                          <div className="font-semibold text-[10px] text-gray-700">NL100 • Target</div>
-                          <div className="text-[9px] text-gray-500">$5,000 bankroll</div>
-                        </div>
-                        <div className="text-[8px] text-gray-500">
-                          $1,950 needed • 2-3 weeks
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Future Milestone */}
-                    <div className="relative flex items-start gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center flex-shrink-0 z-10">
-                        <TrendingUp className="w-3 h-3 text-gray-400" />
-                      </div>
-                      <div className="flex-1 bg-gray-50 border border-gray-200 rounded p-2 opacity-50">
-                        <div className="mb-0.5">
-                          <div className="font-semibold text-[10px] text-gray-600">NL200</div>
-                          <div className="text-[9px] text-gray-500">$10,000 bankroll</div>
-                        </div>
-                        <div className="text-[8px] text-gray-500">
-                          2-3 months
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[8px] font-medium text-gray-500">Progress to NL100</span>
-                    <span className="text-[8px] font-semibold text-gray-700">61%</span>
-                  </div>
-                  <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gray-600 rounded-full transition-all duration-500"
-                      style={{ width: '61%' }}
-                    ></div>
-                  </div>
-                </div>
-
-                {/* Key Metrics */}
-                <div className="grid grid-cols-1 gap-1.5 mt-3 pt-3 border-t border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[8px] text-gray-500">Est. Sessions</span>
-                    <span className="text-[10px] font-semibold text-gray-700">12-15</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[8px] text-gray-500">Safety Buffer</span>
-                    <span className="text-[10px] font-semibold text-gray-700">21 BI</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[8px] text-gray-500">Win Rate</span>
-                    <span className="text-[10px] font-semibold text-gray-700">5.2 bb/100</span>
-                  </div>
-                </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
 
@@ -2605,21 +3052,6 @@ export function PlayerView() {
                         );
                       };
 
-                      const formatDate = (date: Date) => {
-                        return date.toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric',
-                          year: 'numeric'
-                        });
-                      };
-
-                      const formatTime = (date: Date) => {
-                        return date.toLocaleTimeString('en-US', { 
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        });
-                      };
-
                       const isExpanded = expandedOperations.has(operation.id);
                       
                       return (
@@ -2646,8 +3078,8 @@ export function PlayerView() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <div className="text-sm text-gray-900">{formatDate(operation.date)}</div>
-                              <div className="text-xs text-gray-500">{formatTime(operation.date)}</div>
+                              <div className="text-sm text-gray-900">{formatDateOnly(operation.date)}</div>
+                              <div className="text-xs text-gray-500">{formatTimeOnly(operation.date)}</div>
                             </td>
                             <td className="px-4 py-3">
                               <div className="text-sm font-bold text-gray-900">
