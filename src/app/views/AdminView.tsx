@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router';
 import { PlayerCard } from '../components/PlayerCard';
 import { PLGraph } from '../components/PLGraph';
 import { FilterPanel, FilterState } from '../components/FilterPanel';
@@ -9,7 +10,8 @@ import { LiveVideoGrid } from '../components/LiveVideoGrid';
 import { RecentSplits } from '../components/RecentSplits';
 import { WalletPerformance } from '../components/WalletPerformance';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
-import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/tooltip';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink } from 'lucide-react';
 import { TeamsView } from './TeamsView';
 import { PaymentWalletsContent } from '../components/PokerWalletsContent';
 import PaymentWalletForm, { PaymentWallet } from '../components/forms/PokerWalletForm';
@@ -39,6 +41,7 @@ interface Team {
 }
 
 export function AdminView() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   
   const [teams, setTeams] = useState<Team[]>([
@@ -419,6 +422,69 @@ export function AdminView() {
   const [expandedOperations, setExpandedOperations] = useState<Set<string>>(new Set());
   const operationsScrollRef = useRef<HTMLDivElement>(null);
 
+  // Reconciliation state
+  const [reconciliationItems, setReconciliationItems] = useState<any[]>([]);
+  const companyWallets = ['Main Wallet', 'Bank Account', 'Credit Card'];
+
+  const updateReconciliationItems = useCallback(() => {
+    const items: any[] = [];
+    operations.forEach((op) => {
+      op.transactions.forEach((tx: any, txIndex: number) => {
+        const toIsCompanyWallet = companyWallets.includes(tx.to);
+        if (toIsCompanyWallet && tx.status === 'pending') {
+          items.push({
+            opId: op.id,
+            opType: op.type,
+            txIndex,
+            player: op.player,
+            amount: tx.amount,
+            from: tx.from,
+            fromType: tx.fromType,
+            to: tx.to,
+            toType: tx.toType,
+            owner: tx.owner,
+            status: tx.status,
+            date: op.date,
+            nickname: tx.nickname
+          });
+        }
+      });
+    });
+    setReconciliationItems(items);
+  }, [operations]);
+
+  const approveTransaction = useCallback((opId: string, txIndex: number) => {
+    setOperations(prev => prev.map(op => {
+      if (op.id === opId) {
+        const updatedTransactions = [...op.transactions];
+        updatedTransactions[txIndex] = {
+          ...updatedTransactions[txIndex],
+          status: 'confirmed'
+        };
+        return { ...op, transactions: updatedTransactions };
+      }
+      return op;
+    }));
+    // Remove from reconciliation list
+    setReconciliationItems(prev => prev.filter(item => !(item.opId === opId && item.txIndex === txIndex)));
+  }, []);
+
+  const rejectTransaction = useCallback((opId: string, txIndex: number) => {
+    setOperations(prev => prev.map(op => {
+      if (op.id === opId) {
+        const updatedTransactions = [...op.transactions];
+        updatedTransactions[txIndex] = {
+          ...updatedTransactions[txIndex],
+          status: 'failed'
+        };
+        return { ...op, transactions: updatedTransactions };
+      }
+      return op;
+    }));
+    // Remove from reconciliation list
+    setReconciliationItems(prev => prev.filter(item => !(item.opId === opId && item.txIndex === txIndex)));
+  }, []);
+
   // Calculate time range based on selected period
   const getTimeRange = () => {
     const now = new Date();
@@ -612,8 +678,18 @@ export function AdminView() {
   // Generate mock operations
   const generateOperations = (page: number, count: number = 10) => {
     const types = ['Deposit', 'Withdrawal', 'Split', 'Swap'];
-    const wallets = ['Main Wallet', 'PokerStars', 'GGPoker', 'Bank Account', 'Credit Card'];
     const operations = [];
+    
+    const companyWallets = ['Main Wallet', 'Bank Account', 'Credit Card'];
+    const pokerSites = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'];
+    const playerFinancialWallets = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'];
+    
+    const getRandomStatus = () => {
+      const rand = Math.random();
+      if (rand < 0.75) return 'confirmed';
+      if (rand < 0.95) return 'pending';
+      return 'failed';
+    };
     
     for (let i = 0; i < count; i++) {
       const type = types[Math.floor(Math.random() * types.length)];
@@ -627,66 +703,109 @@ export function AdminView() {
       let transactions: any[] = [];
       let amount = 0;
       
-      // Pick a random player for this operation
       const randomPlayer = players[Math.floor(Math.random() * players.length)];
+      const randomPokerSite = pokerSites[Math.floor(Math.random() * pokerSites.length)];
+      const randomPlayerWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
+      const nickname = randomPlayer.name.split(' ')[0] + 'PS';
       
       if (type === 'Deposit') {
-        const txCount = Math.floor(Math.random() * 2) + 1;
-        for (let j = 0; j < txCount; j++) {
-          const txAmount = Math.floor(Math.random() * 2000) + 500;
-          amount += txAmount;
-          const sources = ['Bank Transfer', 'Credit Card', 'Wire Transfer'];
-          transactions.push({
-            from: sources[Math.floor(Math.random() * sources.length)],
-            fromType: 'external',
-            to: 'Main Wallet',
-            toType: 'wallet',
-            amount: txAmount
-          });
-        }
+        const txAmount = Math.floor(Math.random() * 2000) + 500;
+        amount = txAmount;
+        transactions.push({
+          from: 'Main Wallet',
+          fromType: 'company_wallet',
+          to: randomPlayerWallet,
+          toType: 'player_financial',
+          amount: txAmount,
+          owner: 'company',
+          status: getRandomStatus()
+        });
+        transactions.push({
+          from: randomPlayerWallet,
+          fromType: 'player_financial',
+          to: randomPokerSite,
+          toType: 'poker_site',
+          amount: txAmount,
+          owner: 'player',
+          status: getRandomStatus(),
+          nickname: nickname
+        });
       } else if (type === 'Withdrawal') {
         const txAmount = Math.floor(Math.random() * 3000) + 500;
         amount = txAmount;
         transactions.push({
-          from: 'Main Wallet',
-          fromType: 'wallet',
+          from: randomPokerSite,
+          fromType: 'poker_site',
+          to: randomPlayerWallet,
+          toType: 'player_financial',
+          amount: txAmount,
+          owner: 'player',
+          status: getRandomStatus(),
+          nickname: nickname
+        });
+        transactions.push({
+          from: randomPlayerWallet,
+          fromType: 'player_financial',
           to: 'Bank Account',
           toType: 'external',
-          amount: txAmount
+          amount: txAmount,
+          owner: 'player',
+          status: getRandomStatus()
         });
       } else if (type === 'Split') {
         const profit = Math.floor(Math.random() * 4000) + 1000;
         amount = profit;
         const playerShare = Math.floor(profit * 0.5);
         const houseShare = profit - playerShare;
+        
         transactions.push({
-          from: 'Session Profit',
-          fromType: 'profit',
-          to: 'Player Share (50%)',
-          toType: 'player',
-          amount: playerShare
+          from: randomPokerSite,
+          fromType: 'poker_site',
+          to: randomPlayerWallet,
+          toType: 'player_financial',
+          amount: profit,
+          owner: 'player',
+          status: getRandomStatus(),
+          nickname: nickname
         });
+        
         transactions.push({
-          from: 'Session Profit',
-          fromType: 'profit',
-          to: 'House Share (50%)',
-          toType: 'house',
-          amount: houseShare
+          from: randomPlayerWallet,
+          fromType: 'player_financial',
+          to: 'Player Bank Account',
+          toType: 'player_account',
+          amount: playerShare,
+          owner: 'player',
+          status: getRandomStatus()
+        });
+        
+        transactions.push({
+          from: randomPlayerWallet,
+          fromType: 'player_financial',
+          to: 'House Bank Account',
+          toType: 'house_account',
+          amount: houseShare,
+          owner: 'player',
+          status: getRandomStatus()
         });
       } else if (type === 'Swap') {
-        const txCount = Math.floor(Math.random() * 2) + 1;
-        for (let j = 0; j < txCount; j++) {
-          const txAmount = Math.floor(Math.random() * 1000) + 100;
-          amount += txAmount;
-          const platforms = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'];
-          transactions.push({
-            from: 'Main Wallet',
-            fromType: 'wallet',
-            to: platforms[Math.floor(Math.random() * platforms.length)],
-            toType: 'platform',
-            amount: txAmount
-          });
+        let fromWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
+        let toWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
+        while (toWallet === fromWallet) {
+          toWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
         }
+        
+        const txAmount = Math.floor(Math.random() * 1000) + 100;
+        amount = txAmount;
+        transactions.push({
+          from: fromWallet,
+          fromType: 'player_financial',
+          to: toWallet,
+          toType: 'player_financial',
+          amount: txAmount,
+          owner: 'player',
+          status: getRandomStatus()
+        });
       }
       
       operations.push({
@@ -714,6 +833,13 @@ export function AdminView() {
       }
     }
   }, [activeTab]);
+
+  // Update reconciliation items when operations change
+  useEffect(() => {
+    if (operations.length > 0) {
+      updateReconciliationItems();
+    }
+  }, [operations, updateReconciliationItems]);
 
   // Toggle operation expansion
   const toggleOperation = (operationId: string) => {
@@ -1055,12 +1181,13 @@ export function AdminView() {
           </div>
         </TabsContent>
 
-        <TabsContent value="operations" className="flex flex-col h-[calc(100vh-280px)]">
-          {/* Operations Table */}
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col flex-1">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Operations History</h3>
-            </div>
+        <TabsContent value="operations" className="h-[calc(100vh-280px)]">
+          <div className="grid grid-cols-10 gap-4 h-full">
+            {/* Operations Table - 70% */}
+            <div className="col-span-7 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Operations History</h3>
+              </div>
             <div 
               ref={operationsScrollRef}
               onScroll={handleOperationsScroll}
@@ -1105,6 +1232,92 @@ export function AdminView() {
                             </div>
                           );
                         }
+                      }
+                      if (type === 'company_wallet') {
+                        return (
+                          <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                            <Wallet className="w-3 h-3 text-blue-600" />
+                          </div>
+                        );
+                      }
+                      if (type === 'player_financial') {
+                        if (name === 'Skrill') {
+                          return (
+                            <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-green-600">SK</span>
+                            </div>
+                          );
+                        }
+                        if (name === 'Neteller') {
+                          return (
+                            <div className="w-5 h-5 bg-teal-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-teal-600">NL</span>
+                            </div>
+                          );
+                        }
+                        if (name === 'Pix') {
+                          return (
+                            <div className="w-5 h-5 bg-yellow-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-yellow-600">PX</span>
+                            </div>
+                          );
+                        }
+                        if (name === 'LuxonPay') {
+                          return (
+                            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-purple-600">LP</span>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                            <Wallet className="w-3 h-3 text-blue-600" />
+                          </div>
+                        );
+                      }
+                      if (type === 'poker_site') {
+                        if (name === 'PokerStars') {
+                          return (
+                            <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-red-600">PS</span>
+                            </div>
+                          );
+                        }
+                        if (name === 'GGPoker') {
+                          return (
+                            <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-orange-600">GG</span>
+                            </div>
+                          );
+                        }
+                        if (name === '888Poker') {
+                          return (
+                            <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-green-600">888</span>
+                            </div>
+                          );
+                        }
+                        if (name === 'PartyPoker') {
+                          return (
+                            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+                              <span className="text-[8px] font-bold text-purple-600">PP</span>
+                            </div>
+                          );
+                        }
+                      }
+                      if (type === 'player_account') {
+                        return (
+                          <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+                            <DollarSign className="w-3 h-3 text-green-600" />
+                          </div>
+                        );
+                      }
+                      if (type === 'house_account') {
+                        return (
+                          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                            <DollarSign className="w-3 h-3 text-gray-600" />
+                          </div>
+                        );
                       }
                       if (type === 'wallet') {
                         return (
@@ -1169,6 +1382,115 @@ export function AdminView() {
                           <Wallet className="w-3 h-3 text-gray-600" />
                         </div>
                       );
+                    };
+
+                    const getStatusIcon = (status: string) => {
+                      if (status === 'confirmed') {
+                        return (
+                          <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center" title="Confirmed">
+                            <CheckCircle className="w-2.5 h-2.5 text-green-600" />
+                          </div>
+                        );
+                      }
+                      if (status === 'pending') {
+                        return (
+                          <div className="w-4 h-4 bg-yellow-100 rounded-full flex items-center justify-center" title="Pending">
+                            <Clock className="w-2.5 h-2.5 text-yellow-600" />
+                          </div>
+                        );
+                      }
+                      if (status === 'failed') {
+                        return (
+                          <div className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center" title="Failed">
+                            <svg className="w-2.5 h-2.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </div>
+                        );
+                      }
+                      return null;
+                    };
+
+                    const getOwnerBadge = (owner: string) => {
+                      if (owner === 'player') {
+                        return (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                            <User className="w-2.5 h-2.5" />
+                            Player
+                          </span>
+                        );
+                      }
+                      if (owner === 'company') {
+                        return (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            Company
+                          </span>
+                        );
+                      }
+                      return null;
+                    };
+
+                    const getWalletWithLink = (walletName: string, walletType: string, nickname?: string) => {
+                      const isPokerSite = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'].includes(walletName);
+                      const isPlayerFinancial = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'].includes(walletName);
+                      
+                      const getPokerSiteIcon = (site: string) => {
+                        if (site === 'PokerStars') {
+                          return <span className="text-[8px] font-bold text-red-600">PS</span>;
+                        }
+                        if (site === 'GGPoker') {
+                          return <span className="text-[8px] font-bold text-orange-600">GG</span>;
+                        }
+                        if (site === '888Poker') {
+                          return <span className="text-[8px] font-bold text-green-600">888</span>;
+                        }
+                        if (site === 'PartyPoker') {
+                          return <span className="text-[8px] font-bold text-purple-600">PP</span>;
+                        }
+                        return null;
+                      };
+
+                      if (isPokerSite && nickname) {
+                        return (
+                          <div className="flex items-center gap-1">
+                            <div className="w-4 h-4 bg-gray-100 rounded flex items-center justify-center">
+                              {getPokerSiteIcon(walletName)}
+                            </div>
+                            <span className="text-xs text-gray-700 font-medium">{nickname}</span>
+                          </div>
+                        );
+                      }
+
+                      if (isPlayerFinancial) {
+                        const ulids: Record<string, string> = {
+                          'Skrill': '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+                          'Neteller': '01ARZ3NDEKTSV4RRFFQ69G5FBW',
+                          'Pix': '01ARZ3NDEKTSV4RRFFQ69G5FCX',
+                          'LuxonPay': '01ARZ3NDEKTSV4RRFFQ69G5FDY'
+                        };
+                        
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => navigate('/player')}
+                                className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
+                              >
+                                <span className="text-xs text-gray-600">{walletName}</span>
+                                <ExternalLink className="w-3 h-3 text-gray-400" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="bg-gray-900 text-white text-xs">
+                              <div className="font-mono">{ulids[walletName] || 'N/A'}</div>
+                            </TooltipContent>
+                          </Tooltip>
+                        );
+                      }
+
+                      return <span className="text-xs text-gray-600">{walletName}</span>;
                     };
 
                     const formatDate = (date: Date) => {
@@ -1253,12 +1575,16 @@ export function AdminView() {
                                   <div key={txIndex} className="flex items-center justify-between py-1.5 px-3 bg-white rounded border border-gray-200">
                                     <div className="flex items-center gap-2">
                                       {getWalletIcon(tx.fromType, tx.from)}
-                                      <span className="text-xs text-gray-600">{tx.from}</span>
+                                      {getWalletWithLink(tx.from, tx.fromType, tx.nickname)}
                                       <span className="text-xs text-gray-400">→</span>
                                       {getWalletIcon(tx.toType, tx.to)}
-                                      <span className="text-xs text-gray-600">{tx.to}</span>
+                                      {getWalletWithLink(tx.to, tx.toType, tx.nickname)}
                                     </div>
-                                    <span className="text-xs font-semibold text-gray-900">${tx.amount.toLocaleString()}</span>
+                                    <div className="flex items-center gap-2">
+                                      {getOwnerBadge(tx.owner)}
+                                      {getStatusIcon(tx.status)}
+                                      <span className="text-xs font-semibold text-gray-900">${tx.amount.toLocaleString()}</span>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -1291,6 +1617,97 @@ export function AdminView() {
                   )}
                 </tbody>
               </table>
+              </div>
+            </div>
+
+            {/* Reconciliation Sidebar - 30% */}
+            <div className="col-span-3 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-slate-50 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Reconciliation</h3>
+                  {reconciliationItems.length > 0 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                      {reconciliationItems.length} pending
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                {reconciliationItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                    <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
+                    <p className="text-sm font-medium text-gray-900">All caught up!</p>
+                    <p className="text-xs text-gray-500 mt-1">No transactions pending reconciliation</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Summary Card */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                      <div className="text-xs text-gray-600 font-medium">Total Pending</div>
+                      <div className="text-lg font-bold text-gray-900">
+                        ${reconciliationItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                      </div>
+                    </div>
+
+                    {/* Pending Items List */}
+                    {reconciliationItems.map((item, index) => (
+                      <div key={`${item.opId}-${item.txIndex}`} className="border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow bg-white">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-gray-900">{item.opId}</span>
+                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              item.opType === 'Deposit' ? 'bg-blue-100 text-blue-700' :
+                              item.opType === 'Withdrawal' ? 'bg-red-100 text-red-700' :
+                              item.opType === 'Split' ? 'bg-purple-100 text-purple-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {item.opType}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-gray-700">${item.amount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <img 
+                            src={item.player.avatar} 
+                            alt={item.player.name}
+                            className="w-5 h-5 rounded-full border border-gray-200"
+                          />
+                          <span className="text-xs text-gray-700 truncate">{item.player.name}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                          {getWalletIcon(item.fromType, item.from)}
+                          {getWalletWithLink(item.from, item.fromType, item.nickname)}
+                          <span>→</span>
+                          {getWalletIcon(item.toType, item.to)}
+                          {getWalletWithLink(item.to, item.toType, item.nickname)}
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              approveTransaction(item.opId, item.txIndex);
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => {
+                              rejectTransaction(item.opId, item.txIndex);
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </TabsContent>

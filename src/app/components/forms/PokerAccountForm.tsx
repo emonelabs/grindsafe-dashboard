@@ -10,6 +10,7 @@ export interface PokerAccount {
   status: 'active' | 'inactive';
   createdAt: Date;
   notes?: string;
+  ulid?: string;
 }
 
 interface PokerAccountFormProps {

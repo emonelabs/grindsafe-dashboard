@@ -11,6 +11,7 @@ export interface PaymentWallet {
   status: 'active' | 'inactive';
   createdAt: Date;
   notes?: string;
+  ulid?: string;
 }
 
 interface PaymentWalletFormProps {

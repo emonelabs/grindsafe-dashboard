@@ -45,6 +45,8 @@ interface PokerAccount {
   balance: number;
   deposits: number;
   totalPL: number;
+  nickname: string;
+  ulid?: string;
 }
 
 interface AccountDataPoint {
@@ -213,7 +215,8 @@ export function PlayerView() {
       balance: 5420.50,
       status: 'active',
       createdAt: new Date('2026-03-01'),
-      notes: 'Main payment account'
+      notes: 'Main payment account',
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5FAV'
     },
     {
       id: 'w2',
@@ -222,7 +225,8 @@ export function PlayerView() {
       email: 'marcus.chen@example.com',
       balance: 2150.00,
       status: 'active',
-      createdAt: new Date('2026-02-28')
+      createdAt: new Date('2026-02-28'),
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5FBW'
     },
     {
       id: 'w3',
@@ -231,7 +235,8 @@ export function PlayerView() {
       email: 'marcus@pix.com',
       balance: 0.00,
       status: 'inactive',
-      createdAt: new Date('2026-02-15')
+      createdAt: new Date('2026-02-15'),
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5FCX'
     },
     {
       id: 'w4',
@@ -241,7 +246,8 @@ export function PlayerView() {
       balance: 1875.25,
       status: 'active',
       createdAt: new Date('2026-01-10'),
-      notes: 'Secondary payment method'
+      notes: 'Secondary payment method',
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5FDY'
     }
   ]);
   const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
@@ -255,7 +261,15 @@ export function PlayerView() {
       email: 'marcus.chen@example.com',
       status: 'active',
       createdAt: new Date('2026-03-01'),
-      notes: 'Main account for MTTs'
+      notes: 'Main account for MTTs',
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5GE0',
+      platform: 'PokerStars',
+      platformColor: '#FF0000',
+      chartColor: '#FF0000',
+      makeup: 0,
+      balance: 5420,
+      deposits: 10000,
+      totalPL: 15420
     },
     {
       id: 'a2',
@@ -263,7 +277,15 @@ export function PlayerView() {
       nickname: 'MarcusGG',
       email: 'marcus.chen@example.com',
       status: 'active',
-      createdAt: new Date('2026-02-28')
+      createdAt: new Date('2026-02-28'),
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5GF1',
+      platform: 'GGPoker',
+      platformColor: '#FF6600',
+      chartColor: '#FF6600',
+      makeup: 0,
+      balance: 3200,
+      deposits: 8000,
+      totalPL: 8750
     },
     {
       id: 'a3',
@@ -272,7 +294,15 @@ export function PlayerView() {
       email: 'marcus@party.com',
       status: 'inactive',
       createdAt: new Date('2026-02-15'),
-      notes: 'Cash games only'
+      notes: 'Cash games only',
+      ulid: '01ARZ3NDEKTSV4RRFFQ69G5GG2',
+      platform: 'PartyPoker',
+      platformColor: '#FF0000',
+      chartColor: '#FF0000',
+      makeup: 500,
+      balance: 1200,
+      deposits: 5000,
+      totalPL: 2100
     }
   ]);
   const [selectedAccountForEdit, setSelectedAccountForEdit] = useState<PokerAccount | null>(null);
