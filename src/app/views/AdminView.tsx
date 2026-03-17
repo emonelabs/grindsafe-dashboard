@@ -1182,26 +1182,36 @@ export function AdminView() {
     }
 
     if (isPlayerFinancial) {
-      const ulids: Record<string, string> = {
-        'Skrill': '01ARZ3NDEKTSV4RRFFQ69G5FAV',
-        'Neteller': '01ARZ3NDEKTSV4RRFFQ69G5FBW',
-        'Pix': '01ARZ3NDEKTSV4RRFFQ69G5FCX',
-        'LuxonPay': '01ARZ3NDEKTSV4RRFFQ69G5FDY'
+      const generatePaymentLink = (provider: string) => {
+        const randomId = Math.random().toString(36).substring(2, 34).toUpperCase();
+        if (provider === 'Skrill') {
+          return `https://payments.skrill.com/v1/checkout?id=${randomId}`;
+        }
+        if (provider === 'Neteller') {
+          return `https://payments.neteller.com/v1/checkout?id=${randomId}`;
+        }
+        if (provider === 'Pix') {
+          return `https://payments.pix.com/v1/checkout?id=${randomId}`;
+        }
+        if (provider === 'LuxonPay') {
+          return `https://payments.luxonpay.com/v1/checkout?id=${randomId}`;
+        }
+        return '#';
       };
       
       return (
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => navigate('/player')}
+              onClick={() => window.open(generatePaymentLink(walletName), '_blank')}
               className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
             >
               <span className="text-sm text-gray-600">{walletName}</span>
               <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="top" className="bg-gray-900 text-white text-xs">
-            <div className="font-mono">{ulids[walletName] || 'N/A'}</div>
+          <TooltipContent side="top" className="bg-gray-900 text-white text-xs max-w-xs break-all">
+            <div className="font-mono text-[10px]">{generatePaymentLink(walletName)}</div>
           </TooltipContent>
         </Tooltip>
       );
