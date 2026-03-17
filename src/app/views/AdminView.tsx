@@ -1220,87 +1220,87 @@ export function AdminView() {
                       if (type === 'external') {
                         if (name.includes('Bank') || name.includes('Wire')) {
                           return (
-                            <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                              <DollarSign className="w-3 h-3 text-gray-600" />
+                            <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+                              <DollarSign className="w-4 h-4 text-gray-600" />
                             </div>
                           );
                         }
                         if (name.includes('Card')) {
                           return (
-                            <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                              <CreditCard className="w-3 h-3 text-gray-600" />
+                            <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+                              <CreditCard className="w-4 h-4 text-gray-600" />
                             </div>
                           );
                         }
                       }
                       if (type === 'company_wallet') {
                         return (
-                          <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
-                            <Wallet className="w-3 h-3 text-blue-600" />
+                          <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                            <Wallet className="w-4 h-4 text-blue-600" />
                           </div>
                         );
                       }
                       if (type === 'player_financial') {
                         if (name === 'Skrill') {
                           return (
-                            <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-green-600">SK</span>
+                            <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-green-600">SK</span>
                             </div>
                           );
                         }
                         if (name === 'Neteller') {
                           return (
-                            <div className="w-5 h-5 bg-teal-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-teal-600">NL</span>
+                            <div className="w-6 h-6 bg-teal-100 rounded flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-teal-600">NL</span>
                             </div>
                           );
                         }
                         if (name === 'Pix') {
                           return (
-                            <div className="w-5 h-5 bg-yellow-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-yellow-600">PX</span>
+                            <div className="w-6 h-6 bg-yellow-100 rounded flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-yellow-600">PX</span>
                             </div>
                           );
                         }
                         if (name === 'LuxonPay') {
                           return (
-                            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-purple-600">LP</span>
+                            <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-purple-600">LP</span>
                             </div>
                           );
                         }
                         return (
-                          <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
-                            <Wallet className="w-3 h-3 text-blue-600" />
+                          <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+                            <Wallet className="w-4 h-4 text-blue-600" />
                           </div>
                         );
                       }
                       if (type === 'poker_site') {
                         if (name === 'PokerStars') {
                           return (
-                            <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-red-600">PS</span>
+                            <div className="w-6 h-6 bg-red-100 rounded flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-red-600">PS</span>
                             </div>
                           );
                         }
                         if (name === 'GGPoker') {
                           return (
-                            <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-orange-600">GG</span>
+                            <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-orange-600">GG</span>
                             </div>
                           );
                         }
                         if (name === '888Poker') {
                           return (
-                            <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-green-600">888</span>
+                            <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-green-600">888</span>
                             </div>
                           );
                         }
                         if (name === 'PartyPoker') {
                           return (
-                            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-purple-600">PP</span>
+                            <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-purple-600">PP</span>
                             </div>
                           );
                         }
@@ -1387,22 +1387,22 @@ export function AdminView() {
                     const getStatusIcon = (status: string) => {
                       if (status === 'confirmed') {
                         return (
-                          <div className="w-4 h-4 bg-green-100 rounded-full flex items-center justify-center" title="Confirmed">
-                            <CheckCircle className="w-2.5 h-2.5 text-green-600" />
+                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center" title="Confirmed">
+                            <CheckCircle className="w-3 h-3 text-green-600" />
                           </div>
                         );
                       }
                       if (status === 'pending') {
                         return (
-                          <div className="w-4 h-4 bg-yellow-100 rounded-full flex items-center justify-center" title="Pending">
-                            <Clock className="w-2.5 h-2.5 text-yellow-600" />
+                          <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center" title="Pending">
+                            <Clock className="w-3 h-3 text-yellow-600" />
                           </div>
                         );
                       }
                       if (status === 'failed') {
                         return (
-                          <div className="w-4 h-4 bg-red-100 rounded-full flex items-center justify-center" title="Failed">
-                            <svg className="w-2.5 h-2.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center" title="Failed">
+                            <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </div>
@@ -1414,16 +1414,16 @@ export function AdminView() {
                     const getOwnerBadge = (owner: string) => {
                       if (owner === 'player') {
                         return (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                            <User className="w-2.5 h-2.5" />
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                            <User className="w-3 h-3" />
                             Player
                           </span>
                         );
                       }
                       if (owner === 'company') {
                         return (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
-                            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded border border-gray-200">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                             </svg>
                             Company
@@ -1439,27 +1439,27 @@ export function AdminView() {
                       
                       const getPokerSiteIcon = (site: string) => {
                         if (site === 'PokerStars') {
-                          return <span className="text-[8px] font-bold text-red-600">PS</span>;
+                          return <span className="text-[10px] font-bold text-red-600">PS</span>;
                         }
                         if (site === 'GGPoker') {
-                          return <span className="text-[8px] font-bold text-orange-600">GG</span>;
+                          return <span className="text-[10px] font-bold text-orange-600">GG</span>;
                         }
                         if (site === '888Poker') {
-                          return <span className="text-[8px] font-bold text-green-600">888</span>;
+                          return <span className="text-[10px] font-bold text-green-600">888</span>;
                         }
                         if (site === 'PartyPoker') {
-                          return <span className="text-[8px] font-bold text-purple-600">PP</span>;
+                          return <span className="text-[10px] font-bold text-purple-600">PP</span>;
                         }
                         return null;
                       };
 
                       if (isPokerSite && nickname) {
                         return (
-                          <div className="flex items-center gap-1">
-                            <div className="w-4 h-4 bg-gray-100 rounded flex items-center justify-center">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
                               {getPokerSiteIcon(walletName)}
                             </div>
-                            <span className="text-xs text-gray-700 font-medium">{nickname}</span>
+                            <span className="text-sm text-gray-700 font-medium">{nickname}</span>
                           </div>
                         );
                       }
@@ -1479,8 +1479,8 @@ export function AdminView() {
                                 onClick={() => navigate('/player')}
                                 className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
                               >
-                                <span className="text-xs text-gray-600">{walletName}</span>
-                                <ExternalLink className="w-3 h-3 text-gray-400" />
+                                <span className="text-sm text-gray-600">{walletName}</span>
+                                <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="bg-gray-900 text-white text-xs">
@@ -1552,7 +1552,7 @@ export function AdminView() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="text-sm font-bold text-gray-900">
-                              {operation.type === 'Withdrawal' ? '-' : operation.type === 'Deposit' ? '+' : ''}${operation.amount.toLocaleString()}
+                              ${operation.amount.toLocaleString()}
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -1572,18 +1572,18 @@ export function AdminView() {
                             <td colSpan={6} className="px-4 py-0">
                               <div className="pl-12 py-2 space-y-1">
                                 {operation.transactions.map((tx: any, txIndex: number) => (
-                                  <div key={txIndex} className="flex items-center justify-between py-1.5 px-3 bg-white rounded border border-gray-200">
-                                    <div className="flex items-center gap-2">
+                                  <div key={txIndex} className="flex items-center justify-between py-2.5 px-4 bg-white rounded border border-gray-200">
+                                    <div className="flex items-center gap-3">
                                       {getWalletIcon(tx.fromType, tx.from)}
                                       {getWalletWithLink(tx.from, tx.fromType, tx.nickname)}
-                                      <span className="text-xs text-gray-400">→</span>
+                                      <span className="text-sm text-gray-400 mx-1">→</span>
                                       {getWalletIcon(tx.toType, tx.to)}
                                       {getWalletWithLink(tx.to, tx.toType, tx.nickname)}
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-3">
                                       {getOwnerBadge(tx.owner)}
                                       {getStatusIcon(tx.status)}
-                                      <span className="text-xs font-semibold text-gray-900">${tx.amount.toLocaleString()}</span>
+                                      <span className="text-sm font-semibold text-gray-900">${tx.amount.toLocaleString()}</span>
                                     </div>
                                   </div>
                                 ))}
