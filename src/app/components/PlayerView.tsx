@@ -1965,6 +1965,10 @@ export function PlayerView() {
               <History className="w-4 h-4 mr-2" />
               Overview
             </TabsTrigger>
+            <TabsTrigger value="sessions">
+              <Clock className="w-4 h-4 mr-2" />
+              Sessions
+            </TabsTrigger>
             <TabsTrigger value="operations">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
               Operations
@@ -1984,6 +1988,23 @@ export function PlayerView() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-3 mt-6">
+            {/* Ready to Play CTA */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 border-2 border-blue-500">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-white text-base font-bold mb-1">Ready to Play?</h3>
+                  <p className="text-blue-100 text-xs">Start a new session to track your performance</p>
+                </div>
+                <button
+                  onClick={startSession}
+                  className="bg-white hover:bg-gray-50 text-blue-600 font-bold px-5 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  Start Session
+                </button>
+              </div>
+            </div>
+
             {/* 70/30 Split Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-10 gap-3">
               {/* Left Column (70%) - Chart and Sessions */}
@@ -2453,100 +2474,6 @@ export function PlayerView() {
                 </div>
               </div>
             </div>
-
-            {/* Start Session CTA */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 border-2 border-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-white text-base font-bold mb-1">Ready to Play?</h3>
-                  <p className="text-blue-100 text-xs">Start a new session to track your performance</p>
-                </div>
-                <button
-                  onClick={startSession}
-                  className="bg-white hover:bg-gray-50 text-blue-600 font-bold px-5 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm"
-                >
-                  <PlayCircle className="w-4 h-4" />
-                  Start Session
-                </button>
-              </div>
-            </div>
-
-            {/* Sessions Table */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session History</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Date</th>
-                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Duration</th>
-                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Hands</th>
-                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">P/L</th>
-                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Balance</th>
-                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">ROI</th>
-                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Win/Loss</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {sessionHistory.map((session) => {
-                      const sessionProfit = session.profitLoss >= 0;
-                      const roi = ((session.profitLoss / session.buyIn) * 100).toFixed(1);
-                      
-                      return (
-                        <tr key={session.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-3 py-2.5">
-                            <div className="flex items-center gap-1.5 text-gray-500 text-xs">
-                              <Calendar className="w-3.5 h-3.5" />
-                              {formatDate(session.date)}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <div className="text-xs font-semibold text-gray-900">{formatTime(session.duration)}</div>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <div className="text-xs font-semibold text-gray-900">{session.handsPlayed}</div>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <div className={`text-sm font-bold ${sessionProfit ? 'text-green-600' : 'text-red-600'}`}>
-                              {formatPL(session.profitLoss)}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <div className="text-xs font-semibold text-gray-900">${session.buyIn}</div>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <div className={`text-xs font-bold ${parseFloat(roi) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {roi}%
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-1 text-[10px]">
-                                <span className="text-gray-500">W:</span>
-                                <span className="text-green-600 font-bold">${session.biggestWin}</span>
-                              </div>
-                              <div className="flex items-center gap-1 text-[10px]">
-                                <span className="text-gray-500">L:</span>
-                                <span className="text-red-600 font-bold">${Math.abs(session.biggestLoss)}</span>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {sessionHistory.length === 0 && (
-                <div className="text-center py-8 text-gray-400">
-                  <History className="w-10 h-10 mx-auto mb-2 text-gray-300" />
-                  <p className="text-xs">No sessions yet. Start your first session above!</p>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Right Column (30%) - Reconciliations */}
@@ -2934,6 +2861,85 @@ export function PlayerView() {
             </div>
             </div>
             </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="sessions" className="space-y-3 mt-6">
+            {/* Sessions Table */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session History</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Date</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Duration</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Hands</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">P/L</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Balance</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">ROI</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Win/Loss</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {sessionHistory.map((session) => {
+                      const sessionProfit = session.profitLoss >= 0;
+                      const roi = ((session.profitLoss / session.buyIn) * 100).toFixed(1);
+                      
+                      return (
+                        <tr key={session.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1.5 text-gray-500 text-xs">
+                              <Calendar className="w-3.5 h-3.5" />
+                              {formatDate(session.date)}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="text-xs font-semibold text-gray-900">{formatTime(session.duration)}</div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="text-xs font-semibold text-gray-900">{session.handsPlayed}</div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className={`text-sm font-bold ${sessionProfit ? 'text-green-600' : 'text-red-600'}`}>
+                              {formatPL(session.profitLoss)}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="text-xs font-semibold text-gray-900">${session.buyIn}</div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className={`text-xs font-bold ${parseFloat(roi) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {roi}%
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1 text-[10px]">
+                                <span className="text-gray-500">W:</span>
+                                <span className="text-green-600 font-bold">${session.biggestWin}</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-[10px]">
+                                <span className="text-gray-500">L:</span>
+                                <span className="text-red-600 font-bold">${Math.abs(session.biggestLoss)}</span>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {sessionHistory.length === 0 && (
+                <div className="text-center py-8 text-gray-400">
+                  <History className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+                  <p className="text-xs">No sessions yet. Start your first session above!</p>
+                </div>
+              )}
             </div>
           </TabsContent>
 
