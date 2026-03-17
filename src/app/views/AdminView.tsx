@@ -461,7 +461,7 @@ export function AdminView() {
           ...updatedTransactions[txIndex],
           status: 'confirmed'
         };
-        return { ...op, transactions: updatedTransactions };
+        return { ...op, transactions: updatedTransactions, status: getOperationStatus(updatedTransactions) };
       }
       return op;
     }));
@@ -477,7 +477,7 @@ export function AdminView() {
           ...updatedTransactions[txIndex],
           status: 'failed'
         };
-        return { ...op, transactions: updatedTransactions };
+        return { ...op, transactions: updatedTransactions, status: getOperationStatus(updatedTransactions) };
       }
       return op;
     }));
@@ -675,6 +675,20 @@ export function AdminView() {
     setActiveSlideIn(null);
   };
 
+  // Helper function to calculate operation status from transactions
+  const getOperationStatus = (transactions: any[]) => {
+    const statuses = transactions.map(tx => tx.status);
+    if (statuses.some(s => s === 'pending')) return 'Pending';
+    if (statuses.some(s => s === 'failed')) return 'Failed';
+    return 'Completed';
+  };
+
+  // Helper function to determine owner based on "To" field
+  const getOwnerFromTo = (to: string) => {
+    const companyAccounts = ['Main Wallet', 'Bank Account', 'Credit Card'];
+    return companyAccounts.includes(to) ? 'company' : 'player';
+  };
+
   // Generate mock operations
   const generateOperations = (page: number, count: number = 10) => {
     const types = ['Deposit', 'Withdrawal', 'Split', 'Swap'];
@@ -684,7 +698,8 @@ export function AdminView() {
     const pokerSites = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'];
     const playerFinancialWallets = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'];
     
-    const getRandomStatus = () => {
+    const getRandomStatus = (forcePending: boolean = false) => {
+      if (forcePending) return 'pending';
       const rand = Math.random();
       if (rand < 0.75) return 'confirmed';
       if (rand < 0.95) return 'pending';
@@ -708,6 +723,9 @@ export function AdminView() {
       const randomPlayerWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
       const nickname = randomPlayer.name.split(' ')[0] + 'PS';
       
+      // First pass: generate transactions without statuses
+      let companyTxIndices: number[] = [];
+      
       if (type === 'Deposit') {
         const txAmount = Math.floor(Math.random() * 2000) + 500;
         amount = txAmount;
@@ -717,17 +735,16 @@ export function AdminView() {
           to: randomPlayerWallet,
           toType: 'player_financial',
           amount: txAmount,
-          owner: 'company',
-          status: getRandomStatus()
+          owner: getOwnerFromTo(randomPlayerWallet)
         });
+        companyTxIndices.push(0);
         transactions.push({
           from: randomPlayerWallet,
           fromType: 'player_financial',
           to: randomPokerSite,
           toType: 'poker_site',
           amount: txAmount,
-          owner: 'player',
-          status: getRandomStatus(),
+          owner: getOwnerFromTo(randomPokerSite),
           nickname: nickname
         });
       } else if (type === 'Withdrawal') {
@@ -739,8 +756,7 @@ export function AdminView() {
           to: randomPlayerWallet,
           toType: 'player_financial',
           amount: txAmount,
-          owner: 'player',
-          status: getRandomStatus(),
+          owner: getOwnerFromTo(randomPlayerWallet),
           nickname: nickname
         });
         transactions.push({
@@ -749,9 +765,9 @@ export function AdminView() {
           to: 'Bank Account',
           toType: 'external',
           amount: txAmount,
-          owner: 'player',
-          status: getRandomStatus()
+          owner: getOwnerFromTo('Bank Account')
         });
+        companyTxIndices.push(1);
       } else if (type === 'Split') {
         const profit = Math.floor(Math.random() * 4000) + 1000;
         amount = profit;
@@ -764,30 +780,29 @@ export function AdminView() {
           to: randomPlayerWallet,
           toType: 'player_financial',
           amount: profit,
-          owner: 'player',
-          status: getRandomStatus(),
+          owner: getOwnerFromTo(randomPlayerWallet),
           nickname: nickname
         });
         
         transactions.push({
           from: randomPlayerWallet,
           fromType: 'player_financial',
-          to: 'Player Bank Account',
+          to: 'Bank Account',
           toType: 'player_account',
           amount: playerShare,
-          owner: 'player',
-          status: getRandomStatus()
+          owner: getOwnerFromTo('Bank Account')
         });
+        companyTxIndices.push(1);
         
         transactions.push({
           from: randomPlayerWallet,
           fromType: 'player_financial',
-          to: 'House Bank Account',
+          to: 'Bank Account',
           toType: 'house_account',
           amount: houseShare,
-          owner: 'player',
-          status: getRandomStatus()
+          owner: getOwnerFromTo('Bank Account')
         });
+        companyTxIndices.push(2);
       } else if (type === 'Swap') {
         let fromWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
         let toWallet = playerFinancialWallets[Math.floor(Math.random() * playerFinancialWallets.length)];
@@ -803,10 +818,17 @@ export function AdminView() {
           to: toWallet,
           toType: 'player_financial',
           amount: txAmount,
-          owner: 'player',
-          status: getRandomStatus()
+          owner: getOwnerFromTo(toWallet)
         });
       }
+      
+      // Second pass: assign statuses with 1-3 pending for company transactions
+      const numPending = Math.min(companyTxIndices.length, Math.floor(Math.random() * 3) + 1);
+      const pendingIndices = companyTxIndices.sort(() => Math.random() - 0.5).slice(0, numPending);
+      
+      transactions.forEach((tx, index) => {
+        tx.status = pendingIndices.includes(index) ? 'pending' : getRandomStatus();
+      });
       
       operations.push({
         id: `OP-${opNumber.toString().padStart(6, '0')}`,
@@ -814,7 +836,7 @@ export function AdminView() {
         date,
         amount,
         transactions,
-        status: 'Completed',
+        status: getOperationStatus(transactions),
         player: randomPlayer
       });
     }
@@ -910,6 +932,298 @@ export function AdminView() {
       </div>
     </div>
   );
+
+  const getWalletIcon = (type: string, name: string) => {
+    if (type === 'external') {
+      if (name.includes('Bank') || name.includes('Wire')) {
+        return (
+          <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+            <DollarSign className="w-4 h-4 text-gray-600" />
+          </div>
+        );
+      }
+      if (name.includes('Card')) {
+        return (
+          <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+            <CreditCard className="w-4 h-4 text-gray-600" />
+          </div>
+        );
+      }
+    }
+    if (type === 'company_wallet') {
+      return (
+        <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+          <Wallet className="w-4 h-4 text-blue-600" />
+        </div>
+      );
+    }
+    if (type === 'player_financial') {
+      if (name === 'Skrill') {
+        return (
+          <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-green-600">SK</span>
+          </div>
+        );
+      }
+      if (name === 'Neteller') {
+        return (
+          <div className="w-6 h-6 bg-teal-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-teal-600">NL</span>
+          </div>
+        );
+      }
+      if (name === 'Pix') {
+        return (
+          <div className="w-6 h-6 bg-yellow-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-yellow-600">PX</span>
+          </div>
+        );
+      }
+      if (name === 'LuxonPay') {
+        return (
+          <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-purple-600">LP</span>
+          </div>
+        );
+      }
+      return (
+        <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+          <Wallet className="w-4 h-4 text-blue-600" />
+        </div>
+      );
+    }
+    if (type === 'poker_site') {
+      if (name === 'PokerStars') {
+        return (
+          <div className="w-6 h-6 bg-red-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-red-600">PS</span>
+          </div>
+        );
+      }
+      if (name === 'GGPoker') {
+        return (
+          <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-orange-600">GG</span>
+          </div>
+        );
+      }
+      if (name === '888Poker') {
+        return (
+          <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-green-600">888</span>
+          </div>
+        );
+      }
+      if (name === 'PartyPoker') {
+        return (
+          <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-purple-600">PP</span>
+          </div>
+        );
+      }
+    }
+    if (type === 'player_account') {
+      return (
+        <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+          <DollarSign className="w-4 h-4 text-green-600" />
+        </div>
+      );
+    }
+    if (type === 'house_account') {
+      return (
+        <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+          <DollarSign className="w-4 h-4 text-gray-600" />
+        </div>
+      );
+    }
+    if (type === 'wallet') {
+      return (
+        <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+          <Wallet className="w-4 h-4 text-blue-600" />
+        </div>
+      );
+    }
+    if (type === 'profit') {
+      return (
+        <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+          <DollarSign className="w-4 h-4 text-purple-600" />
+        </div>
+      );
+    }
+    if (type === 'player') {
+      return (
+        <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
+          <Users className="w-4 h-4 text-blue-600" />
+        </div>
+      );
+    }
+    if (type === 'house') {
+      return (
+        <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+          <DollarSign className="w-4 h-4 text-gray-600" />
+        </div>
+      );
+    }
+    if (type === 'platform') {
+      if (name === 'PokerStars') {
+        return (
+          <div className="w-6 h-6 bg-red-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-red-600">PS</span>
+          </div>
+        );
+      }
+      if (name === 'GGPoker') {
+        return (
+          <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-orange-600">GG</span>
+          </div>
+        );
+      }
+      if (name === '888Poker') {
+        return (
+          <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-green-600">888</span>
+          </div>
+        );
+      }
+      if (name === 'PartyPoker') {
+        return (
+          <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+            <span className="text-[10px] font-bold text-purple-600">PP</span>
+          </div>
+        );
+      }
+    }
+    return (
+      <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
+        <Wallet className="w-4 h-4 text-gray-600" />
+      </div>
+    );
+  };
+
+  const getStatusIcon = (status: string) => {
+    if (status === 'confirmed') {
+      return (
+        <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center" title="Confirmed">
+          <CheckCircle className="w-3 h-3 text-green-600" />
+        </div>
+      );
+    }
+    if (status === 'pending') {
+      return (
+        <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center" title="Pending">
+          <Clock className="w-3 h-3 text-yellow-600" />
+        </div>
+      );
+    }
+    if (status === 'failed') {
+      return (
+        <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center" title="Failed">
+          <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const getOwnerBadge = (owner: string) => {
+    if (owner === 'player') {
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+          <User className="w-3 h-3" />
+          Player
+        </span>
+      );
+    }
+    if (owner === 'company') {
+      return (
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded border border-gray-200">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+          </svg>
+          Company
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const getWalletWithLink = (walletName: string, walletType: string, nickname?: string) => {
+    const isPokerSite = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'].includes(walletName);
+    const isPlayerFinancial = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'].includes(walletName);
+    
+    const getPokerSiteIcon = (site: string) => {
+      if (site === 'PokerStars') {
+        return <span className="text-[10px] font-bold text-red-600">PS</span>;
+      }
+      if (site === 'GGPoker') {
+        return <span className="text-[10px] font-bold text-orange-600">GG</span>;
+      }
+      if (site === '888Poker') {
+        return <span className="text-[10px] font-bold text-green-600">888</span>;
+      }
+      if (site === 'PartyPoker') {
+        return <span className="text-[10px] font-bold text-purple-600">PP</span>;
+      }
+      return null;
+    };
+
+    if (isPokerSite && nickname) {
+      return (
+        <div className="flex items-center gap-1.5">
+          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+            {getPokerSiteIcon(walletName)}
+          </div>
+          <span className="text-sm text-gray-700 font-medium">{nickname}</span>
+        </div>
+      );
+    }
+
+    if (isPlayerFinancial) {
+      const ulids: Record<string, string> = {
+        'Skrill': '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+        'Neteller': '01ARZ3NDEKTSV4RRFFQ69G5FBW',
+        'Pix': '01ARZ3NDEKTSV4RRFFQ69G5FCX',
+        'LuxonPay': '01ARZ3NDEKTSV4RRFFQ69G5FDY'
+      };
+      
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => navigate('/player')}
+              className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
+            >
+              <span className="text-sm text-gray-600">{walletName}</span>
+              <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="bg-gray-900 text-white text-xs">
+            <div className="font-mono">{ulids[walletName] || 'N/A'}</div>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return <span className="text-sm text-gray-600">{walletName}</span>;
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   return (
     <div className="space-y-0">
@@ -1216,298 +1530,6 @@ export function AdminView() {
                       }
                     };
 
-                    const getWalletIcon = (type: string, name: string) => {
-                      if (type === 'external') {
-                        if (name.includes('Bank') || name.includes('Wire')) {
-                          return (
-                            <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
-                              <DollarSign className="w-4 h-4 text-gray-600" />
-                            </div>
-                          );
-                        }
-                        if (name.includes('Card')) {
-                          return (
-                            <div className="w-6 h-6 bg-gray-100 rounded flex items-center justify-center">
-                              <CreditCard className="w-4 h-4 text-gray-600" />
-                            </div>
-                          );
-                        }
-                      }
-                      if (type === 'company_wallet') {
-                        return (
-                          <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
-                            <Wallet className="w-4 h-4 text-blue-600" />
-                          </div>
-                        );
-                      }
-                      if (type === 'player_financial') {
-                        if (name === 'Skrill') {
-                          return (
-                            <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-green-600">SK</span>
-                            </div>
-                          );
-                        }
-                        if (name === 'Neteller') {
-                          return (
-                            <div className="w-6 h-6 bg-teal-100 rounded flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-teal-600">NL</span>
-                            </div>
-                          );
-                        }
-                        if (name === 'Pix') {
-                          return (
-                            <div className="w-6 h-6 bg-yellow-100 rounded flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-yellow-600">PX</span>
-                            </div>
-                          );
-                        }
-                        if (name === 'LuxonPay') {
-                          return (
-                            <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-purple-600">LP</span>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
-                            <Wallet className="w-4 h-4 text-blue-600" />
-                          </div>
-                        );
-                      }
-                      if (type === 'poker_site') {
-                        if (name === 'PokerStars') {
-                          return (
-                            <div className="w-6 h-6 bg-red-100 rounded flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-red-600">PS</span>
-                            </div>
-                          );
-                        }
-                        if (name === 'GGPoker') {
-                          return (
-                            <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-orange-600">GG</span>
-                            </div>
-                          );
-                        }
-                        if (name === '888Poker') {
-                          return (
-                            <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-green-600">888</span>
-                            </div>
-                          );
-                        }
-                        if (name === 'PartyPoker') {
-                          return (
-                            <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
-                              <span className="text-[10px] font-bold text-purple-600">PP</span>
-                            </div>
-                          );
-                        }
-                      }
-                      if (type === 'player_account') {
-                        return (
-                          <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-                            <DollarSign className="w-3 h-3 text-green-600" />
-                          </div>
-                        );
-                      }
-                      if (type === 'house_account') {
-                        return (
-                          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                            <DollarSign className="w-3 h-3 text-gray-600" />
-                          </div>
-                        );
-                      }
-                      if (type === 'wallet') {
-                        return (
-                          <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
-                            <Wallet className="w-3 h-3 text-blue-600" />
-                          </div>
-                        );
-                      }
-                      if (type === 'profit') {
-                        return (
-                          <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-                            <DollarSign className="w-3 h-3 text-purple-600" />
-                          </div>
-                        );
-                      }
-                      if (type === 'player') {
-                        return (
-                          <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
-                            <Users className="w-3 h-3 text-blue-600" />
-                          </div>
-                        );
-                      }
-                      if (type === 'house') {
-                        return (
-                          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                            <DollarSign className="w-3 h-3 text-gray-600" />
-                          </div>
-                        );
-                      }
-                      if (type === 'platform') {
-                        if (name === 'PokerStars') {
-                          return (
-                            <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-red-600">PS</span>
-                            </div>
-                          );
-                        }
-                        if (name === 'GGPoker') {
-                          return (
-                            <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-orange-600">GG</span>
-                            </div>
-                          );
-                        }
-                        if (name === '888Poker') {
-                          return (
-                            <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-green-600">888</span>
-                            </div>
-                          );
-                        }
-                        if (name === 'PartyPoker') {
-                          return (
-                            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-                              <span className="text-[8px] font-bold text-purple-600">PP</span>
-                            </div>
-                          );
-                        }
-                      }
-                      return (
-                        <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                          <Wallet className="w-3 h-3 text-gray-600" />
-                        </div>
-                      );
-                    };
-
-                    const getStatusIcon = (status: string) => {
-                      if (status === 'confirmed') {
-                        return (
-                          <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center" title="Confirmed">
-                            <CheckCircle className="w-3 h-3 text-green-600" />
-                          </div>
-                        );
-                      }
-                      if (status === 'pending') {
-                        return (
-                          <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center" title="Pending">
-                            <Clock className="w-3 h-3 text-yellow-600" />
-                          </div>
-                        );
-                      }
-                      if (status === 'failed') {
-                        return (
-                          <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center" title="Failed">
-                            <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </div>
-                        );
-                      }
-                      return null;
-                    };
-
-                    const getOwnerBadge = (owner: string) => {
-                      if (owner === 'player') {
-                        return (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">
-                            <User className="w-3 h-3" />
-                            Player
-                          </span>
-                        );
-                      }
-                      if (owner === 'company') {
-                        return (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded border border-gray-200">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                            </svg>
-                            Company
-                          </span>
-                        );
-                      }
-                      return null;
-                    };
-
-                    const getWalletWithLink = (walletName: string, walletType: string, nickname?: string) => {
-                      const isPokerSite = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'].includes(walletName);
-                      const isPlayerFinancial = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'].includes(walletName);
-                      
-                      const getPokerSiteIcon = (site: string) => {
-                        if (site === 'PokerStars') {
-                          return <span className="text-[10px] font-bold text-red-600">PS</span>;
-                        }
-                        if (site === 'GGPoker') {
-                          return <span className="text-[10px] font-bold text-orange-600">GG</span>;
-                        }
-                        if (site === '888Poker') {
-                          return <span className="text-[10px] font-bold text-green-600">888</span>;
-                        }
-                        if (site === 'PartyPoker') {
-                          return <span className="text-[10px] font-bold text-purple-600">PP</span>;
-                        }
-                        return null;
-                      };
-
-                      if (isPokerSite && nickname) {
-                        return (
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                              {getPokerSiteIcon(walletName)}
-                            </div>
-                            <span className="text-sm text-gray-700 font-medium">{nickname}</span>
-                          </div>
-                        );
-                      }
-
-                      if (isPlayerFinancial) {
-                        const ulids: Record<string, string> = {
-                          'Skrill': '01ARZ3NDEKTSV4RRFFQ69G5FAV',
-                          'Neteller': '01ARZ3NDEKTSV4RRFFQ69G5FBW',
-                          'Pix': '01ARZ3NDEKTSV4RRFFQ69G5FCX',
-                          'LuxonPay': '01ARZ3NDEKTSV4RRFFQ69G5FDY'
-                        };
-                        
-                        return (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => navigate('/player')}
-                                className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
-                              >
-                                <span className="text-sm text-gray-600">{walletName}</span>
-                                <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" className="bg-gray-900 text-white text-xs">
-                              <div className="font-mono">{ulids[walletName] || 'N/A'}</div>
-                            </TooltipContent>
-                          </Tooltip>
-                        );
-                      }
-
-                      return <span className="text-xs text-gray-600">{walletName}</span>;
-                    };
-
-                    const formatDate = (date: Date) => {
-                      return date.toLocaleDateString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        year: 'numeric'
-                      });
-                    };
-
-                    const formatTime = (date: Date) => {
-                      return date.toLocaleTimeString('en-US', { 
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      });
-                    };
-
                     const isExpanded = expandedOperations.has(operation.id);
                     
                     return (
@@ -1559,10 +1581,26 @@ export function AdminView() {
                             <div className="text-sm text-gray-900">{operation.transactions.length} transaction{operation.transactions.length !== 1 ? 's' : ''}</div>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-200">
-                              <CheckCircle className="w-3 h-3" />
-                              {operation.status}
-                            </span>
+                            {operation.status === 'Completed' && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded border border-green-200">
+                                <CheckCircle className="w-3 h-3" />
+                                Completed
+                              </span>
+                            )}
+                            {operation.status === 'Pending' && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-700 bg-yellow-50 px-2 py-1 rounded border border-yellow-200">
+                                <Clock className="w-3 h-3" />
+                                Pending
+                              </span>
+                            )}
+                            {operation.status === 'Failed' && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2 py-1 rounded border border-red-200">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Failed
+                              </span>
+                            )}
                           </td>
                         </tr>
                         
