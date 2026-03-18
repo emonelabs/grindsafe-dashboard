@@ -19,7 +19,9 @@ import {
   Zap,
   Plus,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  ChevronRight,
+  Copy
 } from 'lucide-react';
 import SlideInPanel from './SlideInPanel';
 import {
@@ -42,6 +44,159 @@ import '@xyflow/react/dist/style.css';
 
 type RiskOption = 'ai' | 'rule';
 
+type Resource = 'player' | 'session' | 'wallet' | 'operation';
+type LogicOperator = 'AND' | 'OR';
+type FieldType = 'number' | 'text' | 'date' | 'enum';
+
+interface ResourceField {
+  field: string;
+  label: string;
+  type: FieldType;
+  options?: { value: string; label: string }[];
+}
+
+const resourceFields: Record<Resource, ResourceField[]> = {
+  player: [
+    { field: 'bb_100', label: 'bb/100', type: 'number' },
+    { field: 'roi', label: 'ROI (%)', type: 'number' },
+    { field: 'sessions', label: 'Sessions', type: 'number' },
+    { field: 'profit_loss', label: 'Profit/Loss ($)', type: 'number' },
+    { field: 'win_rate', label: 'Win Rate (%)', type: 'number' },
+    { field: 'hands_played', label: 'Hands Played', type: 'number' },
+    { field: 'avg_buy_in', label: 'Avg Buy-in ($)', type: 'number' },
+    { field: 'game_type', label: 'Game Type', type: 'enum', options: [
+      { value: 'cash', label: 'Cash' },
+      { value: 'mtt', label: 'MTT' },
+      { value: 'sng', label: 'SNG' },
+    ]},
+    { field: 'stakes', label: 'Stakes', type: 'text' },
+    { field: 'table_size', label: 'Table Size', type: 'enum', options: [
+      { value: '6max', label: '6-Max' },
+      { value: '9max', label: '9-Max' },
+      { value: 'heads_up', label: 'Heads-Up' },
+    ]},
+  ],
+  session: [
+    { field: 'duration', label: 'Duration (hrs)', type: 'number' },
+    { field: 'hands', label: 'Hands Played', type: 'number' },
+    { field: 'buy_in', label: 'Buy-in ($)', type: 'number' },
+    { field: 'cash_out', label: 'Cash-out ($)', type: 'number' },
+    { field: 'net_result', label: 'Net Result ($)', type: 'number' },
+    { field: 'start_time', label: 'Start Time', type: 'date' },
+    { field: 'end_time', label: 'End Time', type: 'date' },
+    { field: 'date', label: 'Date', type: 'date' },
+    { field: 'day_of_week', label: 'Day of Week', type: 'enum', options: [
+      { value: 'monday', label: 'Monday' },
+      { value: 'tuesday', label: 'Tuesday' },
+      { value: 'wednesday', label: 'Wednesday' },
+      { value: 'thursday', label: 'Thursday' },
+      { value: 'friday', label: 'Friday' },
+      { value: 'saturday', label: 'Saturday' },
+      { value: 'sunday', label: 'Sunday' },
+    ]},
+  ],
+  wallet: [
+    { field: 'balance', label: 'Balance ($)', type: 'number' },
+    { field: 'pending', label: 'Pending Amount ($)', type: 'number' },
+    { field: 'tx_count', label: 'Transaction Count', type: 'number' },
+    { field: 'last_activity', label: 'Last Activity', type: 'date' },
+    { field: 'provider', label: 'Provider', type: 'enum', options: [
+      { value: 'skrill', label: 'Skrill' },
+      { value: 'neteller', label: 'Neteller' },
+      { value: 'pix', label: 'Pix' },
+      { value: 'luxonpay', label: 'LuxonPay' },
+    ]},
+    { field: 'status', label: 'Status', type: 'enum', options: [
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' },
+      { value: 'suspended', label: 'Suspended' },
+    ]},
+  ],
+  operation: [
+    { field: 'amount', label: 'Amount ($)', type: 'number' },
+    { field: 'type', label: 'Type', type: 'enum', options: [
+      { value: 'deposit', label: 'Deposit' },
+      { value: 'withdrawal', label: 'Withdrawal' },
+      { value: 'split', label: 'Split' },
+      { value: 'swap', label: 'Swap' },
+    ]},
+    { field: 'status', label: 'Status', type: 'enum', options: [
+      { value: 'pending', label: 'Pending' },
+      { value: 'completed', label: 'Completed' },
+      { value: 'failed', label: 'Failed' },
+      { value: 'confirmed', label: 'Confirmed' },
+    ]},
+    { field: 'date', label: 'Date', type: 'date' },
+    { field: 'poker_site', label: 'Poker Site', type: 'enum', options: [
+      { value: 'pokerstars', label: 'PokerStars' },
+      { value: 'ggpoker', label: 'GGPoker' },
+      { value: '888poker', label: '888Poker' },
+      { value: 'partypoker', label: 'PartyPoker' },
+    ]},
+  ],
+};
+
+const operatorsByType: Record<FieldType, { value: string; label: string }[]> = {
+  number: [
+    { value: '=', label: '=' },
+    { value: '!=', label: '≠' },
+    { value: '>', label: '>' },
+    { value: '<', label: '<' },
+    { value: '>=', label: '≥' },
+    { value: '<=', label: '≤' },
+  ],
+  text: [
+    { value: 'contains', label: 'contains' },
+    { value: 'not_contains', label: 'does not contain' },
+    { value: 'starts_with', label: 'starts with' },
+    { value: 'ends_with', label: 'ends with' },
+    { value: 'is_empty', label: 'is empty' },
+    { value: 'is_not_empty', label: 'is not empty' },
+  ],
+  date: [
+    { value: 'is', label: 'is' },
+    { value: 'is_before', label: 'is before' },
+    { value: 'is_after', label: 'is after' },
+    { value: 'is_empty', label: 'is empty' },
+  ],
+  enum: [
+    { value: 'is', label: 'is' },
+    { value: 'is_not', label: 'is not' },
+  ],
+};
+
+const actions = ['up', 'down', 'stay'] as const;
+
+type Action = typeof actions[number];
+
+interface SingleCondition {
+  id: string;
+  field: string;
+  operator: string;
+  value: string;
+  valueEnd?: string;
+}
+
+interface ConditionGroup {
+  id: string;
+  logic: LogicOperator;
+  items: (SingleCondition | ConditionGroup)[];
+}
+
+interface ConditionNodeData {
+  name: string;
+  resource: Resource;
+  rootGroup: ConditionGroup;
+}
+
+interface ActionNodeData {
+  action: Action;
+}
+
+interface LevelNodeData {
+  name: string;
+}
+
 interface RiskLevel {
   id: string;
   name: string;
@@ -60,27 +215,276 @@ interface AIDecision {
   reason?: string;
 }
 
-const conditionFields = ['bb/100', 'ROI', 'Sessions'] as const;
-const operators = ['=', '>', '<', '>=', '<='] as const;
-const actions = ['up', 'down', 'stay'] as const;
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-type ConditionField = typeof conditionFields[number];
-type Operator = typeof operators[number];
-type Action = typeof actions[number];
+const createEmptyCondition = (): SingleCondition => ({
+  id: generateId(),
+  field: 'bb_100',
+  operator: '>',
+  value: '',
+});
 
-interface ConditionNodeData {
-  name: string;
-  field: ConditionField;
-  operator: Operator;
-  value: string;
+const createEmptyGroup = (): ConditionGroup => ({
+  id: generateId(),
+  logic: 'AND',
+  items: [createEmptyCondition()],
+});
+
+const createEmptyRootGroup = (): ConditionGroup => ({
+  id: generateId(),
+  logic: 'AND',
+  items: [createEmptyCondition()],
+});
+
+function isConditionGroup(item: SingleCondition | ConditionGroup): item is ConditionGroup {
+  return 'items' in item && 'logic' in item;
 }
 
-interface ActionNodeData {
-  action: Action;
+function ConditionCard({ 
+  condition, 
+  resource, 
+  onUpdate, 
+  onRemove,
+  depth = 0 
+}: { 
+  condition: SingleCondition; 
+  resource: Resource;
+  onUpdate: (updated: SingleCondition) => void;
+  onRemove: () => void;
+  depth?: number;
+}) {
+  const fields = resourceFields[resource];
+  const currentField = fields.find(f => f.field === condition.field);
+  const fieldType = currentField?.type || 'text';
+  const operators = operatorsByType[fieldType];
+  const needsValueEnd = condition.operator === 'between';
+
+  const handleFieldChange = (field: string) => {
+    const newField = fields.find(f => f.field === field);
+    const newFieldType = newField?.type || 'text';
+    const newOperators = operatorsByType[newFieldType];
+    onUpdate({
+      ...condition,
+      field,
+      operator: newOperators[0].value,
+      value: '',
+      valueEnd: undefined,
+    });
+  };
+
+  return (
+    <div className={`flex items-center gap-1.5 ${depth > 0 ? 'pl-4 border-l-2 border-gray-200' : ''}`}>
+      <select
+        value={condition.field}
+        onChange={(e) => handleFieldChange(e.target.value)}
+        className="flex-1 min-w-[80px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700"
+      >
+        {fields.map(f => (
+          <option key={f.field} value={f.field}>{f.label}</option>
+        ))}
+      </select>
+      
+      <select
+        value={condition.operator}
+        onChange={(e) => onUpdate({ ...condition, operator: e.target.value })}
+        className="w-20 px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700"
+      >
+        {operators.map(op => (
+          <option key={op.value} value={op.value}>{op.label}</option>
+        ))}
+      </select>
+
+      {!['is_empty', 'is_not_empty'].includes(condition.operator) && (
+        <>
+          {fieldType === 'enum' && currentField?.options ? (
+            <select
+              value={condition.value}
+              onChange={(e) => onUpdate({ ...condition, value: e.target.value })}
+              className="flex-1 min-w-[60px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700"
+            >
+              <option value="">Select...</option>
+              {currentField.options.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          ) : fieldType === 'date' ? (
+            <input
+              type="date"
+              value={condition.value}
+              onChange={(e) => onUpdate({ ...condition, value: e.target.value })}
+              className="flex-1 min-w-[80px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700"
+            />
+          ) : (
+            <>
+              <input
+                type="number"
+                value={condition.value}
+                onChange={(e) => onUpdate({ ...condition, value: e.target.value })}
+                placeholder="Value"
+                className="flex-1 min-w-[50px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
+              />
+              {needsValueEnd && (
+                <>
+                  <span className="text-xs text-gray-400">and</span>
+                  <input
+                    type="number"
+                    value={condition.valueEnd || ''}
+                    onChange={(e) => onUpdate({ ...condition, valueEnd: e.target.value })}
+                    placeholder="End"
+                    className="flex-1 min-w-[50px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
+                  />
+                </>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      <button
+        onClick={onRemove}
+        className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
 }
 
-interface LevelNodeData {
-  name: string;
+function GroupCard({
+  group,
+  resource,
+  onUpdate,
+  onRemove,
+  depth = 0,
+  isRoot = false
+}: {
+  group: ConditionGroup;
+  resource: Resource;
+  onUpdate: (updated: ConditionGroup) => void;
+  onRemove?: () => void;
+  depth?: number;
+  isRoot?: boolean;
+}) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const handleAddCondition = () => {
+    onUpdate({
+      ...group,
+      items: [...group.items, createEmptyCondition()],
+    });
+  };
+
+  const handleAddGroup = () => {
+    onUpdate({
+      ...group,
+      items: [...group.items, createEmptyGroup()],
+    });
+  };
+
+  const handleUpdateItem = (index: number, updated: SingleCondition | ConditionGroup) => {
+    const newItems = [...group.items];
+    newItems[index] = updated;
+    onUpdate({ ...group, items: newItems });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    const newItems = group.items.filter((_, i) => i !== index);
+    onUpdate({ ...group, items: newItems });
+  };
+
+  const handleLogicChange = (logic: LogicOperator) => {
+    onUpdate({ ...group, logic });
+  };
+
+  return (
+    <div className={`rounded-lg border ${depth > 0 ? 'border-gray-200 bg-gray-50/50' : 'border-gray-200 bg-white'} ${isRoot ? '' : 'p-2'}`}>
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          {!isRoot && (
+            <select
+              value={group.logic}
+              onChange={(e) => handleLogicChange(e.target.value as LogicOperator)}
+              className="px-2 py-0.5 text-xs font-medium bg-indigo-50 border border-indigo-200 rounded text-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+            >
+              <option value="AND">AND</option>
+              <option value="OR">OR</option>
+            </select>
+          )}
+          {isRoot && (
+            <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+              {group.items.length} condition{group.items.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {!isRoot && onRemove && (
+            <button
+              onClick={onRemove}
+              className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+          >
+            <ChevronRight className={`w-3 h-3 transition-transform ${isCollapsed ? '' : 'rotate-90'}`} />
+          </button>
+        </div>
+      </div>
+
+      {!isCollapsed && (
+        <div className="p-2 space-y-1.5">
+          {group.items.map((item, index) => (
+            <div key={isConditionGroup(item) ? item.id : item.id}>
+              {index > 0 && (
+                <div className="flex items-center justify-center py-1">
+                  <span className="text-[10px] font-medium text-gray-400 bg-white px-2 py-0.5 rounded border border-gray-200">
+                    {group.logic}
+                  </span>
+                </div>
+              )}
+              {isConditionGroup(item) ? (
+                <GroupCard
+                  group={item}
+                  resource={resource}
+                  onUpdate={(updated) => handleUpdateItem(index, updated)}
+                  onRemove={() => handleRemoveItem(index)}
+                  depth={depth + 1}
+                />
+              ) : (
+                <ConditionCard
+                  condition={item}
+                  resource={resource}
+                  onUpdate={(updated) => handleUpdateItem(index, updated)}
+                  onRemove={() => handleRemoveItem(index)}
+                  depth={depth}
+                />
+              )}
+            </div>
+          ))}
+
+          <div className="flex items-center gap-2 pt-1.5 border-t border-gray-100 mt-2">
+            <button
+              onClick={handleAddCondition}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Add condition
+            </button>
+            <button
+              onClick={handleAddGroup}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              Add group
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ConditionNode({ data, selected, id }: NodeProps<{ data: ConditionNodeData }> & { id: string }) {
@@ -89,6 +493,63 @@ function ConditionNode({ data, selected, id }: NodeProps<{ data: ConditionNodeDa
   const handleDelete = () => {
     setNodes((nds) => nds.filter((n) => n.id !== id));
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+  };
+
+  const handleUpdateRootGroup = (updated: ConditionGroup) => {
+    setNodes(nds => nds.map(node => {
+      if (node.id === id && node.type === 'condition') {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            rootGroup: updated
+          }
+        };
+      }
+      return node;
+    }));
+  };
+
+  const handleNameChange = (name: string) => {
+    setNodes(nds => nds.map(node => {
+      if (node.id === id && node.type === 'condition') {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            name
+          }
+        };
+      }
+      return node;
+    }));
+  };
+
+  const handleResourceChange = (resource: Resource) => {
+    const firstField = resourceFields[resource][0].field;
+    const newRootGroup: ConditionGroup = {
+      id: generateId(),
+      logic: 'AND',
+      items: [{
+        id: generateId(),
+        field: firstField,
+        operator: '>',
+        value: ''
+      }]
+    };
+    setNodes(nds => nds.map(node => {
+      if (node.id === id && node.type === 'condition') {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            resource,
+            rootGroup: newRootGroup
+          }
+        };
+      }
+      return node;
+    }));
   };
 
   return (
@@ -109,48 +570,37 @@ function ConditionNode({ data, selected, id }: NodeProps<{ data: ConditionNodeDa
           <span className={`font-medium text-sm ${selected ? 'text-indigo-700' : 'text-gray-600'}`}>Condition</span>
         </div>
       </div>
-      <div className="p-4 space-y-3">
+      <div className="p-3 space-y-3 max-h-[400px] overflow-y-auto">
         <div>
           <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Name</label>
           <input
             type="text"
             value={data.name}
-            className="w-full mt-1.5 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
-            placeholder="e.g., Low Profit"
+            onChange={(e) => handleNameChange(e.target.value)}
+            className="w-full mt-1 px-2 py-1.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
+            placeholder="e.g., High Roller Check"
           />
         </div>
         <div>
-          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Field</label>
+          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Resource</label>
           <select
-            value={data.field}
-            className="w-full mt-1.5 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700"
+            value={data.resource}
+            onChange={(e) => handleResourceChange(e.target.value as Resource)}
+            className="w-full mt-1 px-2 py-1.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700"
           >
-            {conditionFields.map(field => (
-              <option key={field} value={field} className="bg-white">{field}</option>
-            ))}
+            <option value="player">Player</option>
+            <option value="session">Session</option>
+            <option value="wallet">Wallet</option>
+            <option value="operation">Operation</option>
           </select>
         </div>
-        <div className="flex gap-2">
-          <div className="flex-1">
-            <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Operator</label>
-            <select
-              value={data.operator}
-              className="w-full mt-1.5 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700"
-            >
-              {operators.map(op => (
-                <option key={op} value={op} className="bg-white">{op}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Value</label>
-            <input
-              type="number"
-              value={data.value}
-              className="w-full mt-1.5 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
-              placeholder="0"
-            />
-          </div>
+        <div className="pt-1">
+          <GroupCard
+            group={data.rootGroup}
+            resource={data.resource}
+            onUpdate={handleUpdateRootGroup}
+            isRoot={true}
+          />
         </div>
       </div>
     </div>
@@ -356,7 +806,17 @@ export function RiskManagement() {
           id: 'cond-1',
           type: 'condition',
           position: { x: 450, y: 80 },
-          data: { name: 'Check Profit', field: 'bb/100', operator: '>', value: '50' },
+          data: { 
+            name: 'Check Profit', 
+            resource: 'player',
+            rootGroup: {
+              id: 'rg-1',
+              logic: 'AND',
+              items: [
+                { id: 'c-1', field: 'bb_100', operator: '>', value: '50' }
+              ]
+            }
+          },
         },
         {
           id: 'action-1',
@@ -385,7 +845,17 @@ export function RiskManagement() {
           id: 'cond-2',
           type: 'condition',
           position: { x: 450, y: 80 },
-          data: { name: 'Check Loss', field: 'bb/100', operator: '<', value: '-30' },
+          data: { 
+            name: 'Check Loss', 
+            resource: 'player',
+            rootGroup: {
+              id: 'rg-2',
+              logic: 'AND',
+              items: [
+                { id: 'c-2', field: 'bb_100', operator: '<', value: '-30' }
+              ]
+            }
+          },
         },
         {
           id: 'action-2',
@@ -581,7 +1051,20 @@ export function RiskManagement() {
           id: `cond-${Date.now()}`,
           type: 'condition',
           position,
-          data: { name: '', field: 'bb/100' as ConditionField, operator: '=' as Operator, value: '0' },
+          data: { 
+            name: '', 
+            resource: 'player' as Resource,
+            rootGroup: {
+              id: generateId(),
+              logic: 'AND' as LogicOperator,
+              items: [{
+                id: generateId(),
+                field: 'bb_100',
+                operator: '>',
+                value: ''
+              }]
+            }
+          },
         };
       } else if (nodeType === 'action') {
         newNode = {
