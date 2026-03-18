@@ -54,6 +54,20 @@ interface AccountDataPoint {
   value: number;
 }
 
+interface Hand {
+  id: string;
+  timestamp: Date;
+  action: 'win' | 'loss' | 'fold';
+  amount: number;
+  cards?: string[];
+  flop?: string[];
+  turn?: string;
+  river?: string;
+  pot: number;
+  position: string;
+  reconciled: boolean;
+}
+
 export function PlayerView() {
   // Mock player data
   const currentPlayer = {
@@ -75,6 +89,9 @@ export function PlayerView() {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [uploadedHands, setUploadedHands] = useState<Hand[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isProcessingUpload, setIsProcessingUpload] = useState(false);
   
   // Initialize session state from localStorage
   const [sessionActive, setSessionActive] = useState(() => {
@@ -919,7 +936,18 @@ export function PlayerView() {
     }
   }, [sessionActive, sessionTime, currentPL, currentEV, sessionData, buyIn, biggestWin, biggestLoss]);
 
-  // Update session data when active
+  // Update session time - always runs when session is active
+  useEffect(() => {
+    if (!sessionActive) return;
+
+    const timeInterval = setInterval(() => {
+      setSessionTime(prev => prev + 1);
+    }, 10000);
+
+    return () => clearInterval(timeInterval);
+  }, [sessionActive]);
+
+  // Update session data (PL/EV/chart) - only when screen sharing
   useEffect(() => {
     if (!sessionActive) return;
 
@@ -929,6 +957,9 @@ export function PlayerView() {
       pl: 0,
       ev: 0
     }]);
+
+    // Only auto-update metrics when screen sharing is enabled
+    if (!isScreenSharing) return;
 
     // Update data every 10 seconds
     const interval = setInterval(() => {
@@ -970,12 +1001,10 @@ export function PlayerView() {
         const evVariance = (Math.random() - 0.5) * 30;
         return Math.round(prev + (Math.random() * 100 - 50) + evVariance);
       });
-      
-      setSessionTime(prev => prev + 1);
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [sessionActive]);
+  }, [sessionActive, isScreenSharing, biggestWin, biggestLoss]);
 
   // Command palette keyboard shortcut (Cmd+O)
   useEffect(() => {
@@ -1020,6 +1049,8 @@ export function PlayerView() {
     setBiggestWin(0);
     setBiggestLoss(0);
     setSessionData([]);
+    setUploadedHands([]);
+    setIsScreenSharing(false);
     // Initial save to localStorage
     localStorage.setItem('activeSession', JSON.stringify({
       isActive: true,
@@ -1072,6 +1103,7 @@ export function PlayerView() {
     setSessionHistory([newSession, ...sessionHistory]);
     setSessionActive(false);
     setIsRecording(false);
+    setUploadedHands([]);
     // Clear session from localStorage
     localStorage.removeItem('activeSession');
     // Switch back to overview tab after ending session
@@ -3269,65 +3301,64 @@ export function PlayerView() {
           </div>
         </div>
 
-        {/* Session Performance Chart - Full Width */}
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Performance</h3>
-          </div>
-          <div className="p-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={sessionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis 
-                  dataKey="time" 
-                  stroke="#6b7280"
-                  style={{ fontSize: '10px' }}
-                />
-                <YAxis 
-                  stroke="#6b7280"
-                  style={{ fontSize: '10px' }}
-                  tickFormatter={(value) => `$${value}`}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '6px',
-                    fontSize: '12px'
-                  }}
-                  formatter={(value: number, name: string) => [`$${value}`, name === 'pl' ? 'P/L' : 'EV']}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="pl" 
-                  stroke="#10b981" 
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="ev" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
-                  dot={false}
-                  strokeDasharray="5 5"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* 50/50 Grid: Live Feed | Live Hands */}
-        <div className="grid grid-cols-2 gap-3">
-          {/* Live Feed */}
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+        {/* 80/20 Grid: Session Performance | Live Feed */}
+        <div className="grid grid-cols-5 gap-3">
+          {/* Session Performance (80%) */}
+          <div className="col-span-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Performance</h3>
+            </div>
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={160}>
+                <LineChart data={sessionData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="time" 
+                    stroke="#6b7280"
+                    style={{ fontSize: '10px' }}
+                  />
+                  <YAxis 
+                    stroke="#6b7280"
+                    style={{ fontSize: '10px' }}
+                    tickFormatter={(value) => `$${value}`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      fontSize: '12px'
+                    }}
+                    formatter={(value: number, name: string) => [`$${value}`, name === 'pl' ? 'P/L' : 'EV']}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="pl" 
+                    stroke="#10b981" 
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="ev" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2}
+                    dot={false}
+                    strokeDasharray="5 5"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Live Feed (20%) */}
+          <div className="col-span-1 bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-2 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Live Feed</h3>
+                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Live Feed</h3>
                 {isScreenSharing && (
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
-                    <span className="text-[10px] font-medium text-red-600 uppercase tracking-wide">Recording</span>
                   </div>
                 )}
               </div>
@@ -3345,42 +3376,68 @@ export function PlayerView() {
                 </div>
 
                 {/* Video Controls */}
-                <div className="p-2 bg-gray-50 flex items-center justify-center gap-2 border-t border-gray-200">
+                <div className="p-1.5 bg-gray-50 flex items-center justify-center border-t border-gray-200">
                   <button 
                     onClick={stopScreenSharing}
-                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center gap-1.5"
+                    className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-[10px] font-semibold transition-all flex items-center gap-1"
                   >
-                    <Square className="w-3 h-3" />
-                    Stop Sharing
+                    <Square className="w-2.5 h-2.5" />
+                    Stop
                   </button>
                 </div>
               </>
             ) : (
               <>
                 <div className="relative bg-gray-100 aspect-video flex items-center justify-center">
-                  <div className="text-center p-4">
-                    <Video className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-xs text-gray-500">Screen sharing disabled</p>
+                  <div className="text-center p-2">
+                    <Video className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                    <p className="text-[10px] text-gray-500">No feed</p>
                   </div>
                 </div>
 
                 {/* Start Sharing Button */}
-                <div className="p-2 bg-gray-50 flex items-center justify-center gap-2 border-t border-gray-200">
+                <div className="p-1.5 bg-gray-50 flex items-center justify-center border-t border-gray-200">
                   <button 
                     onClick={startScreenSharing}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center gap-1.5"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-[10px] font-semibold transition-all flex items-center gap-1"
                   >
-                    <Play className="w-3 h-3" />
-                    Start Sharing
+                    <Play className="w-2.5 h-2.5" />
+                    Share
                   </button>
                 </div>
               </>
             )}
           </div>
-
-          {/* Live Hands */}
-          <PlayerHandHistory />
         </div>
+
+        {/* Hands - Full Width */}
+        <PlayerHandHistory 
+            autoUpdate={isScreenSharing}
+            initialHands={uploadedHands.length > 0 ? uploadedHands : undefined}
+            uploadedCount={uploadedHands.length}
+            isProcessingUpload={isProcessingUpload}
+            onUpload={async (file: File) => {
+              setIsProcessingUpload(true);
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              
+              const mockHands: Hand[] = Array.from({ length: Math.floor(Math.random() * 8) + 5 }, (_, i) => ({
+                id: `uploaded-${Date.now()}-${i}`,
+                timestamp: new Date(),
+                action: (['win', 'loss', 'fold'] as const)[Math.floor(Math.random() * 3)],
+                amount: Math.floor(Math.random() * 500) + 50,
+                cards: ['As', 'Ks'],
+                flop: ['Qh', 'Jd', '9s'],
+                turn: '2d',
+                river: '7c',
+                pot: Math.floor(Math.random() * 1000) + 200,
+                position: ['BTN', 'CO', 'MP', 'BB', 'SB'][Math.floor(Math.random() * 5)],
+                reconciled: Math.random() > 0.15
+              }));
+              
+              setUploadedHands(mockHands);
+              setIsProcessingUpload(false);
+            }}
+          />
         </div>
       </div>
     );

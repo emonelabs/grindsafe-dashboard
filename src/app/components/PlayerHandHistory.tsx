@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Spade, Heart, Diamond, Club, CheckCircle2, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Spade, Heart, Diamond, Club, CheckCircle2, AlertCircle, Upload } from 'lucide-react';
 
 interface Hand {
   id: string;
@@ -42,11 +42,36 @@ const Card = ({ card }: { card: string }) => {
   );
 };
 
-export function PlayerHandHistory() {
+interface PlayerHandHistoryProps {
+  autoUpdate?: boolean;
+  initialHands?: Hand[];
+  uploadedCount?: number;
+  isProcessingUpload?: boolean;
+  onUpload?: (file: File) => void;
+}
+
+export function PlayerHandHistory({ 
+  autoUpdate = true, 
+  initialHands,
+  uploadedCount = 0,
+  isProcessingUpload = false,
+  onUpload
+}: PlayerHandHistoryProps) {
   const [hands, setHands] = useState<Hand[]>([]);
 
-  // Mock data generation for current player only
+    // Use initial hands if provided, otherwise generate mock data
   useEffect(() => {
+    if (initialHands && initialHands.length > 0) {
+      setHands(initialHands);
+      return;
+    }
+
+    // Skip generating mock data if we're not auto-updating and have no initial hands
+    if (!autoUpdate) {
+      setHands([]);
+      return;
+    }
+
     const cardRanks = ['A', 'K', 'Q', 'J', '10', '9', '8', '7', '6', '5', '4', '3', '2'];
     const cardSuits = ['s', 'h', 'd', 'c'];
     const positions = ['BTN', 'SB', 'BB', 'UTG', 'MP', 'CO'];
@@ -135,8 +160,11 @@ export function PlayerHandHistory() {
     };
 
     // Initialize with some hands
-    const initialHands = Array.from({ length: 8 }, generateHand).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-    setHands(initialHands);
+    const generatedHands = Array.from({ length: 8 }, generateHand).sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    setHands(generatedHands);
+
+    // Only auto-update if autoUpdate is true
+    if (!autoUpdate) return;
 
     // Add new hands every 5-10 seconds
     const interval = setInterval(() => {
@@ -145,7 +173,7 @@ export function PlayerHandHistory() {
     }, Math.random() * 5000 + 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [autoUpdate, initialHands]);
 
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -161,9 +189,29 @@ export function PlayerHandHistory() {
       <div className="px-4 py-2 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Live Hands</h3>
+          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Hands</h3>
         </div>
-        <span className="text-[10px] text-gray-500">{hands.length} hands</span>
+        <div className="flex items-center gap-2">
+          {uploadedCount > 0 && !autoUpdate && (
+            <span className="text-[10px] text-green-600">{uploadedCount} uploaded</span>
+          )}
+          <span className="text-[10px] text-gray-500">{hands.length} hands</span>
+          {onUpload && (
+            <label className="cursor-pointer hover:bg-gray-200 p-1 rounded transition-colors">
+              <Upload className="w-3.5 h-3.5 text-gray-500" />
+              <input
+                type="file"
+                accept=".txt,.log,.csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onUpload(file);
+                }}
+                disabled={isProcessingUpload}
+              />
+            </label>
+          )}
+        </div>
       </div>
       
       <div className="divide-y divide-gray-100 overflow-y-auto" style={{ maxHeight: '580px' }}>
