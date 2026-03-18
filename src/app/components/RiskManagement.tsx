@@ -92,62 +92,62 @@ function ConditionNode({ data, selected, id }: NodeProps<{ data: ConditionNodeDa
   };
 
   return (
-    <div className={`bg-white rounded-xl border-2 shadow-xl min-w-[240px] transition-all duration-200 ${selected ? 'border-slate-600 shadow-2xl' : 'border-slate-300'}`}>
+    <div className={`bg-white rounded-xl border shadow-sm transition-all duration-200 ${selected ? 'border-indigo-400 shadow-md shadow-indigo-100' : 'border-gray-200 hover:border-gray-300'}`}>
       <button
         onClick={(e) => {
           e.stopPropagation();
           handleDelete();
         }}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-slate-300 rounded-full flex items-center justify-center hover:bg-red-50 hover:border-red-400 hover:text-red-500 transition-colors z-10"
+        className="absolute -top-2 -right-2 w-5 h-5 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors z-10"
       >
         <X className="w-3 h-3" />
       </button>
-      <Handle type="source" position={Position.Right} className="!bg-slate-600 !w-3 !h-3" />
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-3 py-2.5 rounded-t-xl">
+      <Handle type="source" position={Position.Right} className="!bg-gray-400 !w-2 !h-2 hover:!bg-indigo-500 transition-colors" />
+      <div className={`px-3 py-2.5 rounded-t-xl border-b ${selected ? 'bg-indigo-50 border-indigo-100' : 'bg-gray-50 border-gray-100'}`}>
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" />
-          <span className="font-semibold text-sm">Condition</span>
+          <AlertTriangle className={`w-4 h-4 ${selected ? 'text-indigo-500' : 'text-gray-400'}`} />
+          <span className={`font-medium text-sm ${selected ? 'text-indigo-700' : 'text-gray-600'}`}>Condition</span>
         </div>
       </div>
       <div className="p-4 space-y-3">
         <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Name</label>
+          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Name</label>
           <input
             type="text"
             value={data.name}
-            className="w-full mt-1.5 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-slate-50"
+            className="w-full mt-1.5 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
             placeholder="e.g., Low Profit"
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Field</label>
+          <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Field</label>
           <select
             value={data.field}
-            className="w-full mt-1.5 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-slate-50"
+            className="w-full mt-1.5 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700"
           >
             {conditionFields.map(field => (
-              <option key={field} value={field}>{field}</option>
+              <option key={field} value={field} className="bg-white">{field}</option>
             ))}
           </select>
         </div>
         <div className="flex gap-2">
           <div className="flex-1">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Operator</label>
+            <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Operator</label>
             <select
               value={data.operator}
-              className="w-full mt-1.5 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-slate-50"
+              className="w-full mt-1.5 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700"
             >
               {operators.map(op => (
-                <option key={op} value={op}>{op}</option>
+                <option key={op} value={op} className="bg-white">{op}</option>
               ))}
             </select>
           </div>
           <div className="flex-1">
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Value</label>
+            <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Value</label>
             <input
               type="number"
               value={data.value}
-              className="w-full mt-1.5 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-slate-50"
+              className="w-full mt-1.5 px-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
               placeholder="0"
             />
           </div>
@@ -165,19 +165,23 @@ function ActionNode({ data, selected, id }: NodeProps<{ data: ActionNodeData }> 
     setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
   };
 
-  const getActionColor = (action: Action) => {
+  const getActionStyles = (action: Action) => {
     switch (action) {
-      case 'up': return 'bg-emerald-500 border-emerald-600';
-      case 'down': return 'bg-rose-500 border-rose-600';
-      case 'stay': return 'bg-slate-400 border-slate-500';
-    }
-  };
-
-  const getActionHoverColor = (action: Action) => {
-    switch (action) {
-      case 'up': return 'hover:bg-emerald-100';
-      case 'down': return 'hover:bg-rose-100';
-      case 'stay': return 'hover:bg-slate-100';
+      case 'up': return {
+        active: 'bg-indigo-500 border-indigo-600 text-white',
+        hover: 'hover:bg-indigo-50 hover:border-indigo-300',
+        text: 'text-indigo-500'
+      };
+      case 'down': return {
+        active: 'bg-rose-500 border-rose-600 text-white',
+        hover: 'hover:bg-rose-50 hover:border-rose-300',
+        text: 'text-rose-500'
+      };
+      case 'stay': return {
+        active: 'bg-gray-500 border-gray-600 text-white',
+        hover: 'hover:bg-gray-100 hover:border-gray-400',
+        text: 'text-gray-500'
+      };
     }
   };
 
@@ -191,46 +195,47 @@ function ActionNode({ data, selected, id }: NodeProps<{ data: ActionNodeData }> 
 
   const getActionLabel = (action: Action) => {
     switch (action) {
-      case 'up': return 'Go Up';
-      case 'down': return 'Go Down';
+      case 'up': return 'Up';
+      case 'down': return 'Down';
       case 'stay': return 'Stay';
     }
   };
 
+  const currentStyle = getActionStyles(data.action);
+
   return (
-    <div className={`bg-white rounded-xl border-2 shadow-xl min-w-[200px] transition-all duration-200 ${selected ? 'border-slate-600 shadow-2xl' : 'border-slate-300'}`}>
+    <div className={`bg-white rounded-xl border shadow-sm transition-all duration-200 min-w-[180px] ${selected ? 'border-indigo-400 shadow-md shadow-indigo-100' : 'border-gray-200 hover:border-gray-300'}`}>
       <button
         onClick={(e) => {
           e.stopPropagation();
           handleDelete();
         }}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-slate-300 rounded-full flex items-center justify-center hover:bg-red-50 hover:border-red-400 hover:text-red-500 transition-colors z-10"
+        className="absolute -top-2 -right-2 w-5 h-5 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors z-10"
       >
         <X className="w-3 h-3" />
       </button>
-      <Handle type="target" position={Position.Left} className="!bg-slate-600 !w-3 !h-3" />
-      <Handle type="source" position={Position.Right} className="!bg-slate-600 !w-3 !h-3" />
-      <div className="bg-gradient-to-r from-slate-700 to-slate-800 text-white px-3 py-2.5 rounded-t-xl">
+      <Handle type="target" position={Position.Left} className="!bg-gray-400 !w-2 !h-2 hover:!bg-indigo-500 transition-colors" />
+      <Handle type="source" position={Position.Right} className={`!bg-gray-400 !w-2 !h-2 transition-colors ${data.action === 'up' ? 'hover:!bg-indigo-500' : data.action === 'down' ? 'hover:!bg-rose-500' : 'hover:!bg-gray-500'}`} />
+      <div className={`px-3 py-2.5 rounded-t-xl border-b ${selected ? 'bg-indigo-50 border-indigo-100' : 'bg-gray-50 border-gray-100'}`}>
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" />
-          <span className="font-semibold text-sm">Action</span>
+          <TrendingUp className={`w-4 h-4 ${selected ? 'text-indigo-500' : 'text-gray-400'}`} />
+          <span className={`font-medium text-sm ${selected ? 'text-indigo-700' : 'text-gray-600'}`}>Action</span>
         </div>
       </div>
       <div className="p-4">
         <div className="flex gap-1.5">
-          {actions.map(action => (
-            <button
-              key={action}
-              className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg text-xs font-semibold transition-all border-2 ${
-                data.action === action
-                  ? `${getActionColor(action)} text-white border-transparent shadow-md`
-                  : `bg-white text-slate-600 border-slate-200 ${getActionHoverColor(action)}`
-              }`}
-            >
-              {getActionIcon(action)}
-              <span className="hidden lg:inline">{getActionLabel(action).split(' ')[0]}</span>
-            </button>
-          ))}
+          {actions.map(action => {
+            const style = getActionStyles(action);
+            return (
+              <button
+                key={action}
+                className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg text-xs font-medium transition-all border ${data.action === action ? style.active : `bg-white border-gray-200 ${style.hover}`}`}
+              >
+                {getActionIcon(action)}
+                <span className="hidden lg:inline">{getActionLabel(action)}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -246,25 +251,25 @@ function LevelNode({ data, selected, id }: NodeProps<{ data: LevelNodeData }> & 
   };
 
   return (
-    <div className={`bg-slate-50 rounded-xl border-2 border-dashed shadow-xl min-w-[320px] min-h-[280px] transition-all duration-200 ${selected ? 'border-slate-600' : 'border-slate-300'}`}>
+    <div className={`bg-white/50 backdrop-blur-sm rounded-xl border-2 border-dashed min-w-[280px] min-h-[240px] transition-all duration-200 ${selected ? 'border-indigo-400 shadow-md shadow-indigo-100' : 'border-gray-300 hover:border-gray-400'}`}>
       <button
         onClick={(e) => {
           e.stopPropagation();
           handleDelete();
         }}
-        className="absolute -top-2 -right-2 w-6 h-6 bg-white border-2 border-slate-300 rounded-full flex items-center justify-center hover:bg-red-50 hover:border-red-400 hover:text-red-500 transition-colors z-10"
+        className="absolute -top-2 -right-2 w-5 h-5 bg-white border border-gray-200 rounded-full flex items-center justify-center hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors z-10"
       >
         <X className="w-3 h-3" />
       </button>
-      <Handle type="target" position={Position.Left} className="!bg-slate-600 !w-3 !h-3" />
-      <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-4 py-3 rounded-t-xl">
+      <Handle type="target" position={Position.Left} className="!bg-gray-400 !w-2 !h-2 hover:!bg-indigo-500 transition-colors" />
+      <div className={`px-4 py-3 rounded-t-xl border-b ${selected ? 'bg-indigo-50 border-indigo-100' : 'bg-gray-100 border-gray-200'}`}>
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4" />
-          <span className="font-semibold text-sm">{data.name || 'Level'}</span>
+          <Layers className={`w-4 h-4 ${selected ? 'text-indigo-500' : 'text-gray-400'}`} />
+          <span className={`font-medium text-sm ${selected ? 'text-indigo-700' : 'text-gray-600'}`}>{data.name || 'Level'}</span>
         </div>
       </div>
-      <div className="p-4 pt-8 min-h-[200px]">
-        <div className="text-xs text-slate-400">Drop conditions here</div>
+      <div className="p-4 pt-6 min-h-[180px]">
+        <div className={`text-xs ${selected ? 'text-indigo-400' : 'text-gray-400'}`}>Drop conditions here</div>
       </div>
     </div>
   );
@@ -509,7 +514,7 @@ export function RiskManagement() {
   }, [loadMoreDecisions]);
 
   const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
+    (params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true }, eds)),
     [setEdges],
   );
 
@@ -853,24 +858,24 @@ export function RiskManagement() {
             </div>
           </div>
         ) : editingLevelId ? (
-          <div className="h-full flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm relative">
+          <div className="h-full flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm relative">
             {/* Toolbar with Back Button */}
-            <div className="flex items-center justify-between p-3 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
+            <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
               <button
                 onClick={handleBackToLevels}
-                className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-lg transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm font-medium">Back to Levels</span>
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-800">
+                <span className="text-sm font-semibold text-gray-900">
                   {levels.find(l => l.id === editingLevelId)?.name}
                 </span>
               </div>
               <button
                 onClick={handleSaveLevel}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-2 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
               >
                 Save Level
               </button>
@@ -881,23 +886,23 @@ export function RiskManagement() {
               <div
                 draggable
                 onDragStart={(e) => onDragStart(e, 'condition')}
-                className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-lg shadow-md cursor-grab hover:bg-slate-50 hover:border-slate-300 transition-all"
+                className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm cursor-grab hover:bg-gray-50 hover:border-indigo-300 hover:shadow-md transition-all"
               >
-                <AlertTriangle className="w-5 h-5 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">Condition</span>
+                <AlertTriangle className="w-5 h-5 text-indigo-500" />
+                <span className="text-sm font-medium text-gray-700">Condition</span>
               </div>
               <div
                 draggable
                 onDragStart={(e) => onDragStart(e, 'action')}
-                className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-lg shadow-md cursor-grab hover:bg-slate-50 hover:border-slate-300 transition-all"
+                className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg shadow-sm cursor-grab hover:bg-gray-50 hover:border-indigo-300 hover:shadow-md transition-all"
               >
-                <Zap className="w-5 h-5 text-slate-600" />
-                <span className="text-sm font-medium text-slate-700">Action</span>
+                <Zap className="w-5 h-5 text-indigo-500" />
+                <span className="text-sm font-medium text-gray-700">Action</span>
               </div>
             </div>
 
             {/* React Flow Canvas */}
-            <div className="flex-1 bg-slate-50">
+            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
@@ -907,20 +912,36 @@ export function RiskManagement() {
                 onDragOver={onDragOver}
                 onDrop={onDrop}
                 nodeTypes={nodeTypes}
+                defaultEdgeOptions={{
+                  type: 'smoothstep',
+                  animated: true,
+                  style: {
+                    strokeWidth: 2,
+                    stroke: '#94a3b8',
+                    strokeDasharray: '5,5',
+                  },
+                }}
+                connectionLineStyle={{
+                  stroke: '#94a3b8',
+                  strokeWidth: 2,
+                  strokeDasharray: '5,5',
+                }}
+                snapToGrid={true}
+                snapGrid={[15, 15]}
                 fitView
-                className="bg-slate-50"
+                className="bg-gray-50"
               >
-                <Controls className="!bg-white !border-slate-200 !shadow-xl !rounded-lg" />
-                <MiniMap 
-                  className="!bg-white !border-slate-200 !shadow-xl !rounded-lg"
+                <Controls className="!bg-white !border-gray-200 !shadow-lg [&>button]:!bg-white [&>button]:!border-gray-200 [&>button:hover]:!bg-gray-50 [&>svg]:!fill-gray-500" />
+                <MiniMap
+                  className="!bg-white !border-gray-200 !shadow-lg"
                   nodeColor={(node) => {
-                    if (node.type === 'level') return '#64748b';
-                    if (node.type === 'condition') return '#475569';
+                    if (node.type === 'level') return '#94a3b8';
+                    if (node.type === 'condition') return '#6366f1';
                     return '#22c55e';
                   }}
-                  maskColor="rgba(241, 245, 249, 0.8)"
+                  maskColor="rgba(248, 250, 252, 0.8)"
                 />
-                <Background color="#cbd5e1" gap={20} />
+                <Background color="#e2e8f0" gap={20} style={{ background: '#f8fafc' }} />
               </ReactFlow>
             </div>
           </div>
