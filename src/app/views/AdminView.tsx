@@ -701,8 +701,7 @@ export function AdminView() {
             ? { 
                 ...p, 
                 name: playerData.name,
-                avatar: playerData.avatar,
-                status: playerData.status
+                avatar: playerData.avatar
               }
             : p
         )
@@ -1841,15 +1840,13 @@ export function AdminView() {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Player</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Team</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Session Time</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">P/L</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {filteredPlayers.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-12 text-center">
+                      <td colSpan={4} className="px-4 py-12 text-center">
                         <p className="text-gray-500">No players match your current filters</p>
                       </td>
                     </tr>
@@ -1859,8 +1856,7 @@ export function AdminView() {
                       const playerData: PlayerData = {
                         id: player.id,
                         name: player.name,
-                        avatar: player.avatar,
-                        status: player.status
+                        avatar: player.avatar
                       };
                       return (
                         <tr key={player.id} className="hover:bg-gray-50 transition-colors">
@@ -1900,19 +1896,9 @@ export function AdminView() {
                             )}
                             {player.status === 'Offline' && (
                               <span className="inline-flex items-center px-2.5 py-1 rounded bg-gray-100 text-gray-600 text-xs font-medium">
-                                Offline
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="text-sm text-gray-900">
-                              {Math.floor(player.sessionTime / 60)}h {player.sessionTime % 60}m
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <div className={`text-sm font-bold ${player.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {player.profitLoss >= 0 ? '+' : ''}${player.profitLoss.toLocaleString()}
-                            </div>
+                              Offline
+                            </span>
+                          )}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center justify-center gap-2">

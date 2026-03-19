@@ -273,10 +273,12 @@ function ConditionCard({
   };
 
   return (
-    <div className={`flex items-center gap-1.5 ${depth > 0 ? 'pl-4 border-l-2 border-gray-200' : ''}`}>
+    <div className={`flex items-center gap-1.5 ${depth > 0 ? 'pl-4 border-l-2 border-gray-200' : ''}`} onClick={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
       <select
         value={condition.field}
-        onChange={(e) => handleFieldChange(e.target.value)}
+        onChange={(e) => { e.stopPropagation(); handleFieldChange(e.target.value); }}
+        onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
         className="flex-1 min-w-[80px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700"
       >
         {fields.map(f => (
@@ -286,7 +288,9 @@ function ConditionCard({
       
       <select
         value={condition.operator}
-        onChange={(e) => onUpdate({ ...condition, operator: e.target.value })}
+        onChange={(e) => { e.stopPropagation(); onUpdate({ ...condition, operator: e.target.value }); }}
+        onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
         className="w-20 px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700"
       >
         {operators.map(op => (
@@ -299,7 +303,9 @@ function ConditionCard({
           {fieldType === 'enum' && currentField?.options ? (
             <select
               value={condition.value}
-              onChange={(e) => onUpdate({ ...condition, value: e.target.value })}
+              onChange={(e) => { e.stopPropagation(); onUpdate({ ...condition, value: e.target.value }); }}
+              onClick={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
               className="flex-1 min-w-[60px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700"
             >
               <option value="">Select...</option>
@@ -311,7 +317,9 @@ function ConditionCard({
             <input
               type="date"
               value={condition.value}
-              onChange={(e) => onUpdate({ ...condition, value: e.target.value })}
+              onChange={(e) => { e.stopPropagation(); onUpdate({ ...condition, value: e.target.value }); }}
+              onClick={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
               className="flex-1 min-w-[80px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700"
             />
           ) : (
@@ -319,7 +327,9 @@ function ConditionCard({
               <input
                 type="number"
                 value={condition.value}
-                onChange={(e) => onUpdate({ ...condition, value: e.target.value })}
+                onChange={(e) => { e.stopPropagation(); onUpdate({ ...condition, value: e.target.value }); }}
+                onClick={(e) => e.stopPropagation()}
+                onWheel={(e) => e.stopPropagation()}
                 placeholder="Value"
                 className="flex-1 min-w-[50px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
               />
@@ -329,7 +339,9 @@ function ConditionCard({
                   <input
                     type="number"
                     value={condition.valueEnd || ''}
-                    onChange={(e) => onUpdate({ ...condition, valueEnd: e.target.value })}
+                    onChange={(e) => { e.stopPropagation(); onUpdate({ ...condition, valueEnd: e.target.value }); }}
+                    onClick={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
                     placeholder="End"
                     className="flex-1 min-w-[50px] px-2 py-1.5 text-xs bg-white border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/30 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
                   />
@@ -341,7 +353,7 @@ function ConditionCard({
       )}
 
       <button
-        onClick={onRemove}
+        onClick={(e) => { e.stopPropagation(); onRemove(); }}
         className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
       >
         <X className="w-3 h-3" />
@@ -397,13 +409,15 @@ function GroupCard({
   };
 
   return (
-    <div className={`rounded-lg border ${depth > 0 ? 'border-gray-200 bg-gray-50/50' : 'border-gray-200 bg-white'} ${isRoot ? '' : 'p-2'}`}>
+    <div className={`rounded-lg border ${depth > 0 ? 'border-gray-200 bg-gray-50/50' : 'border-gray-200 bg-white'} ${isRoot ? '' : 'p-2'}`} onClick={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-100">
         <div className="flex items-center gap-2">
           {!isRoot && (
             <select
               value={group.logic}
               onChange={(e) => handleLogicChange(e.target.value as LogicOperator)}
+              onClick={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
               className="px-2 py-0.5 text-xs font-medium bg-indigo-50 border border-indigo-200 rounded text-indigo-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
             >
               <option value="AND">AND</option>
@@ -419,14 +433,14 @@ function GroupCard({
         <div className="flex items-center gap-1">
           {!isRoot && onRemove && (
             <button
-              onClick={onRemove}
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
               className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
             >
               <X className="w-3 h-3" />
             </button>
           )}
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed); }}
             className="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
           >
             <ChevronRight className={`w-3 h-3 transition-transform ${isCollapsed ? '' : 'rotate-90'}`} />
@@ -467,14 +481,14 @@ function GroupCard({
 
           <div className="flex items-center gap-2 pt-1.5 border-t border-gray-100 mt-2">
             <button
-              onClick={handleAddCondition}
+              onClick={(e) => { e.stopPropagation(); handleAddCondition(); }}
               className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
             >
               <Plus className="w-3 h-3" />
               Add condition
             </button>
             <button
-              onClick={handleAddGroup}
+              onClick={(e) => { e.stopPropagation(); handleAddGroup(); }}
               className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
             >
               <Plus className="w-3 h-3" />
@@ -563,20 +577,24 @@ function ConditionNode({ data, selected, id }: NodeProps<{ data: ConditionNodeDa
       >
         <X className="w-3 h-3" />
       </button>
-      <Handle type="source" position={Position.Right} className="!bg-gray-400 !w-2 !h-2 hover:!bg-indigo-500 transition-colors" />
-      <div className={`px-3 py-2.5 rounded-t-xl border-b ${selected ? 'bg-indigo-50 border-indigo-100' : 'bg-gray-50 border-gray-100'}`}>
-        <div className="flex items-center gap-2">
-          <AlertTriangle className={`w-4 h-4 ${selected ? 'text-indigo-500' : 'text-gray-400'}`} />
-          <span className={`font-medium text-sm ${selected ? 'text-indigo-700' : 'text-gray-600'}`}>Condition</span>
+      <div className="flex items-center justify-between">
+        <div className={`px-3 py-2.5 rounded-t-xl border-b border-r flex-1 ${selected ? 'bg-indigo-50 border-indigo-100' : 'bg-gray-50 border-gray-100'}`}>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className={`w-4 h-4 ${selected ? 'text-indigo-500' : 'text-gray-400'}`} />
+            <span className={`font-medium text-sm ${selected ? 'text-indigo-700' : 'text-gray-600'}`}>Condition</span>
+          </div>
         </div>
       </div>
-      <div className="p-3 space-y-3 max-h-[400px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:opacity-0 [&::-webkit-scrollbar]:transition-opacity [&::-webkit-scrollbar:hover]:opacity-100" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
+      <Handle type="source" position={Position.Right} className="!bg-gray-400 !w-2 !h-2 hover:!bg-indigo-500 transition-colors" />
+      <div className="p-3 space-y-3" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
         <div>
           <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Name</label>
           <input
             type="text"
             value={data.name}
             onChange={(e) => handleNameChange(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
             className="w-full mt-1 px-2 py-1.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700 placeholder-gray-400"
             placeholder="e.g., High Roller Check"
           />
@@ -586,6 +604,8 @@ function ConditionNode({ data, selected, id }: NodeProps<{ data: ConditionNodeDa
           <select
             value={data.resource}
             onChange={(e) => handleResourceChange(e.target.value as Resource)}
+            onClick={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
             className="w-full mt-1 px-2 py-1.5 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 text-gray-700"
           >
             <option value="player">Player</option>
@@ -651,10 +671,25 @@ function ActionNode({ data, selected, id }: NodeProps<{ data: ActionNodeData }> 
     }
   };
 
+  const handleActionChange = (action: Action) => {
+    setNodes(nds => nds.map(node => {
+      if (node.id === id && node.type === 'action') {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            action
+          }
+        };
+      }
+      return node;
+    }));
+  };
+
   const currentStyle = getActionStyles(data.action);
 
   return (
-    <div className={`bg-white rounded-xl border shadow-sm transition-all duration-200 min-w-[180px] ${selected ? 'border-indigo-400 shadow-md shadow-indigo-100' : 'border-gray-200 hover:border-gray-300'}`}>
+    <div className={`bg-white rounded-xl border shadow-sm transition-all duration-200 min-w-[180px] ${selected ? 'border-indigo-400 shadow-md shadow-indigo-100' : 'border-gray-200 hover:border-gray-300'}`} onClick={(e) => e.stopPropagation()}>
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -665,20 +700,23 @@ function ActionNode({ data, selected, id }: NodeProps<{ data: ActionNodeData }> 
         <X className="w-3 h-3" />
       </button>
       <Handle type="target" position={Position.Left} className="!bg-gray-400 !w-2 !h-2 hover:!bg-indigo-500 transition-colors" />
-      <Handle type="source" position={Position.Right} className={`!bg-gray-400 !w-2 !h-2 transition-colors ${data.action === 'up' ? 'hover:!bg-indigo-500' : data.action === 'down' ? 'hover:!bg-rose-500' : 'hover:!bg-gray-500'}`} />
       <div className={`px-3 py-2.5 rounded-t-xl border-b ${selected ? 'bg-indigo-50 border-indigo-100' : 'bg-gray-50 border-gray-100'}`}>
         <div className="flex items-center gap-2">
           <TrendingUp className={`w-4 h-4 ${selected ? 'text-indigo-500' : 'text-gray-400'}`} />
           <span className={`font-medium text-sm ${selected ? 'text-indigo-700' : 'text-gray-600'}`}>Action</span>
         </div>
       </div>
-      <div className="p-4">
+      <div className="p-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-1.5">
           {actions.map(action => {
             const style = getActionStyles(action);
             return (
               <button
                 key={action}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleActionChange(action);
+                }}
                 className={`flex-1 flex items-center justify-center gap-1 px-2 py-2.5 rounded-lg text-xs font-medium transition-all border ${data.action === action ? style.active : `bg-white border-gray-200 ${style.hover}`}`}
               >
                 {getActionIcon(action)}
@@ -794,18 +832,12 @@ export function RiskManagement() {
   const [levels, setLevels] = useState<RiskLevel[]>([
     {
       id: 'level-1',
-      name: 'Low Risk',
+      name: 'Level 1',
       nodes: [
-        {
-          id: 'level-1-node',
-          type: 'level',
-          position: { x: 100, y: 100 },
-          data: { name: 'Low Risk Level' },
-        },
         {
           id: 'cond-1',
           type: 'condition',
-          position: { x: 450, y: 80 },
+          position: { x: 100, y: 80 },
           data: { 
             name: 'Check Profit', 
             resource: 'player',
@@ -821,30 +853,23 @@ export function RiskManagement() {
         {
           id: 'action-1',
           type: 'action',
-          position: { x: 750, y: 80 },
+          position: { x: 400, y: 80 },
           data: { action: 'up' },
         },
       ],
       edges: [
-        { id: 'e1', source: 'level-1-node', target: 'cond-1' },
-        { id: 'e2', source: 'cond-1', target: 'action-1' },
+        { id: 'e1', source: 'cond-1', target: 'action-1' },
       ],
       createdAt: new Date('2026-03-01'),
     },
     {
       id: 'level-2',
-      name: 'Medium Risk',
+      name: 'Level 2',
       nodes: [
-        {
-          id: 'level-2-node',
-          type: 'level',
-          position: { x: 100, y: 100 },
-          data: { name: 'Medium Risk Level' },
-        },
         {
           id: 'cond-2',
           type: 'condition',
-          position: { x: 450, y: 80 },
+          position: { x: 100, y: 80 },
           data: { 
             name: 'Check Loss', 
             resource: 'player',
@@ -860,32 +885,18 @@ export function RiskManagement() {
         {
           id: 'action-2',
           type: 'action',
-          position: { x: 750, y: 80 },
+          position: { x: 400, y: 80 },
           data: { action: 'down' },
         },
       ],
       edges: [
-        { id: 'e3', source: 'level-2-node', target: 'cond-2' },
-        { id: 'e4', source: 'cond-2', target: 'action-2' },
+        { id: 'e2', source: 'cond-2', target: 'action-2' },
       ],
       createdAt: new Date('2026-03-05'),
     },
-    {
-      id: 'level-3',
-      name: 'High Risk',
-      nodes: [
-        {
-          id: 'level-3-node',
-          type: 'level',
-          position: { x: 100, y: 100 },
-          data: { name: 'High Risk Level' },
-        },
-      ],
-      edges: [],
-      createdAt: new Date('2026-03-10'),
-    },
   ]);
   const [editingLevelId, setEditingLevelId] = useState<string | null>(null);
+  const [editingLevelName, setEditingLevelName] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newLevelName, setNewLevelName] = useState('');
 
@@ -1023,27 +1034,7 @@ export function RiskManagement() {
 
       if (nodeType !== 'condition' && nodeType !== 'action') return;
 
-      let parentLevelId: string | null = null;
-      
-      for (const node of nodes) {
-        if (node.type === 'level') {
-          const nodeWidth = 320;
-          const nodeHeight = 280;
-          if (
-            dropPosition.x >= node.position.x &&
-            dropPosition.x <= node.position.x + nodeWidth &&
-            dropPosition.y >= node.position.y + 50 &&
-            dropPosition.y <= node.position.y + nodeHeight
-          ) {
-            parentLevelId = node.id;
-            break;
-          }
-        }
-      }
-
-      const position = parentLevelId
-        ? { x: dropPosition.x - 100, y: dropPosition.y - 80 }
-        : { x: dropPosition.x - 100, y: dropPosition.y - 50 };
+      const position = { x: dropPosition.x - 100, y: dropPosition.y - 50 };
 
       let newNode;
       if (nodeType === 'condition') {
@@ -1117,6 +1108,7 @@ export function RiskManagement() {
       setNodes(level.nodes);
       setEdges(level.edges);
       setEditingLevelId(levelId);
+      setEditingLevelName(level.name);
     }
   };
 
@@ -1125,7 +1117,7 @@ export function RiskManagement() {
 
     setLevels(levels.map(level => 
       level.id === editingLevelId
-        ? { ...level, nodes, edges }
+        ? { ...level, nodes, edges, name: editingLevelName.trim() || level.name }
         : level
     ));
     alert('Level saved successfully!');
@@ -1352,9 +1344,13 @@ export function RiskManagement() {
                 <span className="text-sm font-medium">Back to Levels</span>
               </button>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-gray-900">
-                  {levels.find(l => l.id === editingLevelId)?.name}
-                </span>
+                <input
+                  type="text"
+                  value={editingLevelName}
+                  onChange={(e) => setEditingLevelName(e.target.value)}
+                  className="text-sm font-medium text-gray-900 bg-transparent border-b-2 border-gray-300 focus:border-indigo-500 focus:outline-none px-1 py-0.5 min-w-[150px]"
+                  placeholder="Level name"
+                />
               </div>
               <button
                 onClick={handleSaveLevel}
