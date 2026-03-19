@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
   Shield, 
   Cpu, 
@@ -21,8 +21,26 @@ import {
   Trash2,
   ArrowLeft,
   ChevronRight,
-  Copy
+  Copy,
+  Brain,
+  Rocket,
+  Download,
+  CheckCircle2,
+  XCircle,
+  BarChart3,
+  Database,
+  Clock,
+  Activity,
+  Target,
+  Layers3
 } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { Progress } from './ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import SlideInPanel from './SlideInPanel';
 import {
   ReactFlow,
@@ -214,6 +232,126 @@ interface AIDecision {
   timestamp: Date;
   reason?: string;
 }
+
+interface ModelMetrics {
+  epoch: number;
+  precision: number;
+  recall: number;
+  mAP: number;
+  boxLoss: number;
+  classLoss: number;
+  objectLoss: number;
+}
+
+interface Checkpoint {
+  id: string;
+  name: string;
+  createdAt: Date;
+  epochs: number;
+  precision: number;
+  recall: number;
+  mAP: number;
+  boxLoss: number;
+  classLoss: number;
+  objectLoss: number;
+  fileSize: string;
+  isActive: boolean;
+}
+
+function generateTrainingCurve(totalEpochs: number): ModelMetrics[] {
+  const data: ModelMetrics[] = [];
+  for (let i = 1; i <= totalEpochs; i++) {
+    const t = i / totalEpochs;
+    const decay = 1 - Math.exp(-4 * t);
+    const noise = () => (Math.random() - 0.5) * 0.04;
+    data.push({
+      epoch: i,
+      precision: Math.min(0.96, 0.72 + 0.22 * decay + noise()),
+      recall: Math.min(0.94, 0.68 + 0.24 * decay + noise()),
+      mAP: Math.min(0.91, 0.65 + 0.24 * decay + noise()),
+      boxLoss: Math.max(0.008, 0.42 * Math.exp(-3.5 * t) + 0.008 + (Math.random() - 0.5) * 0.005),
+      classLoss: Math.max(0.012, 0.28 * Math.exp(-4 * t) + 0.012 + (Math.random() - 0.5) * 0.004),
+      objectLoss: Math.max(0.018, 0.38 * Math.exp(-3 * t) + 0.018 + (Math.random() - 0.5) * 0.006),
+    });
+  }
+  return data;
+}
+
+const TOTAL_EPOCHS = 50;
+const initialMetricsHistory = generateTrainingCurve(TOTAL_EPOCHS);
+
+const initialCheckpoints: Checkpoint[] = [
+  {
+    id: 'ckpt-1',
+    name: 'v2.1.0_baseline',
+    createdAt: new Date('2026-02-10T10:30:00'),
+    epochs: 50,
+    precision: 0.9412,
+    recall: 0.9234,
+    mAP: 0.8915,
+    boxLoss: 0.0102,
+    classLoss: 0.0151,
+    objectLoss: 0.0213,
+    fileSize: '142 MB',
+    isActive: false,
+  },
+  {
+    id: 'ckpt-2',
+    name: 'v2.2.0_augmented',
+    createdAt: new Date('2026-02-18T14:15:00'),
+    epochs: 50,
+    precision: 0.9534,
+    recall: 0.9312,
+    mAP: 0.9048,
+    boxLoss: 0.0091,
+    classLoss: 0.0132,
+    objectLoss: 0.0195,
+    fileSize: '142 MB',
+    isActive: false,
+  },
+  {
+    id: 'ckpt-3',
+    name: 'v2.3.0_resume',
+    createdAt: new Date('2026-03-01T09:00:00'),
+    epochs: 50,
+    precision: 0.9589,
+    recall: 0.9376,
+    mAP: 0.9103,
+    boxLoss: 0.0087,
+    classLoss: 0.0124,
+    objectLoss: 0.0188,
+    fileSize: '142 MB',
+    isActive: true,
+  },
+  {
+    id: 'ckpt-4',
+    name: 'v2.4.0_tuned',
+    createdAt: new Date('2026-03-08T16:45:00'),
+    epochs: 50,
+    precision: 0.9641,
+    recall: 0.9401,
+    mAP: 0.9156,
+    boxLoss: 0.0083,
+    classLoss: 0.0118,
+    objectLoss: 0.0182,
+    fileSize: '142 MB',
+    isActive: false,
+  },
+  {
+    id: 'ckpt-5',
+    name: 'v2.5.0_final',
+    createdAt: new Date('2026-03-15T11:20:00'),
+    epochs: 50,
+    precision: 0.9687,
+    recall: 0.9458,
+    mAP: 0.9212,
+    boxLoss: 0.0080,
+    classLoss: 0.0112,
+    objectLoss: 0.0179,
+    fileSize: '142 MB',
+    isActive: false,
+  },
+];
 
 const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
@@ -828,6 +966,17 @@ export function RiskManagement() {
     if (!el) return;
   }, []);
 
+  const [aiSubTab, setAiSubTab] = useState<'decisions' | 'metrics' | 'checkpoints'>('decisions');
+  const [metricsHistory] = useState<ModelMetrics[]>(initialMetricsHistory);
+  const [epochRange, setEpochRange] = useState<string>('all');
+  const [isTraining, setIsTraining] = useState(false);
+  const [trainingProgress, setTrainingProgress] = useState(0);
+  const [currentEpoch, setCurrentEpoch] = useState(0);
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>(initialCheckpoints);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [checkpointToDelete, setCheckpointToDelete] = useState<string | null>(null);
+  const trainingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   // Levels state
   const [levels, setLevels] = useState<RiskLevel[]>([
     {
@@ -904,6 +1053,86 @@ export function RiskManagement() {
     const initialDecisions = generateMockAIDecisions(20);
     setAiDecisions(initialDecisions);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (trainingIntervalRef.current) {
+        clearInterval(trainingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const startTraining = () => {
+    setIsTraining(true);
+    setTrainingProgress(0);
+    setCurrentEpoch(0);
+    let epoch = 0;
+    trainingIntervalRef.current = setInterval(() => {
+      epoch += 1;
+      setCurrentEpoch(epoch);
+      setTrainingProgress(Math.round((epoch / TOTAL_EPOCHS) * 100));
+      if (epoch >= TOTAL_EPOCHS) {
+        clearInterval(trainingIntervalRef.current!);
+        trainingIntervalRef.current = null;
+        setIsTraining(false);
+        const lastMetrics = metricsHistory[metricsHistory.length - 1];
+        const newCheckpoint: Checkpoint = {
+          id: generateId(),
+          name: `v${(checkpoints.length + 1).toFixed(1).replace('.', '.')}_manual`,
+          createdAt: new Date(),
+          epochs: TOTAL_EPOCHS,
+          precision: lastMetrics.precision,
+          recall: lastMetrics.recall,
+          mAP: lastMetrics.mAP,
+          boxLoss: lastMetrics.boxLoss,
+          classLoss: lastMetrics.classLoss,
+          objectLoss: lastMetrics.objectLoss,
+          fileSize: '142 MB',
+          isActive: false,
+        };
+        setCheckpoints(prev => [newCheckpoint, ...prev]);
+      }
+    }, 200);
+  };
+
+  const cancelTraining = () => {
+    if (trainingIntervalRef.current) {
+      clearInterval(trainingIntervalRef.current);
+      trainingIntervalRef.current = null;
+    }
+    setIsTraining(false);
+    setTrainingProgress(0);
+    setCurrentEpoch(0);
+  };
+
+  const handleSetActive = (id: string) => {
+    setCheckpoints(prev => prev.map(cp => ({ ...cp, isActive: cp.id === id })));
+  };
+
+  const handleDeleteCheckpoint = () => {
+    if (!checkpointToDelete) return;
+    setCheckpoints(prev => prev.filter(cp => cp.id !== checkpointToDelete));
+    setCheckpointToDelete(null);
+    setDeleteDialogOpen(false);
+  };
+
+  const handleDownloadCheckpoint = (checkpoint: Checkpoint) => {
+    const blob = new Blob([`# Checkpoint: ${checkpoint.name}\nEpochs: ${checkpoint.epochs}\nPrecision: ${checkpoint.precision}\nRecall: ${checkpoint.recall}\nmAP: ${checkpoint.mAP}`], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${checkpoint.name}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const latestMetrics = metricsHistory[metricsHistory.length - 1];
+
+  const filteredMetricsHistory = useMemo(() => {
+    if (epochRange === 'all') return metricsHistory;
+    const limit = parseInt(epochRange);
+    return metricsHistory.filter(m => m.epoch <= limit);
+  }, [metricsHistory, epochRange]);
 
 
 
@@ -1187,7 +1416,8 @@ export function RiskManagement() {
             }`}
           >
             <Cpu className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm font-medium">AI Powered</span>
+            <span className="text-sm font-medium">Training</span>
+            <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-yellow-400 text-yellow-900 rounded">Beta</span>
           </button>
 
           {/* Rule-based Option */}
@@ -1200,7 +1430,7 @@ export function RiskManagement() {
             }`}
           >
             <GitBranch className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm font-medium">Rule-based</span>
+            <span className="text-sm font-medium">Levels</span>
           </button>
         </div>
       </div>
@@ -1209,128 +1439,581 @@ export function RiskManagement() {
       <div className="flex-1 overflow-hidden">
         {selectedOption === 'ai' ? (
           <div className="h-full flex flex-col bg-white border border-slate-200 rounded-xl overflow-hidden">
-            {/* Stats Row */}
-            <div className="grid grid-cols-4 gap-px bg-slate-200 border-b border-slate-200">
-              <div className="bg-slate-50 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Decisions</span>
-                  <Shield className="w-4 h-4 text-slate-400" />
-                </div>
-                <div className="text-2xl font-bold text-slate-800">{stats.total}</div>
-              </div>
-              <div className="bg-slate-50 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Players Impacted</span>
-                  <TrendingUp className="w-4 h-4 text-slate-400" />
-                </div>
-                <div className="text-2xl font-bold text-slate-800">{stats.playersImpacted}</div>
-              </div>
-              <div className="bg-emerald-50 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Go Up</span>
-                  <ArrowUpRight className="w-4 h-4 text-emerald-400" />
-                </div>
-                <div className="text-2xl font-bold text-emerald-600">{stats.up}</div>
-              </div>
-              <div className="bg-rose-50 p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-rose-600 uppercase tracking-wider">Go Down</span>
-                  <ArrowDownRight className="w-4 h-4 text-rose-400" />
-                </div>
-                <div className="text-2xl font-bold text-rose-600">{stats.down}</div>
-              </div>
+            {/* Sub-tab Navigation */}
+            <div className="flex items-center gap-1 px-4 pt-3 border-b border-slate-200 bg-slate-50">
+              <button
+                onClick={() => setAiSubTab('decisions')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                  aiSubTab === 'decisions'
+                    ? 'border-slate-800 text-slate-800 bg-white'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Database className="w-4 h-4" />
+                Decisions
+              </button>
+              <button
+                onClick={() => setAiSubTab('metrics')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                  aiSubTab === 'metrics'
+                    ? 'border-slate-800 text-slate-800 bg-white'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4" />
+                Model Metrics
+              </button>
+              <button
+                onClick={() => setAiSubTab('checkpoints')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-t-lg border-b-2 transition-colors ${
+                  aiSubTab === 'checkpoints'
+                    ? 'border-slate-800 text-slate-800 bg-white'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <Layers3 className="w-4 h-4" />
+                Checkpoints
+              </button>
             </div>
 
-            {/* Filter Bar */}
-            <div className="flex items-center gap-3 p-4 border-b border-slate-200 bg-slate-50">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search player..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white shadow-sm"
-                />
-              </div>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <select
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="pl-9 pr-8 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent appearance-none bg-white shadow-sm"
+            {/* Sub-tab Content */}
+            {aiSubTab === 'decisions' ? (
+              <>
+                {/* Filter Bar */}
+                <div className="flex items-center gap-3 p-4 border-b border-slate-200 bg-slate-50">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search player..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent bg-white shadow-sm"
+                    />
+                  </div>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="pl-9 pr-8 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent appearance-none bg-white shadow-sm"
+                    >
+                      <option value="all">All Time</option>
+                      <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
+                      <option value="week">This Week</option>
+                      <option value="month">This Month</option>
+                      <option value="last-month">Last Month</option>
+                      <option value="quarter">This Quarter</option>
+                      <option value="year">This Year</option>
+                    </select>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+                </div>
+
+                {/* Table with Infinite Scroll */}
+                <div
+                  ref={decisionsScrollRef}
+                  onScroll={handleScroll}
+                  className="flex-1 overflow-y-auto"
                 >
-                  <option value="all">All Time</option>
-                  <option value="today">Today</option>
-                  <option value="yesterday">Yesterday</option>
-                  <option value="week">This Week</option>
-                  <option value="month">This Month</option>
-                  <option value="last-month">Last Month</option>
-                  <option value="quarter">This Quarter</option>
-                  <option value="year">This Year</option>
-                </select>
-                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
+                  <table className="w-full">
+                    <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-50">Player</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-50">Decision</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-50">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredDecisions.map((decision) => (
+                        <tr key={decision.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={decision.playerAvatar}
+                                alt={decision.playerName}
+                                className="w-9 h-9 rounded-full border-2 border-slate-100 object-cover shadow-sm"
+                              />
+                              <span className="text-sm font-medium text-slate-800">{decision.playerName}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {getDecisionBadge(decision.decision)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="text-sm text-slate-800">{formatDate(decision.timestamp)}</div>
+                            <div className="text-xs text-slate-400">{formatTime(decision.timestamp)}</div>
+                          </td>
+                        </tr>
+                      ))}
 
-            {/* Table with Infinite Scroll */}
-            <div 
-              ref={decisionsScrollRef}
-              onScroll={handleScroll}
-              className="flex-1 overflow-y-auto"
-            >
-              <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-50">Player</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-50">Decision</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-50">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredDecisions.map((decision) => (
-                    <tr key={decision.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={decision.playerAvatar}
-                            alt={decision.playerName}
-                            className="w-9 h-9 rounded-full border-2 border-slate-100 object-cover shadow-sm"
-                          />
-                          <span className="text-sm font-medium text-slate-800">{decision.playerName}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {getDecisionBadge(decision.decision)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-slate-800">{formatDate(decision.timestamp)}</div>
-                        <div className="text-xs text-slate-400">{formatTime(decision.timestamp)}</div>
-                      </td>
-                    </tr>
+                      {isLoadingDecisions && (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-8 text-center">
+                            <div className="flex items-center justify-center gap-2 text-slate-500">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <span className="text-sm">Loading more...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                      {!hasMoreDecisions && filteredDecisions.length > 0 && (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-6 text-center">
+                            <span className="text-xs text-slate-400">No more decisions to load</span>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : aiSubTab === 'metrics' ? (
+              <div className="flex-1 overflow-y-auto p-5">
+                {/* Metric Summary Cards */}
+                <div className="grid grid-cols-4 gap-4 mb-6">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-slate-500 uppercase">Precision</span>
+                        <Target className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-slate-800">{latestMetrics.precision.toFixed(4)}</div>
+                      <div className="flex items-center gap-1 mt-1 text-xs text-emerald-600">
+                        <TrendingUp className="w-3 h-3" />
+                        +2.4% from baseline
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-slate-500 uppercase">Recall</span>
+                        <Activity className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-slate-800">{latestMetrics.recall.toFixed(4)}</div>
+                      <div className="flex items-center gap-1 mt-1 text-xs text-emerald-600">
+                        <TrendingUp className="w-3 h-3" />
+                        +3.1% from baseline
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-slate-500 uppercase">mAP</span>
+                        <Layers className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-slate-800">{latestMetrics.mAP.toFixed(4)}</div>
+                      <div className="flex items-center gap-1 mt-1 text-xs text-emerald-600">
+                        <TrendingUp className="w-3 h-3" />
+                        +4.2% from baseline
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-slate-500 uppercase">Total Epochs</span>
+                        <Clock className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <div className="text-2xl font-bold text-slate-800">{TOTAL_EPOCHS}</div>
+                      <div className="flex items-center gap-1 mt-1 text-xs text-slate-400">
+                        {filteredMetricsHistory.length} epochs shown
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Epoch Range Filter */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-xs font-medium text-slate-500 uppercase">Epoch Range:</span>
+                  {['10', '25', 'all'].map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setEpochRange(range)}
+                      className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                        epochRange === range
+                          ? 'bg-slate-800 text-white'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {range === 'all' ? 'All' : `First ${range}`}
+                    </button>
                   ))}
-                  
-                  {isLoadingDecisions && (
-                    <tr>
-                      <td colSpan={3} className="px-4 py-8 text-center">
-                        <div className="flex items-center justify-center gap-2 text-slate-500">
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span className="text-sm">Loading more...</span>
+                </div>
+
+                {/* mAP Chart */}
+                <Card className="mb-4">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold">Mean Average Precision (mAP) per Epoch</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={240}>
+                      <LineChart data={filteredMetricsHistory}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
+                        <XAxis
+                          dataKey="epoch"
+                          tick={{ fontSize: 11, fill: '#64748b' }}
+                          tickLine={false}
+                          axisLine={false}
+                          label={{ value: 'Epoch', position: 'insideBottom', offset: -4, style: { fontSize: 11, fill: '#64748b' } }}
+                        />
+                        <YAxis
+                          domain={[0.5, 1]}
+                          tick={{ fontSize: 11, fill: '#64748b' }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => v.toFixed(2)}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#fff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                          }}
+                          formatter={(value: number) => [value.toFixed(4), 'mAP']}
+                          labelFormatter={(label) => `Epoch ${label}`}
+                        />
+                        <Line type="monotone" dataKey="mAP" stroke="#a855f7" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                {/* Precision & Recall / Loss Metrics / Confusion Matrix — 3-column */}
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  {/* Precision & Recall Chart */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold">Precision & Recall</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <LineChart data={filteredMetricsHistory}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
+                          <XAxis
+                            dataKey="epoch"
+                            tick={{ fontSize: 11, fill: '#64748b' }}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <YAxis
+                            domain={[0.5, 1]}
+                            tick={{ fontSize: 11, fill: '#64748b' }}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={(v) => v.toFixed(1)}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#fff',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                            }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          <Line type="monotone" dataKey="precision" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="recall" stroke="#22c55e" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Loss Metrics Chart */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold">Loss Metrics</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <LineChart data={filteredMetricsHistory}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200" />
+                          <XAxis
+                            dataKey="epoch"
+                            tick={{ fontSize: 11, fill: '#64748b' }}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <YAxis
+                            tick={{ fontSize: 11, fill: '#64748b' }}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={(v) => v.toFixed(2)}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#fff',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '8px',
+                              fontSize: '12px',
+                              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                            }}
+                          />
+                          <Legend wrapperStyle={{ fontSize: 12 }} />
+                          <Line type="monotone" dataKey="boxLoss" stroke="#f97316" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="classLoss" stroke="#ef4444" strokeWidth={2} dot={false} />
+                          <Line type="monotone" dataKey="objectLoss" stroke="#06b6d4" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  {/* Confusion Matrix */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base font-semibold">Confusion Matrix</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-col gap-1">
+                        <div className="grid grid-cols-[1fr_repeat(3,1fr)] gap-1 mb-1">
+                          <div />
+                          <div className="text-center text-xs font-semibold text-slate-600 py-1">Go Up</div>
+                          <div className="text-center text-xs font-semibold text-slate-600 py-1">Go Down</div>
+                          <div className="text-center text-xs font-semibold text-slate-600 py-1">Stay</div>
                         </div>
-                      </td>
-                    </tr>
-                  )}
-                  
-                  {!hasMoreDecisions && filteredDecisions.length > 0 && (
-                    <tr>
-                      <td colSpan={3} className="px-4 py-6 text-center">
-                        <span className="text-xs text-slate-400">No more decisions to load</span>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        {[
+                          { label: 'Go Up', values: [0.92, 0.04, 0.04] },
+                          { label: 'Go Down', values: [0.03, 0.90, 0.07] },
+                          { label: 'Stay', values: [0.05, 0.08, 0.87] },
+                        ].map((row) => {
+                          const maxVal = Math.max(...row.values);
+                          return (
+                            <div key={row.label} className="grid grid-cols-[1fr_repeat(3,1fr)] gap-1 items-center">
+                              <div className="text-xs font-semibold text-slate-600 py-2 pl-1">{row.label}</div>
+                              {row.values.map((val, i) => {
+                                const intensity = val / maxVal;
+                                return (
+                                  <div
+                                    key={i}
+                                    className="relative rounded flex items-center justify-center py-2"
+                                    style={{ backgroundColor: `rgba(99, 102, 241, ${intensity * 0.85 + 0.05})` }}
+                                  >
+                                    <span className={`text-xs font-bold ${intensity > 0.5 ? 'text-white' : 'text-slate-800'}`}>
+                                      {(val * 100).toFixed(0)}%
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                        <div className="grid grid-cols-3 gap-1 mt-3 pt-3 border-t border-slate-100">
+                          {[
+                            { label: 'Precision', value: latestMetrics.precision },
+                            { label: 'Recall', value: latestMetrics.recall },
+                            { label: 'F1-Score', value: (2 * latestMetrics.precision * latestMetrics.recall) / (latestMetrics.precision + latestMetrics.recall) },
+                          ].map((metric) => (
+                            <div key={metric.label} className="text-center">
+                              <div className="text-xs text-slate-500 mb-0.5">{metric.label}</div>
+                              <div className="text-sm font-bold text-slate-800">{metric.value.toFixed(4)}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 mt-1">
+                          {[
+                            { label: 'Go Up Prec', value: 0.9234 },
+                            { label: 'Go Up Rec', value: 0.9156 },
+                            { label: 'Go Up F1', value: 0.9195 },
+                          ].map((metric) => (
+                            <div key={metric.label} className="text-center">
+                              <div className="text-xs text-slate-400 mb-0.5">{metric.label}</div>
+                              <div className="text-xs font-medium text-slate-700">{metric.value.toFixed(4)}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 mt-1">
+                          {[
+                            { label: 'Go Down Prec', value: 0.9102 },
+                            { label: 'Go Down Rec', value: 0.9078 },
+                            { label: 'Go Down F1', value: 0.9090 },
+                          ].map((metric) => (
+                            <div key={metric.label} className="text-center">
+                              <div className="text-xs text-slate-400 mb-0.5">{metric.label}</div>
+                              <div className="text-xs font-medium text-slate-700">{metric.value.toFixed(4)}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 mt-1">
+                          {[
+                            { label: 'Stay Prec', value: 0.8931 },
+                            { label: 'Stay Rec', value: 0.8842 },
+                            { label: 'Stay F1', value: 0.8886 },
+                          ].map((metric) => (
+                            <div key={metric.label} className="text-center">
+                              <div className="text-xs text-slate-400 mb-0.5">{metric.label}</div>
+                              <div className="text-xs font-medium text-slate-700">{metric.value.toFixed(4)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 overflow-y-auto p-5">
+                {/* Training Panel */}
+                <Card className="mb-6">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-slate-600" />
+                      Manual Training
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {!isTraining ? (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-slate-600 mb-1">
+                            Run a manual training iteration on the current dataset
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            This will train the model for {TOTAL_EPOCHS} epochs and create a new checkpoint upon completion.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={startTraining}
+                          className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700"
+                        >
+                          <Rocket className="w-4 h-4" />
+                          Start Training
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center animate-pulse">
+                              <Brain className="w-4 h-4 text-slate-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-slate-800">Training in progress...</p>
+                              <p className="text-xs text-slate-500">Epoch {currentEpoch} / {TOTAL_EPOCHS}</p>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={cancelTraining}
+                            variant="outline"
+                            className="text-slate-600 border-slate-300 hover:bg-slate-100"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                        <Progress value={trainingProgress} className="h-2" />
+                        <div className="flex justify-between text-xs text-slate-500">
+                          <span>{trainingProgress}% complete</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Checkpoints Table */}
+                {checkpoints.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <Layers3 className="w-12 h-12 text-slate-300 mb-3" />
+                    <p className="text-sm font-medium text-slate-600 mb-1">No checkpoints saved yet</p>
+                    <p className="text-xs text-slate-400">Trigger a training run to create your first checkpoint.</p>
+                  </div>
+                ) : (
+                  <div className="border border-slate-200 rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50 hover:bg-slate-50">
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">Name</TableHead>
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">Date</TableHead>
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">Epochs</TableHead>
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">Precision</TableHead>
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">Recall</TableHead>
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">mAP</TableHead>
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">Size</TableHead>
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">Status</TableHead>
+                          <TableHead className="text-xs font-semibold text-slate-500 uppercase">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {checkpoints.map((checkpoint) => (
+                          <TableRow key={checkpoint.id} className="hover:bg-slate-50">
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Database className="w-4 h-4 text-slate-400" />
+                                <span className="text-sm font-medium text-slate-800">{checkpoint.name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-slate-600">{checkpoint.createdAt.toLocaleDateString()}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-slate-600">{checkpoint.epochs}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-slate-800 font-medium">{checkpoint.precision.toFixed(4)}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-slate-800 font-medium">{checkpoint.recall.toFixed(4)}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-slate-800 font-medium">{checkpoint.mAP.toFixed(4)}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-slate-500">{checkpoint.fileSize}</span>
+                            </TableCell>
+                            <TableCell>
+                              {checkpoint.isActive ? (
+                                <Badge variant="default" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                  Active
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 hover:bg-slate-100">
+                                  Inactive
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {!checkpoint.isActive && (
+                                  <button
+                                    onClick={() => handleSetActive(checkpoint.id)}
+                                    className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                                    title="Set as active"
+                                  >
+                                    <CheckCircle2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDownloadCheckpoint(checkpoint)}
+                                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                                  title="Download weights"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setCheckpointToDelete(checkpoint.id);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                  title="Delete checkpoint"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : editingLevelId ? (
           <div className="h-full flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm relative">
@@ -1552,6 +2235,32 @@ export function RiskManagement() {
           </div>
         )}
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Checkpoint</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-600">
+            Are you sure you want to delete this checkpoint? This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="border-slate-300 text-slate-600"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteCheckpoint}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

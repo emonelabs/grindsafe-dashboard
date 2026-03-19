@@ -213,6 +213,12 @@ export function AdminView() {
   ]);
 
   const [graphData, setGraphData] = useState<any[]>([]);
+  
+  // Static data for Financials section (never updates)
+  const [staticGraphData, setStaticGraphData] = useState<any[]>([]);
+  const [staticAdjustedPlayers, setStaticAdjustedPlayers] = useState<any[]>([]);
+  const [staticTeams, setStaticTeams] = useState<any[]>([]);
+  
   const [filters, setFilters] = useState<FilterState>({
     searchQuery: '',
     timeRange: 'all',
@@ -581,6 +587,26 @@ export function AdminView() {
     }
 
     setGraphData(initialData);
+
+    // Capture static snapshot for Financials section (only once when empty)
+    if (staticGraphData.length === 0) {
+      setStaticGraphData(initialData);
+      setStaticAdjustedPlayers(adjustedPlayers.map(p => ({
+        ...p,
+        profitLoss: Math.round(p.profitLoss * multiplier),
+        sessionTime: Math.round(p.sessionTime * multiplier)
+      })));
+      setStaticTeams(teams.map(team => {
+        const teamPlayers = adjustedPlayers.filter(p => p.teamId === team.id);
+        const totalProfitLoss = teamPlayers.reduce((sum, p) => sum + p.profitLoss, 0);
+        const activePlayers = teamPlayers.filter(p => p.status !== 'Offline').length;
+        return {
+          ...team,
+          totalProfitLoss,
+          activePlayers
+        };
+      }));
+    }
 
     const interval = setInterval(() => {
       setGraphData(prevData => {
@@ -1302,12 +1328,17 @@ export function AdminView() {
 
       <div className="space-y-6 p-6">
         {/* Tabs */}
-        <Tabs defaultValue="overview" className="w-full" onValueChange={setActiveTab}>
+        <Tabs defaultValue="financials" className="w-full" onValueChange={setActiveTab}>
         <div className="flex items-center justify-between mb-6">
           <TabsList className="bg-white border border-gray-200 p-1 gap-1">
+            <TabsTrigger value="financials" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <DollarSign className="w-4 h-4" />
+              Financials
+            </TabsTrigger>
             <TabsTrigger value="overview" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <Activity className="w-4 h-4" />
               Live
+              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-yellow-400 text-yellow-900 data-[state=active]:bg-white/20 data-[state=active]:text-white/90 rounded">Beta</span>
             </TabsTrigger>
             <TabsTrigger value="teams" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <Users className="w-4 h-4" />
@@ -1364,7 +1395,7 @@ export function AdminView() {
             {/* LEFT SIDE - P/L Performance (70%) */}
             <div className="lg:col-span-7 space-y-3">
               {/* Company-Wide Consolidated P/L Chart */}
-              <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden shadow-sm">
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
@@ -1488,6 +1519,230 @@ export function AdminView() {
               <HandHistory />
               <RecentSplits />
               <WalletPerformance />
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="financials" className="space-y-3">
+          {/* 70/30 Split: P/L Performance & Financial Summary */}
+          <div className="grid grid-cols-1 lg:grid-cols-10 gap-3">
+            {/* LEFT SIDE - P/L Performance (70%) */}
+            <div className="lg:col-span-7 space-y-3">
+              {/* Company-Wide Consolidated P/L Chart - Static */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 bg-green-500 rounded-full"></div>
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Company-Wide P/L Performance</h3>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`text-xl font-bold ${staticTeams.reduce((sum, t) => sum + t.totalProfitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {staticTeams.reduce((sum, t) => sum + t.totalProfitLoss, 0) >= 0 ? '+' : ''}${staticTeams.reduce((sum, t) => sum + t.totalProfitLoss, 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <PLGraph data={staticGraphData} players={staticAdjustedPlayers} showLegend={false} height={280} />
+                </div>
+              </div>
+
+              {/* Hierarchical Team & Player P/L Charts - Static */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {staticTeams.map(team => {
+                  const teamPlayers = staticAdjustedPlayers.filter(p => p.teamId === team.id);
+                  return (
+                    <div key={team.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Team Header & Chart */}
+                      <div className="border-b border-gray-200">
+                        <div className="px-3 py-2.5 border-b border-gray-200 bg-gray-50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color }}></div>
+                              <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">{team.name}</h4>
+                              <div className="flex items-center gap-1">
+                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                  team.gameType === 'Cash' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                                }`}>
+                                  {team.gameType}
+                                </span>
+                                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700">
+                                  {team.tableStructure}
+                                </span>
+                              </div>
+                            </div>
+                            <div className={`text-base font-bold ${team.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {team.totalProfitLoss >= 0 ? '+' : ''}${team.totalProfitLoss.toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1">
+                            {team.activePlayers} active • {team.memberCount} total
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          <PLGraph 
+                            data={staticGraphData} 
+                            players={teamPlayers} 
+                            showLegend={false} 
+                            height={140}
+                            compact={false}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Individual Players Under This Team */}
+                      <div className="p-2 bg-gray-50">
+                        <div className="grid grid-cols-2 gap-2">
+                          {teamPlayers.map(player => (
+                            <div 
+                              key={player.id}
+                              onClick={() => setSelectedPlayer(player)}
+                              className="bg-white border border-gray-200 rounded overflow-hidden hover:border-gray-400 hover:shadow-sm transition-all cursor-pointer"
+                            >
+                              <div className="px-2 py-1.5 border-b border-gray-100 bg-white">
+                                <div className="flex items-center gap-1.5">
+                                  <img src={player.avatar} alt={player.name} className="w-5 h-5 rounded-full border border-gray-200" />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-[10px] font-semibold text-gray-900 truncate">{player.name}</div>
+                                    {player.status === 'LIVE' && (
+                                      <div className="flex items-center gap-0.5">
+                                        <div className="w-1 h-1 bg-red-500 rounded-full"></div>
+                                        <span className="text-[8px] text-red-600 font-medium">LIVE</span>
+                                      </div>
+                                    )}
+                                    {player.status === 'IN GAME' && (
+                                      <div className="flex items-center gap-0.5">
+                                        <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+                                        <span className="text-[8px] text-blue-600 font-medium">IN GAME</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="p-2">
+                                <div className="mb-1">
+                                  <div className={`text-sm font-bold ${player.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {player.profitLoss >= 0 ? '+' : ''}${player.profitLoss.toLocaleString()}
+                                  </div>
+                                  <div className="text-[8px] text-gray-500">
+                                    {Math.floor(player.sessionTime / 60)}h {player.sessionTime % 60}m
+                                  </div>
+                                </div>
+                                <PLGraph 
+                                  data={staticGraphData} 
+                                  players={[player]} 
+                                  showLegend={false} 
+                                  height={60}
+                                  compact={true}
+                                  showAxes={false}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+
+            {/* RIGHT SIDE - Financial Summary (30%) */}
+            <div className="lg:col-span-3 lg:sticky lg:top-6 space-y-3">
+              {/* Financial Summary Cards */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Financial Summary</h4>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Total Deposits</div>
+                    <div className="text-lg font-bold text-blue-600">$125,450</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">Last 30 days</div>
+                  </div>
+                  <div className="border-t border-gray-100 pt-4">
+                    <div className="text-xs text-gray-500 mb-1">Total Withdrawals</div>
+                    <div className="text-lg font-bold text-red-600">$89,320</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">Last 30 days</div>
+                  </div>
+                  <div className="border-t border-gray-100 pt-4">
+                    <div className="text-xs text-gray-500 mb-1">Net Cash Flow</div>
+                    <div className="text-lg font-bold text-green-600">+$36,130</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">Last 30 days</div>
+                  </div>
+                  <div className="border-t border-gray-100 pt-4">
+                    <div className="text-xs text-gray-500 mb-1">Avg P/L per Player</div>
+                    <div className="text-lg font-bold text-gray-900">${Math.round(staticTeams.reduce((sum, t) => sum + t.totalProfitLoss, 0) / staticAdjustedPlayers.length).toLocaleString()}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5">All time</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Frozen Wallet Performance Summary */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Wallet Performance</h4>
+                    <span className="text-[10px] text-gray-400">Static view</span>
+                  </div>
+                </div>
+                <div className="p-3 space-y-2">
+                  {paymentWallets.slice(0, 4).map((wallet) => (
+                    <div key={wallet.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded flex items-center justify-center ${
+                          wallet.provider === 'Skrill' ? 'bg-green-100' :
+                          wallet.provider === 'Neteller' ? 'bg-teal-100' :
+                          wallet.provider === 'Pix' ? 'bg-yellow-100' :
+                          'bg-purple-100'
+                        }`}>
+                          <span className="text-[10px] font-bold text-gray-700">
+                            {wallet.provider === 'Skrill' ? 'SK' :
+                             wallet.provider === 'Neteller' ? 'NL' :
+                             wallet.provider === 'Pix' ? 'PX' : 'LP'}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-gray-900">{wallet.provider}</div>
+                          <div className="text-[10px] text-gray-500">{wallet.username}</div>
+                        </div>
+                      </div>
+                      <div className="text-sm font-bold text-gray-900">
+                        ${wallet.balance.toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Frozen Recent Splits Summary */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Recent Splits</h4>
+                    <span className="text-[10px] text-gray-400">Static view</span>
+                  </div>
+                </div>
+                <div className="p-3 space-y-2">
+                  {players.slice(0, 4).map((player) => {
+                    const splitAmount = Math.abs(Math.round(player.profitLoss * 0.5));
+                    return (
+                      <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <div className="flex items-center gap-2">
+                          <img src={player.avatar} alt={player.name} className="w-6 h-6 rounded-full border border-gray-200" />
+                          <div>
+                            <div className="text-xs font-semibold text-gray-900">{player.name}</div>
+                            <div className="text-[10px] text-gray-500">Split</div>
+                          </div>
+                        </div>
+                        <div className="text-sm font-bold text-green-600">
+                          +${splitAmount.toLocaleString()}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </TabsContent>
