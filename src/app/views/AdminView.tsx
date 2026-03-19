@@ -17,6 +17,9 @@ import { PaymentWalletsContent } from '../components/PokerWalletsContent';
 import PaymentWalletForm, { PaymentWallet } from '../components/forms/PokerWalletForm';
 import SlideInPanel from '../components/SlideInPanel';
 import { RiskManagement } from '../components/RiskManagement';
+import PlayerEditForm, { PlayerData, PlayerFormData } from '../components/forms/PlayerEditForm';
+import MemberEditForm, { MemberData, MemberFormData } from '../components/forms/MemberEditForm';
+import { Pencil } from 'lucide-react';
 
 interface Player {
   id: string;
@@ -24,7 +27,7 @@ interface Player {
   avatar: string;
   profitLoss: number;
   sessionTime: number;
-  isRecording: boolean;
+  status: 'LIVE' | 'IN GAME' | 'Offline';
   color: string;
   teamId: string;
 }
@@ -51,6 +54,11 @@ export function AdminView() {
     { id: 'team4', name: 'Grinders', memberCount: 15, totalProfitLoss: 8900, activePlayers: 7, color: '#8b5cf6', gameType: 'Cash', tableStructure: '6-max' },
   ]);
 
+  const getRandomStatus = () => {
+    const statuses: ('LIVE' | 'IN GAME' | 'Offline')[] = ['LIVE', 'IN GAME', 'Offline'];
+    return statuses[Math.floor(Math.random() * statuses.length)];
+  };
+
   const [players, setPlayers] = useState<Player[]>([
     {
       id: 'player1',
@@ -58,7 +66,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1674644674031-b49db824edbc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 2450,
       sessionTime: 186,
-      isRecording: true,
+      status: 'LIVE',
       color: '#3b82f6',
       teamId: 'team1'
     },
@@ -68,7 +76,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1761243892035-c3e13829115a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 3200,
       sessionTime: 245,
-      isRecording: true,
+      status: 'IN GAME',
       color: '#10b981',
       teamId: 'team1'
     },
@@ -78,7 +86,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1762810211495-d79a02ba7d0d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: -850,
       sessionTime: 142,
-      isRecording: false,
+      status: 'Offline',
       color: '#f59e0b',
       teamId: 'team2'
     },
@@ -88,7 +96,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1532272278764-53cd1fe53f72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 4850,
       sessionTime: 298,
-      isRecording: true,
+      status: 'LIVE',
       color: '#8b5cf6',
       teamId: 'team3'
     },
@@ -98,7 +106,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1758518732130-4b51da74b0b6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 1800,
       sessionTime: 167,
-      isRecording: true,
+      status: 'IN GAME',
       color: '#ec4899',
       teamId: 'team4'
     },
@@ -108,7 +116,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1769071166530-11f7857f4c59?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: -1200,
       sessionTime: 203,
-      isRecording: true,
+      status: 'IN GAME',
       color: '#06b6d4',
       teamId: 'team2'
     },
@@ -118,7 +126,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 3750,
       sessionTime: 225,
-      isRecording: true,
+      status: 'Offline',
       color: '#f97316',
       teamId: 'team1'
     },
@@ -128,7 +136,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 2100,
       sessionTime: 198,
-      isRecording: true,
+      status: 'LIVE',
       color: '#14b8a6',
       teamId: 'team3'
     },
@@ -138,7 +146,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: -950,
       sessionTime: 178,
-      isRecording: true,
+      status: 'IN GAME',
       color: '#a855f7',
       teamId: 'team2'
     },
@@ -148,7 +156,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 5200,
       sessionTime: 312,
-      isRecording: true,
+      status: 'LIVE',
       color: '#06b6d4',
       teamId: 'team4'
     },
@@ -158,7 +166,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 1650,
       sessionTime: 189,
-      isRecording: true,
+      status: 'Offline',
       color: '#eab308',
       teamId: 'team3'
     },
@@ -168,7 +176,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: -420,
       sessionTime: 156,
-      isRecording: true,
+      status: 'IN GAME',
       color: '#ec4899',
       teamId: 'team1'
     },
@@ -178,7 +186,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 2890,
       sessionTime: 267,
-      isRecording: true,
+      status: 'LIVE',
       color: '#22c55e',
       teamId: 'team4'
     },
@@ -188,7 +196,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 3340,
       sessionTime: 234,
-      isRecording: true,
+      status: 'IN GAME',
       color: '#3b82f6',
       teamId: 'team2'
     },
@@ -198,7 +206,7 @@ export function AdminView() {
       avatar: 'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
       profitLoss: 1120,
       sessionTime: 145,
-      isRecording: true,
+      status: 'Offline',
       color: '#f59e0b',
       teamId: 'team3'
     }
@@ -258,10 +266,14 @@ export function AdminView() {
     }
   ]);
   const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
-  const [activeSlideIn, setActiveSlideIn] = useState<'paymentwallet' | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'paymentwallet' | 'player' | 'member' | null>(null);
 
-  // Members state - Backoffice/Management personnel (max 15)
-  const [members] = useState([
+  // Player/Member edit state
+  const [selectedPlayerForEdit, setSelectedPlayerForEdit] = useState<PlayerData | null>(null);
+  const [selectedMemberForEdit, setSelectedMemberForEdit] = useState<MemberData | null>(null);
+
+  // Members state - convert to useState for editability
+  const [members, setMembers] = useState([
     {
       id: 'member1',
       name: 'John Anderson',
@@ -544,7 +556,7 @@ export function AdminView() {
   }));
 
   const totalProfitLoss = adjustedPlayers.reduce((sum, p) => sum + p.profitLoss, 0);
-  const activePlayers = adjustedPlayers.filter(p => p.isRecording).length;
+  const activePlayers = adjustedPlayers.filter(p => p.status !== 'Offline').length;
   const totalSessions = adjustedPlayers.length;
   const avgProfit = totalProfitLoss / adjustedPlayers.length;
 
@@ -608,7 +620,7 @@ export function AdminView() {
       prevTeams.map(team => {
         const teamPlayers = adjustedPlayers.filter(p => p.teamId === team.id);
         const totalProfitLoss = teamPlayers.reduce((sum, p) => sum + p.profitLoss, 0);
-        const activePlayers = teamPlayers.filter(p => p.isRecording).length;
+        const activePlayers = teamPlayers.filter(p => p.status !== 'Offline').length;
         return {
           ...team,
           totalProfitLoss,
@@ -627,8 +639,8 @@ export function AdminView() {
       return false;
     }
 
-    if (filters.playerStatus === 'recording' && !player.isRecording) return false;
-    if (filters.playerStatus === 'paused' && player.isRecording) return false;
+    if (filters.playerStatus === 'recording' && player.status === 'Offline') return false;
+    if (filters.playerStatus === 'paused' && player.status !== 'Offline') return false;
     if (filters.playerStatus === 'profitable' && player.profitLoss <= 0) return false;
     if (filters.playerStatus === 'losing' && player.profitLoss >= 0) return false;
 
@@ -673,6 +685,49 @@ export function AdminView() {
       setPaymentWallets(prev => [...prev, newWallet]);
     }
     setActiveSlideIn(null);
+  };
+
+  // Player edit handlers
+  const handleEditPlayer = (player: PlayerData) => {
+    setSelectedPlayerForEdit(player);
+    setActiveSlideIn('player');
+  };
+
+  const handlePlayerSubmit = (playerData: PlayerFormData) => {
+    if (selectedPlayerForEdit) {
+      setPlayers(prev => 
+        prev.map(p => 
+          p.id === selectedPlayerForEdit.id 
+            ? { 
+                ...p, 
+                name: playerData.name,
+                avatar: playerData.avatar,
+                status: playerData.status
+              }
+            : p
+        )
+      );
+    }
+    setSelectedPlayerForEdit(null);
+  };
+
+  // Member edit handlers
+  const handleEditMember = (member: MemberData) => {
+    setSelectedMemberForEdit(member);
+    setActiveSlideIn('member');
+  };
+
+  const handleMemberSubmit = (memberData: MemberFormData) => {
+    if (selectedMemberForEdit) {
+      setMembers(prev => 
+        prev.map(m => 
+          m.id === selectedMemberForEdit.id 
+            ? { ...m, ...memberData }
+            : m
+        )
+      );
+    }
+    setSelectedMemberForEdit(null);
   };
 
   // Helper function to calculate operation status from transactions
@@ -1275,10 +1330,6 @@ export function AdminView() {
               <Users className="w-4 h-4" />
               Members
             </TabsTrigger>
-            <TabsTrigger value="sessions" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
-              <Play className="w-4 h-4" />
-              Sessions
-            </TabsTrigger>
             <TabsTrigger value="risk" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <Shield className="w-4 h-4" />
               Risk Management
@@ -1389,10 +1440,16 @@ export function AdminView() {
                                   <img src={player.avatar} alt={player.name} className="w-5 h-5 rounded-full border border-gray-200" />
                                   <div className="flex-1 min-w-0">
                                     <div className="text-[10px] font-semibold text-gray-900 truncate">{player.name}</div>
-                                    {player.isRecording && (
+                                    {player.status === 'LIVE' && (
                                       <div className="flex items-center gap-0.5">
                                         <div className="w-1 h-1 bg-red-500 rounded-full animate-pulse"></div>
                                         <span className="text-[8px] text-red-600 font-medium">LIVE</span>
+                                      </div>
+                                    )}
+                                    {player.status === 'IN GAME' && (
+                                      <div className="flex items-center gap-0.5">
+                                        <div className="w-1 h-1 bg-blue-500 rounded-full"></div>
+                                        <span className="text-[8px] text-blue-600 font-medium">IN GAME</span>
                                       </div>
                                     )}
                                   </div>
@@ -1769,152 +1826,13 @@ export function AdminView() {
           />
         </TabsContent>
 
-        <TabsContent value="players">
-          {/* Players Table - Simple version without filters */}
+        <TabsContent value="players" className="space-y-3">
+          <FilterPanel onFilterChange={setFilters} />
+
+          {/* Players Table - With filters and View Session */}
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Players</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Player</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Team</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Session Time</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">P/L</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {adjustedPlayers.map(player => {
-                    const team = teams.find(t => t.id === player.teamId);
-                    return (
-                      <tr key={player.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={player.avatar} 
-                            alt={player.name}
-                            className="w-10 h-10 rounded-full border border-gray-200 object-cover"
-                          />
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">{player.name}</div>
-                            <div className="text-xs text-gray-500">ID: {player.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                        <td className="px-4 py-3">
-                          {team && (
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: team.color }}></div>
-                              <span className="text-sm text-gray-900">{team.name}</span>
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {player.isRecording ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-red-50 text-red-700 text-xs font-medium">
-                              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
-                              LIVE
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-1 rounded bg-gray-100 text-gray-600 text-xs font-medium">
-                              Offline
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm text-gray-900">
-                            {Math.floor(player.sessionTime / 60)}h {player.sessionTime % 60}m
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className={`text-sm font-bold ${player.profitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {player.profitLoss >= 0 ? '+' : ''}${player.profitLoss.toLocaleString()}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="members">
-          {/* Members Table - For backoffice/management */}
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Team Members</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Name</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Role</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Department</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Email</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Phone</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Join Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {members.map(member => (
-                    <tr key={member.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={member.avatar} 
-                            alt={member.name}
-                            className="w-10 h-10 rounded-full border border-gray-200 object-cover"
-                          />
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">{member.name}</div>
-                            <div className="text-xs text-gray-500">ID: {member.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
-                          {member.role}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-gray-900">{member.department}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-gray-700">{member.email}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-gray-700">{member.phone}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="text-sm text-gray-900">
-                          {member.joinDate.toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                          })}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="sessions" className="space-y-3">
-          <FilterPanel onFilterChange={setFilters} />
-
-          {/* Sessions Table - With filters and View Session */}
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Player Sessions</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -1938,6 +1856,12 @@ export function AdminView() {
                   ) : (
                     filteredPlayers.map(player => {
                       const team = teams.find(t => t.id === player.teamId);
+                      const playerData: PlayerData = {
+                        id: player.id,
+                        name: player.name,
+                        avatar: player.avatar,
+                        status: player.status
+                      };
                       return (
                         <tr key={player.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3">
@@ -1962,12 +1886,19 @@ export function AdminView() {
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            {player.isRecording ? (
+                            {player.status === 'LIVE' && (
                               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-red-50 text-red-700 text-xs font-medium">
                                 <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
                                 LIVE
                               </span>
-                            ) : (
+                            )}
+                            {player.status === 'IN GAME' && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
+                                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                IN GAME
+                              </span>
+                            )}
+                            {player.status === 'Offline' && (
                               <span className="inline-flex items-center px-2.5 py-1 rounded bg-gray-100 text-gray-600 text-xs font-medium">
                                 Offline
                               </span>
@@ -1983,19 +1914,135 @@ export function AdminView() {
                               {player.profitLoss >= 0 ? '+' : ''}${player.profitLoss.toLocaleString()}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <button
-                              onClick={() => setSelectedPlayer(player)}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-900 hover:bg-gray-800 text-white text-xs font-medium rounded transition-colors"
-                            >
-                              <Play className="w-3 h-3" />
-                              View Session
-                            </button>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-2">
+                              {player.status !== 'Offline' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={() => setSelectedPlayer(player)}
+                                      className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                    >
+                                      <Play className="w-4 h-4" />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="left">
+                                    <span>View Session</span>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => handleEditPlayer(playerData)}
+                                    className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  <span>Edit</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
                           </td>
                         </tr>
                       );
                     })
                   )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="members">
+          {/* Members Table - For backoffice/management */}
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Team Members</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Role</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Department</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Email</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Phone</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Join Date</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {members.map(member => {
+                    const memberData: MemberData = {
+                      id: member.id,
+                      name: member.name,
+                      avatar: member.avatar,
+                      role: member.role,
+                      department: member.department,
+                      email: member.email,
+                      phone: member.phone,
+                      joinDate: member.joinDate
+                    };
+                    return (
+                      <tr key={member.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <img 
+                              src={member.avatar} 
+                              alt={member.name}
+                              className="w-10 h-10 rounded-full border border-gray-200 object-cover"
+                            />
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">{member.name}</div>
+                              <div className="text-xs text-gray-500">ID: {member.id}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2.5 py-1 rounded bg-blue-50 text-blue-700 text-xs font-medium">
+                            {member.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">{member.department}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-700">{member.email}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-700">{member.phone}</div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-900">
+                            {member.joinDate.toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric', 
+                              year: 'numeric' 
+                            })}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => handleEditMember(memberData)}
+                                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <span>Edit</span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -2010,6 +2057,7 @@ export function AdminView() {
         {selectedPlayer && (
           <PlayerSessionModal
             player={selectedPlayer}
+            isOpen={!!selectedPlayer}
             onClose={() => setSelectedPlayer(null)}
           />
         )}
@@ -2030,6 +2078,44 @@ export function AdminView() {
             }}
             onSubmit={handleWalletSubmit}
             editWallet={selectedWalletForEdit}
+          />
+        </SlideInPanel>
+
+        {/* Slide-In Panel for Player Edit */}
+        <SlideInPanel
+          isOpen={activeSlideIn === 'player'}
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedPlayerForEdit(null);
+          }}
+          title={selectedPlayerForEdit ? 'Edit Player' : 'Add Player'}
+        >
+          <PlayerEditForm
+            onClose={() => {
+              setActiveSlideIn(null);
+              setSelectedPlayerForEdit(null);
+            }}
+            onSubmit={handlePlayerSubmit}
+            editPlayer={selectedPlayerForEdit}
+          />
+        </SlideInPanel>
+
+        {/* Slide-In Panel for Member Edit */}
+        <SlideInPanel
+          isOpen={activeSlideIn === 'member'}
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedMemberForEdit(null);
+          }}
+          title={selectedMemberForEdit ? 'Edit Member' : 'Add Member'}
+        >
+          <MemberEditForm
+            onClose={() => {
+              setActiveSlideIn(null);
+              setSelectedMemberForEdit(null);
+            }}
+            onSubmit={handleMemberSubmit}
+            editMember={selectedMemberForEdit}
           />
         </SlideInPanel>
       </div>

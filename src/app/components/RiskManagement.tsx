@@ -570,7 +570,7 @@ function ConditionNode({ data, selected, id }: NodeProps<{ data: ConditionNodeDa
           <span className={`font-medium text-sm ${selected ? 'text-indigo-700' : 'text-gray-600'}`}>Condition</span>
         </div>
       </div>
-      <div className="p-3 space-y-3 max-h-[400px] overflow-y-auto">
+      <div className="p-3 space-y-3 max-h-[400px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar]:opacity-0 [&::-webkit-scrollbar]:transition-opacity [&::-webkit-scrollbar:hover]:opacity-100" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
         <div>
           <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Name</label>
           <input
