@@ -723,6 +723,7 @@ function ConditionNode({ data, selected, id }: NodeProps<{ data: ConditionNodeDa
           </div>
         </div>
       </div>
+      <Handle type="target" position={Position.Left} className="!bg-gray-400 !w-2 !h-2 hover:!bg-indigo-500 transition-colors" />
       <Handle type="source" position={Position.Right} className="!bg-gray-400 !w-2 !h-2 hover:!bg-indigo-500 transition-colors" />
       <div className="p-3 space-y-3" onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
         <div>
