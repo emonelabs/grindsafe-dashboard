@@ -1,11 +1,11 @@
 export const walletImages: Record<string, string> = {
-  'Skrill': '/imgs/skrill.png',
-  'Neteller': '/imgs/neteller.png',
-  'LuxonPay': '/imgs/luxon-pay.png',
-  'PokerStars': '/imgs/pokerstars.jpg',
-  'GGPoker': '/imgs/ggpoker.png',
-  '888Poker': '/imgs/888poker.jpg',
-  'PartyPoker': '/imgs/partypoker.png',
+  'Skrill': `${import.meta.env.BASE_URL}imgs/skrill.png`,
+  'Neteller': `${import.meta.env.BASE_URL}imgs/neteller.png`,
+  'LuxonPay': `${import.meta.env.BASE_URL}imgs/luxon-pay.png`,
+  'PokerStars': `${import.meta.env.BASE_URL}imgs/pokerstars.jpg`,
+  'GGPoker': `${import.meta.env.BASE_URL}imgs/ggpoker.png`,
+  '888Poker': `${import.meta.env.BASE_URL}imgs/888poker.jpg`,
+  'PartyPoker': `${import.meta.env.BASE_URL}imgs/partypoker.png`,
 };
 
 export const walletColors: Record<string, string> = {

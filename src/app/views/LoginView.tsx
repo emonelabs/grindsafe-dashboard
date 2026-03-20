@@ -106,7 +106,7 @@ export function LoginView() {
             <form className="p-8 md:p-12" onSubmit={step === 'email' ? handleEmailSubmit : undefined}>
               <div className="flex flex-col gap-6">
                 <div className="flex flex-col items-center gap-2 text-center">
-                  <img src="/imgs/logo.svg" alt="GrindSafe" className="h-12 w-auto" />
+                  <img src={`${import.meta.env.BASE_URL}imgs/logo.svg`} alt="GrindSafe" className="h-12 w-auto" />
                   <h1 className="text-2xl font-bold">GrindSafe</h1>
                   <p className="text-balance text-sm text-muted-foreground">
                     Professional Poker Analytics Platform
@@ -221,7 +221,7 @@ export function LoginView() {
 
             <div className="relative hidden bg-muted md:block">
               <img
-                src="/imgs/login-preview.jpg"
+                src={`${import.meta.env.BASE_URL}imgs/login-preview.jpg`
                 alt="GrindSafe Preview"
                 className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
               />

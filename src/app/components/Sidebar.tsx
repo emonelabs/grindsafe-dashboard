@@ -24,7 +24,7 @@ export function Sidebar() {
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-9 h-9 bg-black rounded-md flex items-center justify-center flex-shrink-0 p-1">
-            <img src="/imgs/logo.svg" alt="GrindSafe" className="w-full h-full object-contain" />
+            <img src={`${import.meta.env.BASE_URL}imgs/logo.svg`} alt="GrindSafe" className="w-full h-full object-contain" />
           </div>
           {isExpanded && (
             <div className="min-w-0">
