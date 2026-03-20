@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, ChevronDown, Grid3x3, PieChart, Dices } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, ScatterChart, Scatter, ZAxis } from 'recharts';
+import { TrendingUp, TrendingDown, Activity, ChevronDown, Grid3x3, PieChart, Dices, Users, ChevronRight } from 'lucide-react';
 
 interface StatRow {
   name: string;
@@ -564,6 +564,88 @@ export function PokerAnalytics({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const mockHands = useMemo(() => generateMockHands(), []);
 
+  // Static chart data - pre-generated to avoid changing on re-renders
+  const winrateByPositionData = useMemo(() => {
+    const positions = ['BB (IP)', 'BB (OOP)', 'BTN (IP)', 'CO (IP)', 'CO (OOP)', 'EP (IP)', 'EP (OOP)', 'MP (IP)', 'MP (OOP)', 'SB (OOP)'];
+    const textures = ['Rain', 'Mon', 'Mid', 'Prd'];
+    const streets = ['F', 'T', 'R'];
+    
+    return positions.map(pos => {
+      const baseWinrate = pos.includes('IP') ? 8 : -3;
+      const variance = pos.includes('BB') ? 15 : 8;
+      const seed = pos.length * 100;
+      
+      const getColor = (wr: number) => {
+        if (wr >= 15) return '#22c55e';
+        if (wr >= 5) return '#84cc16';
+        if (wr >= -5) return '#eab308';
+        if (wr >= -15) return '#f97316';
+        return '#ef4444';
+      };
+      
+      // Simple seeded random for consistency
+      const seededRandom = (i: number, j: number) => {
+        const x = Math.sin(seed + i * 12.9898 + j * 78.233) * 43758.5453;
+        return x - Math.floor(x);
+      };
+      
+      const data = textures.flatMap((texture, i) => 
+        streets.map((street, j) => ({
+          texture: `${texture}-${street}`,
+          x: 0.5,
+          winrate: baseWinrate + (seededRandom(i, j) * variance * 2 - variance) + (i * 3) - (j * 2),
+          fill: getColor(baseWinrate + (seededRandom(i, j) * variance * 2 - variance) + (i * 3) - (j * 2))
+        }))
+      );
+      
+      return { position: pos, data, avg: pos.includes('IP') ? 8.3 : -2.1 };
+    });
+  }, []);
+
+  const heroVillainData = useMemo(() => {
+    const positions = ['BB', 'SB', 'BTN', 'CO', 'HJ', 'MP', 'EP', 'UTG'];
+    const positionStrength: Record<string, number> = {
+      'BTN': 20, 'CO': 15, 'HJ': 10, 'MP': 5, 
+      'EP': 0, 'UTG': -5, 'SB': -8, 'BB': -10
+    };
+    
+    const getColor = (wr: number) => {
+      if (wr >= 15) return '#22c55e';
+      if (wr >= 5) return '#84cc16';
+      if (wr >= -5) return '#eab308';
+      if (wr >= -15) return '#f97316';
+      return '#ef4444';
+    };
+    
+    return positions.map(heroPosition => {
+      const heroStrength = positionStrength[heroPosition] || 0;
+      const villainPositions = positions.filter(p => p !== heroPosition);
+      const avg = (positionStrength[heroPosition] || 0) - 4; // Simplified avg calculation
+      
+      const seed = heroPosition.charCodeAt(0) * 100 + heroPosition.charCodeAt(1);
+      const seededRandom = (i: number) => {
+        const x = Math.sin(seed + i * 12.9898) * 43758.5453;
+        return x - Math.floor(x);
+      };
+      
+      const data = villainPositions.map((villain, i) => {
+        const villainStrength = positionStrength[villain] || 0;
+        const baseWinrate = heroStrength - villainStrength;
+        const variance = 8;
+        const winrate = baseWinrate + (seededRandom(i) * variance * 2 - variance);
+        
+        return {
+          villain,
+          x: 0.5,
+          winrate,
+          fill: getColor(winrate)
+        };
+      });
+      
+      return { heroPosition, data, avg };
+    });
+  }, []);
+
   const CardComponent = ({ card, size = 'sm' }: { card: Card; size?: 'sm' | 'md' }) => {
     const suitStyles: Record<string, { bg: string; text: string; border: string }> = {
       hearts: { bg: 'bg-red-50', text: 'text-red-500', border: 'border-red-200' },
@@ -787,7 +869,7 @@ export function PokerAnalytics({
 
         {activeTab === 'stats' && (
           <>
-            {/* Metrics Row */}
+            {/* Metrics Row - Only shown on Stats tab */}
             <div className="flex flex-wrap gap-8 border-b border-gray-200 pb-5 mb-5">
               <div className="flex flex-col">
                 <span className="text-xl font-bold text-gray-900">
@@ -875,291 +957,103 @@ export function PokerAnalytics({
                 </div>
               ))}
             </div>
-
-            {/* Stats Sub-Tabs */}
-            <div className="flex gap-6 mb-4 pb-2 border-b border-gray-200">
-              <button
-                onClick={() => setStatsSubTab('actions')}
-                className={`pb-1 transition-all text-sm font-medium ${
-                  statsSubTab === 'actions'
-                    ? 'text-gray-900 border-b-2 border-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Next Actions
-              </button>
-              <button
-                onClick={() => setStatsSubTab('positions')}
-                className={`pb-1 transition-all text-sm font-medium ${
-                  statsSubTab === 'positions'
-                    ? 'text-gray-900 border-b-2 border-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Positions
-              </button>
-              <button
-                onClick={() => { setStatsSubTab('hands'); setHandsPage(1); }}
-                className={`pb-1 transition-all text-sm font-medium ${
-                  statsSubTab === 'hands'
-                    ? 'text-gray-900 border-b-2 border-gray-900'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                Hands
-              </button>
-            </div>
-
-            {/* Table based on sub-tab */}
-            {statsSubTab === 'actions' && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-[10px] text-gray-500 uppercase font-semibold tracking-wide">
-                      <th className="pb-2 pr-4 font-normal">Action</th>
-                      <th className="pb-2 pr-4 font-normal">Hands</th>
-                      <th className="pb-2 pr-4 font-normal">Opp-s</th>
-                      <th className="pb-2 pr-4 font-normal">per 1k</th>
-                      <th className="pb-2 pr-4 font-normal">Value</th>
-                      <th className="pb-2 pr-4 font-normal">Won</th>
-                      <th className="pb-2 pr-4 font-normal">Profit</th>
-                      <th className="pb-2 pr-4 font-normal">$/hand</th>
-                      <th className="pb-2 pr-4 font-normal">Disp.</th>
-                      <th className="pb-2 font-normal">EV</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aggregateStats(allCategories).map((stat, idx) => (
-                      <tr 
-                        key={stat.name} 
-                        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-                        onClick={() => {
-                          const statType = STAT_TYPE_MAP[stat.name];
-                          if (statType && onDrillDown) {
-                            onDrillDown(statType as StatType, `${activeCategory.label} > ${stat.name}`);
-                          }
-                        }}
-                      >
-                        <td className="py-2.5 pr-4 text-sm text-gray-900 font-medium">{stat.name}</td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.hands.toLocaleString()}</td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.opportunities}</td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.hitsPerOne}</td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.statValue}</td>
-                        <td className={`py-2.5 pr-4 text-sm ${stat.won >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(stat.won)}
-                        </td>
-                        <td className={`py-2.5 pr-4 text-sm ${stat.actionProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatBbs(stat.actionProfit)}
-                        </td>
-                        <td className={`py-2.5 pr-4 text-sm ${stat.actionProfitPerHand >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {stat.actionProfitPerHand}
-                        </td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.dispersion.toFixed(2)}</td>
-                        <td className={`py-2.5 text-sm ${stat.evDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {stat.evDiff !== 0 ? formatCurrency(stat.evDiff) : '--'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {statsSubTab === 'positions' && (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-[10px] text-gray-500 uppercase font-semibold tracking-wide">
-                      <th className="pb-2 pr-4 font-normal">Position</th>
-                      <th className="pb-2 pr-4 font-normal">Hands</th>
-                      <th className="pb-2 pr-4 font-normal">Opp-s</th>
-                      <th className="pb-2 pr-4 font-normal">per 1k</th>
-                      <th className="pb-2 pr-4 font-normal">Value</th>
-                      <th className="pb-2 pr-4 font-normal">Won</th>
-                      <th className="pb-2 pr-4 font-normal">Profit</th>
-                      <th className="pb-2 pr-4 font-normal">$/hand</th>
-                      <th className="pb-2 pr-4 font-normal">Disp.</th>
-                      <th className="pb-2 font-normal">EV</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aggregatePositionStats(allCategories).map((posStat, idx) => (
-                      <tr 
-                        key={posStat.position} 
-                        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-                        onClick={() => {
-                          if (onDrillDown) {
-                            onDrillDown('fold-to-raise' as StatType, `${activeCategory.label} > ${posStat.position}`);
-                          }
-                        }}
-                      >
-                        <td className="py-2.5 pr-4 text-sm text-gray-900 font-medium">{posStat.position}</td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.hands.toLocaleString()}</td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.opportunities}</td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.hitsPerOne}</td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.statValue}</td>
-                        <td className={`py-2.5 pr-4 text-sm ${posStat.won >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatCurrency(posStat.won)}
-                        </td>
-                        <td className={`py-2.5 pr-4 text-sm ${posStat.actionProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatBbs(posStat.actionProfit)}
-                        </td>
-                        <td className={`py-2.5 pr-4 text-sm ${posStat.actionProfitPerHand >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {posStat.actionProfitPerHand}
-                        </td>
-                        <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.dispersion.toFixed(2)}</td>
-                        <td className={`py-2.5 text-sm ${posStat.evDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {posStat.evDiff !== 0 ? formatCurrency(posStat.evDiff) : '--'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {statsSubTab === 'hands' && (
-              <div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-[10px] text-gray-500 uppercase font-semibold tracking-wide">
-                        <th className="pb-2 pr-4 font-normal">Position</th>
-                        <th className="pb-2 pr-4 font-normal">Preflop</th>
-                        <th className="pb-2 pr-4 font-normal">Flop</th>
-                        <th className="pb-2 pr-4 font-normal">Turn</th>
-                        <th className="pb-2 pr-4 font-normal">River</th>
-                        <th className="pb-2 pr-4 font-normal">Result</th>
-                        <th className="pb-2 font-normal">Profit</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {mockHands.slice((handsPage - 1) * handsPerPage, handsPage * handsPerPage).map((hand) => (
-                        <tr 
-                          key={hand.id} 
-                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-                        >
-                          <td className="py-2.5 pr-4 text-sm text-gray-700">{hand.position}</td>
-                          <td className="py-2.5 pr-4">
-                            <div className="flex gap-1">
-                              {hand.preflop.map((card, i) => (
-                                <CardComponent key={i} card={card} />
-                              ))}
-                            </div>
-                          </td>
-                          <td className="py-2.5 pr-4">
-                            <div className="flex gap-1">
-                              {hand.flop.map((card, i) => (
-                                <CardComponent key={i} card={card} />
-                              ))}
-                            </div>
-                          </td>
-                          <td className="py-2.5 pr-4">
-                            {hand.turn && <CardComponent card={hand.turn} />}
-                          </td>
-                          <td className="py-2.5 pr-4">
-                            {hand.river && <CardComponent card={hand.river} />}
-                          </td>
-                          <td className={`py-2.5 pr-4 text-sm font-medium ${
-                            hand.result === 'win' ? 'text-green-600' : 
-                            hand.result === 'lose' ? 'text-red-600' : 'text-gray-600'
-                          }`}>
-                            {hand.result.charAt(0).toUpperCase() + hand.result.slice(1)}
-                          </td>
-                          <td className={`py-2.5 text-sm ${hand.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            ${hand.profit.toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-200">
-                  {Array.from({ length: Math.ceil(mockHands.length / handsPerPage) }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setHandsPage(page)}
-                      className={`w-8 h-8 text-sm rounded ${
-                        handsPage === page
-                          ? 'bg-gray-900 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         )}
 
         {activeTab === 'graph' && (
-          <div className="h-96">
-            <div className="flex justify-end mb-4">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setGraphType('line')}
-                  className={`px-3 py-1 text-xs rounded ${
-                    graphType === 'line'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Line
-                </button>
-                <button
-                  onClick={() => setGraphType('bar')}
-                  className={`px-3 py-1 text-xs rounded ${
-                    graphType === 'bar'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Bar
-                </button>
+          <div className="grid grid-cols-3 gap-4">
+            {/* Performance Chart */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-[10px] text-gray-500 mb-3">Performance</div>
+              <ResponsiveContainer width="100%" height={180}>
+                <LineChart data={activeCategory.graphData}>
+                  <CartesianGrid strokeDasharray="2 2" stroke="#e5e7eb" />
+                  <XAxis dataKey="hands" stroke="#9ca3af" style={{ fontSize: '10px' }} />
+                  <YAxis stroke="#9ca3af" style={{ fontSize: '10px' }} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '8px', fontSize: '10px', color: '#374151' }}
+                    formatter={(value: number) => [`${value}`]}
+                  />
+                  <Line type="monotone" dataKey="value" stroke="#9ca3af" strokeWidth={1.5} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Winrate by Position */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-[10px] text-gray-500 mb-3">Winrate by Position</div>
+              <div className="overflow-x-auto">
+                <div className="flex gap-2 min-w-max">
+                  {winrateByPositionData.map((posData) => (
+                    <div key={posData.position} className="bg-white rounded p-2 flex-shrink-0 w-40">
+                      <div className="text-[9px] text-gray-500 mb-1 text-center">{posData.position}</div>
+                      <div className="h-32 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+                            <CartesianGrid strokeDasharray="2 2" stroke="#e5e7eb" />
+                            <XAxis type="number" dataKey="x" domain={[0, 1]} tick={false} hide={true} />
+                            <YAxis type="number" dataKey="winrate" domain={[-50, 50]} ticks={[-50, 0, 50]} tick={{ fontSize: 9 }} stroke="#d1d5db" width={30} />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '4px', fontSize: '10px' }}
+                              formatter={(value: number, name: string, props: any) => [`${value > 0 ? '+' : ''}${value.toFixed(1)}`, `${props.payload.texture}`]}
+                            />
+                            <ZAxis range={[60, 60]} />
+                            <Scatter 
+                              data={posData.data}
+                              shape={(props: any) => {
+                                const { cx, cy, fill } = props;
+                                return <circle cx={cx} cy={cy} r={4} fill={fill} opacity={0.8} />;
+                              }}
+                            />
+                          </ScatterChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="text-center text-[9px] text-gray-600 mt-1 pt-1 border-t border-gray-100">
+                        {posData.avg > 0 ? '+' : ''}{posData.avg.toFixed(1)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height="100%">
-              {graphType === 'line' ? (
-                <LineChart data={activeCategory.graphData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="hands" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    dot={{ fill: '#3b82f6', strokeWidth: 2 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              ) : (
-                <BarChart data={activeCategory.graphData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="hands" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              )}
-            </ResponsiveContainer>
+
+            {/* Hero/Villain Winrate */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-[10px] text-gray-500 mb-3">Hero vs Villain</div>
+              <div className="overflow-x-auto">
+                <div className="flex gap-2 min-w-max">
+                  {heroVillainData.map((heroData) => (
+                    <div key={heroData.heroPosition} className="bg-white rounded p-2 flex-shrink-0 w-40">
+                      <div className="text-[9px] text-gray-500 mb-1 text-center">{heroData.heroPosition}</div>
+                      <div className="h-32 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ScatterChart margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+                            <CartesianGrid strokeDasharray="2 2" stroke="#e5e7eb" />
+                            <XAxis type="number" dataKey="x" domain={[0, 1]} tick={false} hide={true} />
+                            <YAxis type="number" dataKey="winrate" domain={[-50, 50]} ticks={[-50, 0, 50]} tick={{ fontSize: 9 }} stroke="#d1d5db" width={30} />
+                            <Tooltip 
+                              contentStyle={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px', padding: '4px', fontSize: '10px' }}
+                              formatter={(value: number, name: string, props: any) => [`${value > 0 ? '+' : ''}${value.toFixed(1)}`, `vs ${props.payload.villain}`]}
+                            />
+                            <ZAxis range={[60, 60]} />
+                            <Scatter 
+                              data={heroData.data}
+                              shape={(props: any) => {
+                                const { cx, cy, fill } = props;
+                                return <circle cx={cx} cy={cy} r={4} fill={fill} opacity={0.8} />;
+                              }}
+                            />
+                          </ScatterChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="text-center text-[9px] text-gray-600 mt-1 pt-1 border-t border-gray-100">
+                        {heroData.avg > 0 ? '+' : ''}{heroData.avg.toFixed(1)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1168,102 +1062,282 @@ export function PokerAnalytics({
             <table className="border-collapse">
               <thead>
                 <tr>
-                  <th className="p-2"></th>
+                  <th className="p-1"></th>
                   {['AA', 'AK', 'AQ', 'AJ', 'AT', 'A9', 'A8', 'A7', 'A6', 'A5', 'A4', 'A3', 'A2'].map((h) => (
-                    <th key={h} className="p-2 text-xs text-gray-500 font-normal">{h}</th>
+                    <th key={h} className="p-1 text-[9px] text-gray-400 font-normal">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {['AA', 'AKs', 'AQs', 'AJs', 'ATs', 'A9s', 'A8s', 'A7s', 'A6s', 'A5s', 'A4s', 'A3s', 'A2s'].map((rowHand, i) => (
                   <tr key={rowHand}>
-                    <td className="p-2 text-xs text-gray-500 font-normal">{rowHand}</td>
+                    <td className="p-1 text-[9px] text-gray-400 font-normal">{rowHand}</td>
                     {activeCategory.rangeData[i].map((value, j) => (
                       <td
                         key={j}
-                        className="p-1 text-center cursor-pointer hover:opacity-80 transition-opacity"
+                        className="p-0.5 text-center cursor-pointer"
                         style={{
-                          backgroundColor: value === 100 ? '#1e40af' : value === 50 ? '#3b82f6' : value === 25 ? '#93c5fd' : '#f3f4f6',
-                          color: value > 0 ? 'white' : 'transparent',
-                          fontSize: '10px',
-                          fontWeight: 'medium'
+                          backgroundColor: value === 100 ? '#d1d5db' : value === 50 ? '#e5e7eb' : value === 25 ? '#f3f4f6' : '#fafafa',
+                          color: value > 50 ? '#6b7280' : '#9ca3af',
+                          fontSize: '8px'
                         }}
                         title={`${rowHand} vs ${['AA', 'AK', 'AQ', 'AJ', 'AT', 'A9', 'A8', 'A7', 'A6', 'A5', 'A4', 'A3', 'A2'][j]}: ${value}%`}
                       >
-                        {value > 0 ? `${value}%` : ''}
+                        {value > 0 ? `${value}` : ''}
                       </td>
                     ))}
                   </tr>
                 ))}
                 <tr>
-                  <td className="p-2"></td>
+                  <td className="p-1"></td>
                   {['AA', 'AK', 'AQ', 'AJ', 'AT', 'A9', 'A8', 'A7', 'A6', 'A5', 'A4', 'A3', 'A2'].map((h) => (
-                    <td key={h} className="p-2 text-xs text-gray-500 font-normal">{h}o</td>
+                    <td key={h} className="p-1 text-[9px] text-gray-400 font-normal">{h}o</td>
                   ))}
                 </tr>
               </tbody>
             </table>
-            <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-[#1e40af] rounded"></div>
-                100%
-              </span>
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-[#3b82f6] rounded"></div>
-                50%
-              </span>
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-[#93c5fd] rounded"></div>
-                25%
-              </span>
-            </div>
           </div>
         )}
 
         {activeTab === 'strength' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              {activeCategory.handStrengthData.map((item) => (
-                <div key={item.hand} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-900">{item.hand}</span>
-                    <span className="text-lg font-bold text-gray-900">{item.equity}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all"
-                      style={{ width: `${item.equity}%` }}
-                    ></div>
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500">
-                    Frequency: {item.frequency}%
-                  </div>
+          <div className="grid grid-cols-3 gap-2">
+            {activeCategory.handStrengthData.map((item) => (
+              <div key={item.hand} className="bg-gray-50 rounded p-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10px] text-gray-600">{item.hand}</span>
+                  <span className="text-xs font-medium text-gray-700">{item.equity}%</span>
                 </div>
-              ))}
-            </div>
-            
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h4 className="text-sm font-semibold text-gray-900 mb-4">Equity Distribution</h4>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={activeCategory.handStrengthData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="hand" stroke="#6b7280" style={{ fontSize: '10px' }} />
-                  <YAxis stroke="#6b7280" style={{ fontSize: '10px' }} domain={[0, 100]} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      fontSize: '12px'
+                <div className="w-full bg-gray-200 rounded-full h-1">
+                  <div
+                    className="bg-gray-400 h-1 rounded-full"
+                    style={{ width: `${item.equity}%` }}
+                  ></div>
+                </div>
+                <div className="text-[9px] text-gray-400 mt-1">
+                  {item.frequency}%
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Stats Sub-Tabs - Fixed at bottom */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex gap-6 mb-4 pb-2 border-b border-gray-200">
+          <button
+            onClick={() => setStatsSubTab('actions')}
+            className={`pb-1 transition-all text-sm font-medium ${
+              statsSubTab === 'actions'
+                ? 'text-gray-900 border-b-2 border-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Next Actions
+          </button>
+          <button
+            onClick={() => setStatsSubTab('positions')}
+            className={`pb-1 transition-all text-sm font-medium ${
+              statsSubTab === 'positions'
+                ? 'text-gray-900 border-b-2 border-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Positions
+          </button>
+          <button
+            onClick={() => { setStatsSubTab('hands'); setHandsPage(1); }}
+            className={`pb-1 transition-all text-sm font-medium ${
+              statsSubTab === 'hands'
+                ? 'text-gray-900 border-b-2 border-gray-900'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Hands
+          </button>
+        </div>
+
+        {/* Tables based on sub-tab - Fixed at bottom */}
+        {statsSubTab === 'actions' && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-[10px] text-gray-500 uppercase font-semibold tracking-wide">
+                  <th className="pb-2 pr-4 font-normal">Action</th>
+                  <th className="pb-2 pr-4 font-normal">Hands</th>
+                  <th className="pb-2 pr-4 font-normal">Opp-s</th>
+                  <th className="pb-2 pr-4 font-normal">per 1k</th>
+                  <th className="pb-2 pr-4 font-normal">Value</th>
+                  <th className="pb-2 pr-4 font-normal">Won</th>
+                  <th className="pb-2 pr-4 font-normal">Profit</th>
+                  <th className="pb-2 pr-4 font-normal">$/hand</th>
+                  <th className="pb-2 pr-4 font-normal">Disp.</th>
+                  <th className="pb-2 font-normal">EV</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aggregateStats(allCategories).map((stat, idx) => (
+                  <tr 
+                    key={stat.name} 
+                    className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      const statType = STAT_TYPE_MAP[stat.name];
+                      if (statType && onDrillDown) {
+                        onDrillDown(statType as StatType, `${activeCategory.label} > ${stat.name}`);
+                      }
                     }}
-                    formatter={(value: any) => [`${value}%`, 'Equity']}
-                  />
-                  <Bar dataKey="equity" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                  >
+                    <td className="py-2.5 pr-4 text-sm text-gray-900 font-medium">{stat.name}</td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.hands.toLocaleString()}</td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.opportunities}</td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.hitsPerOne}</td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.statValue}</td>
+                    <td className={`py-2.5 pr-4 text-sm ${stat.won >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(stat.won)}
+                    </td>
+                    <td className={`py-2.5 pr-4 text-sm ${stat.actionProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatBbs(stat.actionProfit)}
+                    </td>
+                    <td className={`py-2.5 pr-4 text-sm ${stat.actionProfitPerHand >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {stat.actionProfitPerHand}
+                    </td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{stat.dispersion.toFixed(2)}</td>
+                    <td className={`py-2.5 text-sm ${stat.evDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {stat.evDiff !== 0 ? formatCurrency(stat.evDiff) : '--'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {statsSubTab === 'positions' && (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-[10px] text-gray-500 uppercase font-semibold tracking-wide">
+                  <th className="pb-2 pr-4 font-normal">Position</th>
+                  <th className="pb-2 pr-4 font-normal">Hands</th>
+                  <th className="pb-2 pr-4 font-normal">Opp-s</th>
+                  <th className="pb-2 pr-4 font-normal">per 1k</th>
+                  <th className="pb-2 pr-4 font-normal">Value</th>
+                  <th className="pb-2 pr-4 font-normal">Won</th>
+                  <th className="pb-2 pr-4 font-normal">Profit</th>
+                  <th className="pb-2 pr-4 font-normal">$/hand</th>
+                  <th className="pb-2 pr-4 font-normal">Disp.</th>
+                  <th className="pb-2 font-normal">EV</th>
+                </tr>
+              </thead>
+              <tbody>
+                {aggregatePositionStats(allCategories).map((posStat, idx) => (
+                  <tr 
+                    key={posStat.position} 
+                    className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => {
+                      if (onDrillDown) {
+                        onDrillDown('fold-to-raise' as StatType, `${activeCategory.label} > ${posStat.position}`);
+                      }
+                    }}
+                  >
+                    <td className="py-2.5 pr-4 text-sm text-gray-900 font-medium">{posStat.position}</td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.hands.toLocaleString()}</td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.opportunities}</td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.hitsPerOne}</td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.statValue}</td>
+                    <td className={`py-2.5 pr-4 text-sm ${posStat.won >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(posStat.won)}
+                    </td>
+                    <td className={`py-2.5 pr-4 text-sm ${posStat.actionProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatBbs(posStat.actionProfit)}
+                    </td>
+                    <td className={`py-2.5 pr-4 text-sm ${posStat.actionProfitPerHand >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {posStat.actionProfitPerHand}
+                    </td>
+                    <td className="py-2.5 pr-4 text-sm text-gray-700">{posStat.dispersion.toFixed(2)}</td>
+                    <td className={`py-2.5 text-sm ${posStat.evDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {posStat.evDiff !== 0 ? formatCurrency(posStat.evDiff) : '--'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {statsSubTab === 'hands' && (
+          <div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-[10px] text-gray-500 uppercase font-semibold tracking-wide">
+                    <th className="pb-2 pr-4 font-normal">Position</th>
+                    <th className="pb-2 pr-4 font-normal">Preflop</th>
+                    <th className="pb-2 pr-4 font-normal">Flop</th>
+                    <th className="pb-2 pr-4 font-normal">Turn</th>
+                    <th className="pb-2 pr-4 font-normal">River</th>
+                    <th className="pb-2 pr-4 font-normal">Result</th>
+                    <th className="pb-2 font-normal">Profit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mockHands.slice((handsPage - 1) * handsPerPage, handsPage * handsPerPage).map((hand) => (
+                    <tr 
+                      key={hand.id} 
+                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="py-2.5 pr-4 text-sm text-gray-700">{hand.position}</td>
+                      <td className="py-2.5 pr-4">
+                        <div className="flex gap-1">
+                          {hand.preflop.map((card, i) => (
+                            <CardComponent key={i} card={card} />
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        <div className="flex gap-1">
+                          {hand.flop.map((card, i) => (
+                            <CardComponent key={i} card={card} />
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        {hand.turn && <CardComponent card={hand.turn} />}
+                      </td>
+                      <td className="py-2.5 pr-4">
+                        {hand.river && <CardComponent card={hand.river} />}
+                      </td>
+                      <td className={`py-2.5 pr-4 text-sm font-medium ${
+                        hand.result === 'win' ? 'text-green-600' : 
+                        hand.result === 'lose' ? 'text-red-600' : 'text-gray-600'
+                      }`}>
+                        {hand.result.charAt(0).toUpperCase() + hand.result.slice(1)}
+                      </td>
+                      <td className={`py-2.5 text-sm ${hand.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ${hand.profit.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-gray-200">
+              {Array.from({ length: Math.ceil(mockHands.length / handsPerPage) }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setHandsPage(page)}
+                  className={`w-8 h-8 text-sm rounded ${
+                    handsPage === page
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
