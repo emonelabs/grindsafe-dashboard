@@ -11,7 +11,7 @@ import { RecentSplits } from '../components/RecentSplits';
 import { WalletPerformance } from '../components/WalletPerformance';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/tooltip';
-import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink } from 'lucide-react';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink, Grid3x3 } from 'lucide-react';
 import { TeamsView } from './TeamsView';
 import { PaymentWalletsContent } from '../components/PokerWalletsContent';
 import PaymentWalletForm, { PaymentWallet } from '../components/forms/PokerWalletForm';
@@ -19,6 +19,7 @@ import SlideInPanel from '../components/SlideInPanel';
 import { RiskManagement } from '../components/RiskManagement';
 import PlayerEditForm, { PlayerData, PlayerFormData } from '../components/forms/PlayerEditForm';
 import MemberEditForm, { MemberData, MemberFormData } from '../components/forms/MemberEditForm';
+import { DrillDownAnalytics } from '../components/DrillDownAnalytics';
 import { Pencil } from 'lucide-react';
 
 interface Player {
@@ -1344,6 +1345,11 @@ export function AdminView() {
               <Users className="w-4 h-4" />
               Teams
             </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Grid3x3 className="w-4 h-4" />
+              Analytics
+              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-yellow-400 text-yellow-900 data-[state=active]:bg-white/20 data-[state=active]:text-white/90 rounded">Beta</span>
+            </TabsTrigger>
             <TabsTrigger value="operations" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
               <ArrowLeftRight className="w-4 h-4" />
               Operations
@@ -1813,6 +1819,37 @@ export function AdminView() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <select
+                  value={selectedPlayer?.id || 'company'}
+                  onChange={(e) => {
+                    if (e.target.value === 'company') {
+                      setSelectedPlayer(null);
+                    } else {
+                      const player = players.find(p => p.id === e.target.value);
+                      setSelectedPlayer(player || null);
+                    }
+                  }}
+                  className="px-4 py-2 text-sm border border-gray-200 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors cursor-pointer"
+                >
+                  <option value="company">Company-Wide Analytics</option>
+                  {players.map(player => (
+                    <option key={player.id} value={player.id}>{player.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <DrillDownAnalytics 
+              playerId={selectedPlayer?.id}
+              playerName={selectedPlayer?.name}
+              isCompanyWide={!selectedPlayer}
+            />
           </div>
         </TabsContent>
 

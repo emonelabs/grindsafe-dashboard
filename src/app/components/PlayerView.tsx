@@ -16,6 +16,7 @@ import { PokerAccountsContent } from './PokerAccountsContent';
 import { PlayerHandHistory } from './PlayerHandHistory';
 import LegalDocumentForm, { LegalDocument } from './forms/LegalDocumentForm';
 import { LegalDocumentsContent } from './LegalDocumentsContent';
+import { DrillDownAnalytics } from './DrillDownAnalytics';
 
 interface SessionData {
   time: string;
@@ -2001,6 +2002,11 @@ export function PlayerView() {
               <Clock className="w-4 h-4 mr-2" />
               Sessions
             </TabsTrigger>
+            <TabsTrigger value="analytics">
+              <Grid3x3 className="w-4 h-4 mr-2" />
+              Analytics
+              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-yellow-400 text-yellow-900 rounded">Beta</span>
+            </TabsTrigger>
             <TabsTrigger value="operations">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
               Operations
@@ -2973,6 +2979,14 @@ export function PlayerView() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <DrillDownAnalytics 
+              playerId={currentPlayer.name}
+              playerName={currentPlayer.name}
+              isCompanyWide={false}
+            />
           </TabsContent>
 
           <TabsContent value="operations" className="mt-6 flex flex-col h-[calc(100vh-280px)]">
