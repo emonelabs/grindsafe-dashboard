@@ -221,7 +221,7 @@ export function LoginView() {
 
             <div className="relative hidden bg-muted md:block">
               <img
-                src={`${import.meta.env.BASE_URL}imgs/login-preview.jpg`
+                src={`${import.meta.env.BASE_URL}imgs/login-preview.jpg`}
                 alt="GrindSafe Preview"
                 className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
               />
