@@ -6,8 +6,9 @@ import MessagesView from './views/MessagesView';
 import { LoginView } from './views/LoginView';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
-export const router = createBrowserRouter([
-  {
+export const router = createBrowserRouter(
+  [
+    {
     path: '/login',
     Component: LoginView,
   },
@@ -33,4 +34,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+],
+{ basename: '/grindsafe-dashboard' });
