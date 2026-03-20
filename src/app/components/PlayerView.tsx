@@ -17,6 +17,9 @@ import { PlayerHandHistory } from './PlayerHandHistory';
 import LegalDocumentForm, { LegalDocument } from './forms/LegalDocumentForm';
 import { LegalDocumentsContent } from './LegalDocumentsContent';
 import { DrillDownAnalytics } from './DrillDownAnalytics';
+import { WalletIcon } from './WalletIcon';
+import { PokerWalletIcon } from './PokerWalletIcon';
+import { walletImages } from '../constants/walletImages';
 
 interface SessionData {
   time: string;
@@ -1235,63 +1238,15 @@ export function PlayerView() {
       );
     }
     if (type === 'player_financial') {
-      if (name === 'Skrill') {
-        return (
-          <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-green-600">SK</span>
-          </div>
-        );
-      }
-      if (name === 'Neteller') {
-        return (
-          <div className="w-5 h-5 bg-teal-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-teal-600">NL</span>
-          </div>
-        );
-      }
-      if (name === 'Pix') {
-        return (
-          <div className="w-5 h-5 bg-yellow-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-yellow-600">PX</span>
-          </div>
-        );
-      }
-      if (name === 'LuxonPay') {
-        return (
-          <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-purple-600">LP</span>
-          </div>
-        );
+      const walletKey = name as 'Skrill' | 'Neteller' | 'Pix' | 'LuxonPay';
+      if (walletImages[name]) {
+        return <WalletIcon type={walletKey} className="w-5 h-5" />;
       }
     }
     if (type === 'poker_site') {
-      if (name === 'PokerStars') {
-        return (
-          <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-red-600">PS</span>
-          </div>
-        );
-      }
-      if (name === 'GGPoker') {
-        return (
-          <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-orange-600">GG</span>
-          </div>
-        );
-      }
-      if (name === '888Poker') {
-        return (
-          <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-green-600">888</span>
-          </div>
-        );
-      }
-      if (name === 'PartyPoker') {
-        return (
-          <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-purple-600">PP</span>
-          </div>
-        );
+      const platformKey = name as 'PokerStars' | 'GGPoker' | '888Poker' | 'PartyPoker';
+      if (walletImages[name]) {
+        return <PokerWalletIcon platform={platformKey} size="sm" className="w-5 h-5" />;
       }
     }
     if (type === 'wallet') {
@@ -1323,33 +1278,9 @@ export function PlayerView() {
       );
     }
     if (type === 'platform') {
-      if (name === 'PokerStars') {
-        return (
-          <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-red-600">PS</span>
-          </div>
-        );
-      }
-      if (name === 'GGPoker') {
-        return (
-          <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-orange-600">GG</span>
-          </div>
-        );
-      }
-      if (name === '888Poker') {
-        return (
-          <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-green-600">888</span>
-          </div>
-        );
-      }
-      if (name === 'PartyPoker') {
-        return (
-          <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-            <span className="text-[8px] font-bold text-purple-600">PP</span>
-          </div>
-        );
+      const platformKey = name as 'PokerStars' | 'GGPoker' | '888Poker' | 'PartyPoker';
+      if (walletImages[name]) {
+        return <PokerWalletIcon platform={platformKey} size="sm" className="w-5 h-5" />;
       }
     }
     if (type === 'player_account') {
@@ -1400,32 +1331,18 @@ export function PlayerView() {
     return null;
   };
 
-  const getWalletWithLink = (walletName: string, walletType: string, nickname?: string) => {
+  const getWalletWithLink = (walletName: string, walletType: string, nickname?: string, skipIcon: boolean = false) => {
     const isPokerSite = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'].includes(walletName);
     const isPlayerFinancial = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'].includes(walletName);
-    
-    const getPokerSiteIcon = (site: string) => {
-      if (site === 'PokerStars') {
-        return <span className="text-[8px] font-bold text-red-600">PS</span>;
-      }
-      if (site === 'GGPoker') {
-        return <span className="text-[8px] font-bold text-orange-600">GG</span>;
-      }
-      if (site === '888Poker') {
-        return <span className="text-[8px] font-bold text-green-600">888</span>;
-      }
-      if (site === 'PartyPoker') {
-        return <span className="text-[8px] font-bold text-purple-600">PP</span>;
-      }
-      return null;
-    };
 
     if (isPokerSite && nickname) {
+      if (skipIcon) {
+        return <span className="text-xs text-gray-700 font-medium">{nickname}</span>;
+      }
+      const platformKey = walletName as 'PokerStars' | 'GGPoker' | '888Poker' | 'PartyPoker';
       return (
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 bg-gray-100 rounded flex items-center justify-center">
-            {getPokerSiteIcon(walletName)}
-          </div>
+          <PokerWalletIcon platform={platformKey} size="sm" className="w-5 h-5" />
           <span className="text-xs text-gray-700 font-medium">{nickname}</span>
         </div>
       );
@@ -1449,6 +1366,26 @@ export function PlayerView() {
         return '#';
       };
       
+      if (skipIcon) {
+        return (
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => window.open(generatePaymentLink(walletName), '_blank')}
+                className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
+              >
+                <span className="text-xs text-gray-600">{walletName}</span>
+                <ExternalLink className="w-3 h-3 text-gray-400" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="bg-gray-900 text-white text-xs max-w-xs break-all">
+              <div className="font-mono text-[8px]">{generatePaymentLink(walletName)}</div>
+            </TooltipContent>
+          </UITooltip>
+        );
+      }
+      
+      const walletKey = walletName as 'Skrill' | 'Neteller' | 'Pix' | 'LuxonPay';
       return (
         <UITooltip>
           <TooltipTrigger asChild>
@@ -1456,7 +1393,7 @@ export function PlayerView() {
               onClick={() => window.open(generatePaymentLink(walletName), '_blank')}
               className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
             >
-              <span className="text-xs text-gray-600">{walletName}</span>
+              <WalletIcon type={walletKey} className="w-4 h-4" />
               <ExternalLink className="w-3 h-3 text-gray-400" />
             </button>
           </TooltipTrigger>
@@ -2385,10 +2322,10 @@ export function PlayerView() {
                           </div>
                           <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
                             {getWalletIcon(item.fromType, item.from)}
-                            {getWalletWithLink(item.from, item.fromType, item.nickname)}
+                            {getWalletWithLink(item.from, item.fromType, item.nickname, true)}
                             <span>→</span>
                             {getWalletIcon(item.toType, item.to)}
-                            {getWalletWithLink(item.to, item.toType, item.nickname)}
+                            {getWalletWithLink(item.to, item.toType, item.nickname, true)}
                           </div>
                           <div className="flex gap-2">
                             {item.buttonType === 'confirm' ? (

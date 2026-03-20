@@ -20,6 +20,9 @@ import { RiskManagement } from '../components/RiskManagement';
 import PlayerEditForm, { PlayerData, PlayerFormData } from '../components/forms/PlayerEditForm';
 import MemberEditForm, { MemberData, MemberFormData } from '../components/forms/MemberEditForm';
 import { DrillDownAnalytics } from '../components/DrillDownAnalytics';
+import { WalletIcon } from '../components/WalletIcon';
+import { PokerWalletIcon } from '../components/PokerWalletIcon';
+import { walletImages } from '../constants/walletImages';
 import { Pencil } from 'lucide-react';
 
 interface Player {
@@ -1040,33 +1043,9 @@ export function AdminView() {
       );
     }
     if (type === 'player_financial') {
-      if (name === 'Skrill') {
-        return (
-          <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-green-600">SK</span>
-          </div>
-        );
-      }
-      if (name === 'Neteller') {
-        return (
-          <div className="w-6 h-6 bg-teal-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-teal-600">NL</span>
-          </div>
-        );
-      }
-      if (name === 'Pix') {
-        return (
-          <div className="w-6 h-6 bg-yellow-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-yellow-600">PX</span>
-          </div>
-        );
-      }
-      if (name === 'LuxonPay') {
-        return (
-          <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-purple-600">LP</span>
-          </div>
-        );
+      const walletKey = name as 'Skrill' | 'Neteller' | 'Pix' | 'LuxonPay';
+      if (walletImages[name]) {
+        return <WalletIcon type={walletKey} className="w-6 h-6" />;
       }
       return (
         <div className="w-6 h-6 bg-blue-100 rounded flex items-center justify-center">
@@ -1075,33 +1054,9 @@ export function AdminView() {
       );
     }
     if (type === 'poker_site') {
-      if (name === 'PokerStars') {
-        return (
-          <div className="w-6 h-6 bg-red-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-red-600">PS</span>
-          </div>
-        );
-      }
-      if (name === 'GGPoker') {
-        return (
-          <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-orange-600">GG</span>
-          </div>
-        );
-      }
-      if (name === '888Poker') {
-        return (
-          <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-green-600">888</span>
-          </div>
-        );
-      }
-      if (name === 'PartyPoker') {
-        return (
-          <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-purple-600">PP</span>
-          </div>
-        );
+      const platformKey = name as 'PokerStars' | 'GGPoker' | '888Poker' | 'PartyPoker';
+      if (walletImages[name]) {
+        return <PokerWalletIcon platform={platformKey} size="sm" className="w-6 h-6" />;
       }
     }
     if (type === 'player_account') {
@@ -1147,33 +1102,9 @@ export function AdminView() {
       );
     }
     if (type === 'platform') {
-      if (name === 'PokerStars') {
-        return (
-          <div className="w-6 h-6 bg-red-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-red-600">PS</span>
-          </div>
-        );
-      }
-      if (name === 'GGPoker') {
-        return (
-          <div className="w-6 h-6 bg-orange-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-orange-600">GG</span>
-          </div>
-        );
-      }
-      if (name === '888Poker') {
-        return (
-          <div className="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-green-600">888</span>
-          </div>
-        );
-      }
-      if (name === 'PartyPoker') {
-        return (
-          <div className="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
-            <span className="text-[10px] font-bold text-purple-600">PP</span>
-          </div>
-        );
+      const platformKey = name as 'PokerStars' | 'GGPoker' | '888Poker' | 'PartyPoker';
+      if (walletImages[name]) {
+        return <PokerWalletIcon platform={platformKey} size="sm" className="w-6 h-6" />;
       }
     }
     return (
@@ -1232,32 +1163,18 @@ export function AdminView() {
     return null;
   };
 
-  const getWalletWithLink = (walletName: string, walletType: string, nickname?: string) => {
+  const getWalletWithLink = (walletName: string, walletType: string, nickname?: string, skipIcon: boolean = false) => {
     const isPokerSite = ['PokerStars', 'GGPoker', '888Poker', 'PartyPoker'].includes(walletName);
     const isPlayerFinancial = ['Skrill', 'Neteller', 'Pix', 'LuxonPay'].includes(walletName);
-    
-    const getPokerSiteIcon = (site: string) => {
-      if (site === 'PokerStars') {
-        return <span className="text-[10px] font-bold text-red-600">PS</span>;
-      }
-      if (site === 'GGPoker') {
-        return <span className="text-[10px] font-bold text-orange-600">GG</span>;
-      }
-      if (site === '888Poker') {
-        return <span className="text-[10px] font-bold text-green-600">888</span>;
-      }
-      if (site === 'PartyPoker') {
-        return <span className="text-[10px] font-bold text-purple-600">PP</span>;
-      }
-      return null;
-    };
 
     if (isPokerSite && nickname) {
+      if (skipIcon) {
+        return <span className="text-sm text-gray-700 font-medium">{nickname}</span>;
+      }
+      const platformKey = walletName as 'PokerStars' | 'GGPoker' | '888Poker' | 'PartyPoker';
       return (
         <div className="flex items-center gap-1.5">
-          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-            {getPokerSiteIcon(walletName)}
-          </div>
+          <PokerWalletIcon platform={platformKey} size="sm" className="w-6 h-6" />
           <span className="text-sm text-gray-700 font-medium">{nickname}</span>
         </div>
       );
@@ -1281,6 +1198,26 @@ export function AdminView() {
         return '#';
       };
       
+      if (skipIcon) {
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => window.open(generatePaymentLink(walletName), '_blank')}
+                className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
+              >
+                <span className="text-sm text-gray-600">{walletName}</span>
+                <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="bg-gray-900 text-white text-xs max-w-xs break-all">
+              <div className="font-mono text-[10px]">{generatePaymentLink(walletName)}</div>
+            </TooltipContent>
+          </Tooltip>
+        );
+      }
+      
+      const walletKey = walletName as 'Skrill' | 'Neteller' | 'Pix' | 'LuxonPay';
       return (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -1288,7 +1225,7 @@ export function AdminView() {
               onClick={() => window.open(generatePaymentLink(walletName), '_blank')}
               className="inline-flex items-center gap-1 hover:text-gray-900 transition-colors"
             >
-              <span className="text-sm text-gray-600">{walletName}</span>
+              <WalletIcon type={walletKey} className="w-5 h-5" />
               <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
             </button>
           </TooltipTrigger>
@@ -1697,18 +1634,7 @@ export function AdminView() {
                   {paymentWallets.slice(0, 4).map((wallet) => (
                     <div key={wallet.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                       <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded flex items-center justify-center ${
-                          wallet.provider === 'Skrill' ? 'bg-green-100' :
-                          wallet.provider === 'Neteller' ? 'bg-teal-100' :
-                          wallet.provider === 'Pix' ? 'bg-yellow-100' :
-                          'bg-purple-100'
-                        }`}>
-                          <span className="text-[10px] font-bold text-gray-700">
-                            {wallet.provider === 'Skrill' ? 'SK' :
-                             wallet.provider === 'Neteller' ? 'NL' :
-                             wallet.provider === 'Pix' ? 'PX' : 'LP'}
-                          </span>
-                        </div>
+                        <WalletIcon type={wallet.provider as 'Skrill' | 'Neteller' | 'Pix' | 'LuxonPay'} className="w-8 h-8" />
                         <div>
                           <div className="text-xs font-semibold text-gray-900">{wallet.provider}</div>
                           <div className="text-[10px] text-gray-500">{wallet.username}</div>
@@ -1972,10 +1898,10 @@ export function AdminView() {
                                   <div key={txIndex} className="flex items-center justify-between py-2.5 px-4 bg-white rounded border border-gray-200">
                                     <div className="flex items-center gap-3">
                                       {getWalletIcon(tx.fromType, tx.from)}
-                                      {getWalletWithLink(tx.from, tx.fromType, tx.nickname)}
+                                      {getWalletWithLink(tx.from, tx.fromType, tx.nickname, true)}
                                       <span className="text-sm text-gray-400 mx-1">→</span>
                                       {getWalletIcon(tx.toType, tx.to)}
-                                      {getWalletWithLink(tx.to, tx.toType, tx.nickname)}
+                                      {getWalletWithLink(tx.to, tx.toType, tx.nickname, true)}
                                     </div>
                                     <div className="flex items-center gap-3">
                                       {getOwnerBadge(tx.owner)}
@@ -2073,10 +1999,10 @@ export function AdminView() {
                         </div>
                         <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
                           {getWalletIcon(item.fromType, item.from)}
-                          {getWalletWithLink(item.from, item.fromType, item.nickname)}
+                          {getWalletWithLink(item.from, item.fromType, item.nickname, true)}
                           <span>→</span>
                           {getWalletIcon(item.toType, item.to)}
-                          {getWalletWithLink(item.to, item.toType, item.nickname)}
+                          {getWalletWithLink(item.to, item.toType, item.nickname, true)}
                         </div>
                         <div className="flex gap-2">
                           <button
