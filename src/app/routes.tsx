@@ -35,4 +35,4 @@ export const router = createBrowserRouter(
     ],
   },
 ],
-{ basename: '/grindsafe-dashboard' });
+{ basename: '/' });
