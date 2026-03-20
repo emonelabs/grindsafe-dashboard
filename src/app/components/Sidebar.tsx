@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, User, Settings, Activity, History, PlayCircle, Users, Network, Split, Wallet, ChevronRight, ChevronLeft, MessageSquare, LogOut } from 'lucide-react';
+import { LayoutDashboard, User, Settings, History, PlayCircle, Users, Network, Split, Wallet, ChevronRight, ChevronLeft, MessageSquare, LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,12 +23,12 @@ export function Sidebar() {
       {/* Logo/Header */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 bg-gray-900 rounded-md flex items-center justify-center flex-shrink-0">
-            <Activity className="w-5 h-5 text-white" />
+          <div className="w-9 h-9 bg-black rounded-md flex items-center justify-center flex-shrink-0 p-1">
+            <img src="/imgs/logo.svg" alt="GrindSafe" className="w-full h-full object-contain" />
           </div>
           {isExpanded && (
             <div className="min-w-0">
-              <h2 className="text-gray-900 font-semibold text-base truncate">PokerTrack</h2>
+              <h2 className="text-gray-900 font-semibold text-base truncate">GrindSafe</h2>
               <p className="text-gray-500 text-xs truncate">Pro Monitor</p>
             </div>
           )}

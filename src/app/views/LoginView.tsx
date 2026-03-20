@@ -1,34 +1,37 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
-import { Mail, LogIn, Loader2, ArrowLeft, Shield, Activity } from 'lucide-react';
+import { Card, CardContent } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Label } from '../components/ui/label';
+import { Separator } from '../components/ui/separator';
+import { cn } from '../components/ui/utils';
+import { Loader2, ArrowLeft, Shield, Mail } from 'lucide-react';
+import { InputOTP, InputOTPSlot } from '../components/ui/input-otp';
 
 type LoginStep = 'email' | 'otp';
 
 export function LoginView() {
   const [step, setStep] = useState<LoginStep>('email');
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [generatedOtp, setGeneratedOtp] = useState('');
   const { login, user } = useAuth();
   const navigate = useNavigate();
-  const otpInputs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Redirect to home if user is already logged in
   useEffect(() => {
     if (user) {
       navigate('/', { replace: true });
     }
   }, [user, navigate]);
 
-  // Handle email submission
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Validate email
     if (!email) {
       setError('Please enter your email address');
       return;
@@ -40,7 +43,6 @@ export function LoginView() {
       return;
     }
 
-    // Check if email is authorized
     if (email.toLowerCase() !== 'joao@emonelabs.com') {
       setError('Only verified business emails are allowed');
       return;
@@ -49,14 +51,9 @@ export function LoginView() {
     setIsSubmitting(true);
 
     try {
-      // Simulate sending OTP
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Static OTP code
       const otpCode = '288451';
       setGeneratedOtp(otpCode);
-      
-      // Move to OTP step
       setStep('otp');
     } catch (err) {
       setError('Failed to send OTP. Please try again.');
@@ -65,57 +62,9 @@ export function LoginView() {
     }
   };
 
-  // Handle OTP input change
-  const handleOtpChange = (index: number, value: string) => {
-    // Only allow digits
-    if (value && !/^\d$/.test(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      otpInputs.current[index + 1]?.focus();
-    }
-  };
-
-  // Handle OTP input keydown
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpInputs.current[index - 1]?.focus();
-    }
-  };
-
-  // Handle OTP paste
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').slice(0, 6);
-    if (!/^\d+$/.test(pastedData)) return;
-
-    const newOtp = [...otp];
-    pastedData.split('').forEach((digit, index) => {
-      if (index < 6) newOtp[index] = digit;
-    });
-    setOtp(newOtp);
-
-    // Focus the next empty input or the last one
-    const nextEmptyIndex = newOtp.findIndex(v => !v);
-    const focusIndex = nextEmptyIndex === -1 ? 5 : nextEmptyIndex;
-    otpInputs.current[focusIndex]?.focus();
-  };
-
-  // Auto-submit when all OTP digits are filled
-  useEffect(() => {
-    if (otp.every(digit => digit !== '') && !isSubmitting) {
-      handleOtpSubmit();
-    }
-  }, [otp]);
-
-  // Handle OTP verification
   const handleOtpSubmit = async () => {
     setError('');
-    const otpValue = otp.join('');
+    const otpValue = otp;
 
     if (otpValue.length !== 6) {
       setError('Please enter the complete 6-digit code');
@@ -125,20 +74,16 @@ export function LoginView() {
     setIsSubmitting(true);
 
     try {
-      // Verify OTP
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       if (otpValue !== generatedOtp) {
         setError('Invalid verification code. Please try again.');
-        setOtp(['', '', '', '', '', '']);
-        otpInputs.current[0]?.focus();
+        setOtp('');
         setIsSubmitting(false);
         return;
       }
 
-      // OTP verified, proceed with login
       await login(email);
-      // Login successful - user will be redirected by useEffect hook
     } catch (err) {
       setError('Failed to verify code. Please try again.');
     } finally {
@@ -146,168 +91,147 @@ export function LoginView() {
     }
   };
 
-  // Handle back to email
   const handleBack = () => {
     setStep('email');
-    setOtp(['', '', '', '', '', '']);
+    setOtp('');
     setError('');
     setGeneratedOtp('');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-900 rounded-xl mb-4 shadow-lg">
-            <Activity className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">GrindSafe</h1>
-          <p className="text-gray-600 font-medium">Professional Poker Analytics Platform</p>
-        </div>
+    <div className="flex min-h-svh flex-col items-center justify-center bg-muted p-6 md:p-10">
+      <div className="w-full max-w-sm md:max-w-4xl">
+        <Card className="overflow-hidden p-0">
+          <CardContent className="grid p-0 md:grid-cols-2">
+            <form className="p-8 md:p-12" onSubmit={step === 'email' ? handleEmailSubmit : undefined}>
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col items-center gap-2 text-center">
+                  <img src="/imgs/logo.svg" alt="GrindSafe" className="h-12 w-auto" />
+                  <h1 className="text-2xl font-bold">GrindSafe</h1>
+                  <p className="text-balance text-sm text-muted-foreground">
+                    Professional Poker Analytics Platform
+                  </p>
+                </div>
 
-        {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-          {step === 'email' ? (
-            <>
-              <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Sign In</h2>
-                <p className="text-sm text-gray-600">Enter your email to receive a verification code</p>
-              </div>
-
-              <form onSubmit={handleEmailSubmit} className="space-y-6">
-                {/* Email Input */}
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Mail className="h-5 w-5 text-gray-400" />
+                {step === 'email' ? (
+                  <div className="flex flex-col gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="you@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="pl-10"
+                          disabled={isSubmitting}
+                          autoFocus
+                        />
+                      </div>
                     </div>
-                    <input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      className="block w-full pl-10 pr-3 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-gray-900 placeholder-gray-400 transition-all"
-                      disabled={isSubmitting}
-                      autoFocus
-                    />
-                  </div>
-                  {error && (
-                    <p className="mt-2 text-sm text-red-600">{error}</p>
-                  )}
-                </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Sending Code...
-                    </>
-                  ) : (
-                    <>
-                      Continue
-                    </>
-                  )}
-                </button>
-              </form>
-            </>
-          ) : (
-            <>
-              {/* OTP Step */}
-              <div className="mb-6">
-                <button
-                  onClick={handleBack}
-                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                  <span className="text-sm font-medium">Back</span>
-                </button>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-full">
-                    <Shield className="w-5 h-5 text-gray-900" />
+                    {error && (
+                      <p className="text-sm text-destructive">{error}</p>
+                    )}
+
+                    <Button type="submit" disabled={isSubmitting} className="w-full">
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Sending Code...
+                        </>
+                      ) : (
+                        'Continue'
+                      )}
+                    </Button>
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900">Verify Your Email</h2>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors self-start mb-2"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                      </button>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex size-10 items-center justify-center rounded-full bg-muted">
+                          <Shield className="size-5" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-bold">Verify Your Email</h2>
+                          <p className="text-sm text-muted-foreground">
+                            Code sent to <span className="text-foreground font-medium">{email}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="otp">Verification Code</Label>
+                      <div className="flex justify-center">
+                        <InputOTP
+                          value={otp}
+                          onChange={setOtp}
+                          onComplete={handleOtpSubmit}
+                          maxLength={6}
+                          disabled={isSubmitting}
+                        >
+                          {[...Array(6)].map((_, i) => (
+                            <InputOTPSlot key={i} index={i} className="h-12 w-12 text-center text-lg font-bold border-2" />
+                          ))}
+                        </InputOTP>
+                      </div>
+                    </div>
+
+                    {error && (
+                      <p className="text-sm text-destructive">{error}</p>
+                    )}
+
+                    <Button
+                      type="button"
+                      onClick={handleOtpSubmit}
+                      disabled={isSubmitting || otp.length !== 6}
+                      className="w-full"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Signing In...
+                        </>
+                      ) : (
+                        'Sign In'
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                <div className="text-center text-sm text-muted-foreground">
+                  {step === 'email'
+                    ? 'Secure access to your poker analytics dashboard'
+                    : "Didn't receive the code? Check your spam folder."}
                 </div>
-                <p className="text-sm text-gray-600">
-                  We've sent a 6-digit code to <span className="font-medium text-gray-900">{email}</span>
-                </p>
               </div>
+            </form>
 
-              <div className="space-y-6">
-                {/* OTP Input */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Enter Verification Code
-                  </label>
-                  <div className="flex gap-2 justify-between" onPaste={handleOtpPaste}>
-                    {otp.map((digit, index) => (
-                      <input
-                        key={index}
-                        ref={el => otpInputs.current[index] = el}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(index, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                        className="w-12 h-14 text-center text-2xl font-bold bg-white border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 text-gray-900 transition-all"
-                        disabled={isSubmitting}
-                        autoFocus={index === 0}
-                      />
-                    ))}
-                  </div>
-                  {error && (
-                    <p className="mt-2 text-sm text-red-600">{error}</p>
-                  )}
-                </div>
+            <div className="relative hidden bg-muted md:block">
+              <img
+                src="/imgs/login-preview.jpg"
+                alt="GrindSafe Preview"
+                className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-                {/* Verify Button */}
-                <button
-                  onClick={handleOtpSubmit}
-                  disabled={isSubmitting || otp.some(d => !d)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-lg transition-all shadow-md hover:shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Signing In...
-                    </>
-                  ) : (
-                    <>
-                      Sign In
-                    </>
-                  )}
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Info */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-500 text-center">
-              {step === 'email' 
-                ? 'Secure access to your poker analytics dashboard'
-                : 'Didn\'t receive the code? Check your spam folder or go back to resend.'
-              }
-            </p>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center mt-6">
-          <p className="text-sm text-gray-600 font-medium">
-            Secure · Professional · Real-time Analytics
-          </p>
-        </div>
+        <p className="px-6 py-4 text-center text-xs text-muted-foreground">
+          Secure · Professional · Real-time Analytics
+        </p>
       </div>
     </div>
   );
