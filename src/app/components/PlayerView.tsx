@@ -77,7 +77,7 @@ export function PlayerView() {
     team: 'High Rollers'
   };
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('analytics');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | 'legaldocument' | null>(null);
   const [aiQuery, setAiQuery] = useState('');
@@ -1994,18 +1994,14 @@ export function PlayerView() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="overview">
-              <History className="w-4 h-4 mr-2" />
-              Overview
+            <TabsTrigger value="analytics">
+              <Grid3x3 className="w-4 h-4 mr-2" />
+              Analytics
+              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-yellow-400 text-yellow-900 data-[state=active]:bg-white/20 data-[state=active]:text-white/90 rounded">Beta</span>
             </TabsTrigger>
             <TabsTrigger value="sessions">
               <Clock className="w-4 h-4 mr-2" />
               Sessions
-            </TabsTrigger>
-            <TabsTrigger value="analytics">
-              <Grid3x3 className="w-4 h-4 mr-2" />
-              Analytics
-              <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-yellow-400 text-yellow-900 rounded">Beta</span>
             </TabsTrigger>
             <TabsTrigger value="operations">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
@@ -2024,883 +2020,6 @@ export function PlayerView() {
               Legal
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="overview" className="space-y-3 mt-6">
-            {/* Ready to Play CTA */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 border-2 border-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-white text-base font-bold mb-1">Ready to Play?</h3>
-                  <p className="text-blue-100 text-xs">Start a new session to track your performance</p>
-                </div>
-                <button
-                  onClick={startSession}
-                  className="bg-white hover:bg-gray-50 text-blue-600 font-bold px-5 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm"
-                >
-                  <PlayCircle className="w-4 h-4" />
-                  Start Session
-                </button>
-              </div>
-            </div>
-
-            {/* 70/30 Split Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-3">
-              {/* Left Column (70%) - Chart and Sessions */}
-              <div className="lg:col-span-7 space-y-3">
-                {/* Performance Chart */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Performance Chart</h3>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-                      <span className="text-xs text-gray-600">Actual P/L</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-                      <span className="text-xs text-gray-600">EV</span>
-                    </div>
-                    <span className={`text-xl font-bold ${sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4">
-                {/* P/L & EV Chart */}
-                <div className="mb-4">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={sessionHistory.slice().reverse().map((s, i) => ({
-                      session: `S${i + 1}`,
-                      pl: s.profitLoss,
-                      ev: s.ev,
-                      date: s.date
-                    }))}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis 
-                        dataKey="session" 
-                        stroke="#6b7280"
-                        style={{ fontSize: '12px' }}
-                      />
-                      <YAxis 
-                        stroke="#6b7280"
-                        style={{ fontSize: '12px' }}
-                        tickFormatter={(value) => `$${value.toLocaleString()}`}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px',
-                          padding: '12px',
-                          color: '#111827'
-                        }}
-                        formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === 'pl' ? 'Actual P/L' : 'EV']}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="pl"
-                        name="pl"
-                        stroke="#10b981"
-                        strokeWidth={2}
-                        dot={{ r: 4, fill: '#10b981' }}
-                        activeDot={{ r: 6 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="ev"
-                        name="ev"
-                        stroke="#3b82f6"
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        dot={{ r: 4, fill: '#3b82f6' }}
-                        activeDot={{ r: 6 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-
-                {/* Summary Metrics */}
-                <div className="grid grid-cols-4 gap-3 mb-4 pb-4 border-b border-gray-200">
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 mb-1">Makeup</div>
-                    <div className={`text-lg font-bold ${pokerAccounts.reduce((sum, a) => sum + a.makeup, 0) < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      ${Math.abs(pokerAccounts.reduce((sum, a) => sum + a.makeup, 0)).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 mb-1">Current Balance</div>
-                    <div className="text-lg font-bold text-gray-900">
-                      ${pokerAccounts.reduce((sum, a) => sum + a.balance, 0).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 mb-1">Net Deposits</div>
-                    <div className="text-lg font-bold text-gray-900">
-                      ${pokerAccounts.reduce((sum, a) => sum + a.deposits, 0).toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xs text-gray-500 mb-1">Total P/L</div>
-                    <div className={`text-lg font-bold ${pokerAccounts.reduce((sum, a) => sum + a.totalPL, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {pokerAccounts.reduce((sum, a) => sum + a.totalPL, 0) >= 0 ? '+' : ''}${pokerAccounts.reduce((sum, a) => sum + a.totalPL, 0).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Account Cards Grid */}
-                <div className="grid grid-cols-2 gap-3">
-                  {pokerAccounts.map((account) => (
-                    <div key={account.id} className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className={`${account.platformColor} text-white text-[10px] font-bold px-2 py-1 rounded`}>
-                            {account.platform.substring(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="text-xs font-bold text-gray-900">{account.platform}</div>
-                            <div className="flex items-center gap-1">
-                              <div className={`w-1.5 h-1.5 rounded-full ${account.status === 'active' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-                              <span className="text-[9px] text-gray-500 capitalize">{account.status}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className={`text-right ${account.totalPL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          <div className="text-sm font-bold">
-                            {account.totalPL >= 0 ? '+' : ''}${account.totalPL.toLocaleString()}
-                          </div>
-                          <div className="text-[9px]">P/L</div>
-                        </div>
-                      </div>
-                      
-                      {/* Mini Chart */}
-                      <div className="h-16 mb-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={accountPerformanceData[account.id] || []}>
-                            <Line
-                              type="monotone"
-                              dataKey="value"
-                              stroke={account.chartColor}
-                              strokeWidth={1.5}
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          setSelectedAccount(account);
-                          setActiveSlideIn('accountdetails');
-                        }}
-                        className="w-full text-[10px] font-medium text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 rounded py-1.5 transition-colors"
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 50/50 Split: Winrate by Position & Hero/Villain Winrate */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              {/* Winrate by Position - Left Half */}
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-gray-600" />
-                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Winrate by Position</h3>
-                      </div>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Performance across board textures</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      <ChevronRight className="w-3 h-3 animate-pulse" />
-                      <span>Scroll</span>
-                    </div>
-                  </div>
-                </div>
-              
-                <div className="p-4 overflow-x-auto scrollbar-thin relative">
-                  {/* Scroll indicator at left */}
-                  <div className="absolute top-0 left-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
-                  
-                  {/* Legend */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 min-w-max">
-                    <div className="text-[10px] font-bold text-gray-700 mb-2">Board Textures & Streets</div>
-                    <div className="grid grid-cols-4 gap-2 text-[9px] text-gray-600">
-                      <div><span className="font-semibold">Rainbow:</span> No flush draw</div>
-                      <div><span className="font-semibold">Monotone:</span> All same suit</div>
-                      <div><span className="font-semibold">Middle Pair:</span> Connected board</div>
-                      <div><span className="font-semibold">Paired:</span> Board has pair</div>
-                      <div className="col-span-4 text-gray-500 mt-1">
-                        Each dot represents performance on specific texture at Flop, Turn, or River
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Position Grid */}
-                  <div className="flex gap-2 pb-4 min-w-max">
-                  {['BB (IP)', 'BB (OOP)', 'BTN (IP)', 'CO (IP)', 'CO (OOP)', 'EP (IP)', 'EP (OOP)', 'MP (IP)', 'MP (OOP)', 'SB (OOP)'].map((position) => (
-                    <div key={position} className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-shrink-0 w-48">
-                      <div className="text-[10px] font-bold text-gray-700 mb-2 text-center">{position}</div>
-                      <div className="h-32 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ScatterChart
-                            margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis 
-                              type="number" 
-                              dataKey="x"
-                              domain={[0, 1]}
-                              tick={false}
-                              stroke="#9ca3af"
-                              hide={true}
-                            />
-                            <YAxis 
-                              type="number" 
-                              dataKey="winrate"
-                              domain={[-50, 50]}
-                              ticks={[-50, -25, 0, 25, 50]}
-                              tick={{ fontSize: 9 }}
-                              stroke="#9ca3af"
-                              width={30}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '6px',
-                                padding: '6px',
-                                fontSize: '11px'
-                              }}
-                              formatter={(value: number, name: string, props: any) => [
-                                `${value > 0 ? '+' : ''}${value.toFixed(1)} bb/100`,
-                                `${props.payload.texture} - ${props.payload.street}`
-                              ]}
-                            />
-                            <ZAxis range={[50, 50]} />
-                            <Scatter 
-                              data={(() => {
-                                // Generate mock data for each position with more sparse distribution
-                                const textures = ['Rainbow', 'Monotone', 'Middle Pair', 'Paired'];
-                                const streets = ['Flop', 'Turn', 'River'];
-                                const baseWinrate = position.includes('IP') ? 8 : -3;
-                                const variance = position.includes('BB') ? 15 : 8;
-                                
-                                return textures.flatMap((texture, i) => 
-                                  streets.map((street, j) => {
-                                    const winrate = baseWinrate + (Math.random() * variance * 2 - variance) + (i * 3) - (j * 2);
-                                    
-                                    // Calculate color based on winrate (gradient from red to green)
-                                    const getColor = (wr: number) => {
-                                      if (wr >= 20) return '#10b981'; // green-500
-                                      if (wr >= 10) return '#22c55e'; // green-400
-                                      if (wr >= 5) return '#84cc16'; // lime-500
-                                      if (wr >= 0) return '#eab308'; // yellow-500
-                                      if (wr >= -5) return '#f97316'; // orange-500
-                                      if (wr >= -10) return '#f87171'; // red-400
-                                      return '#ef4444'; // red-500
-                                    };
-                                    
-                                    return {
-                                      texture,
-                                      street,
-                                      x: 0.5 + (Math.random() * 0.1 - 0.05), // Slight horizontal jitter
-                                      winrate,
-                                      fill: getColor(winrate),
-                                      label: `${texture.substring(0, 3)}-${street.substring(0, 1)}`
-                                    };
-                                  })
-                                );
-                              })()}
-                              shape={(props: any) => {
-                                const { cx, cy, fill } = props;
-                                return (
-                                  <circle
-                                    cx={cx}
-                                    cy={cy}
-                                    r={4}
-                                    fill={fill}
-                                    opacity={0.8}
-                                  />
-                                );
-                              }}
-                            />
-                          </ScatterChart>
-                        </ResponsiveContainer>
-                      </div>
-                      {/* Average winrate for this position */}
-                      <div className="text-center mt-2 pt-2 border-t border-gray-200">
-                        <div className="text-[9px] text-gray-500">Avg</div>
-                        <div className="text-xs font-bold text-gray-900">
-                          {position.includes('IP') ? '+8.3' : '-2.1'} bb/100
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                  {/* Scroll indicator at right */}
-                  <div className="absolute top-0 right-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
-                </div>
-              </div>
-
-              {/* Hero/Villain Winrate - Right Half */}
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-gray-600" />
-                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Hero/Villain Winrate</h3>
-                      </div>
-                      <p className="text-[10px] text-gray-500 mt-0.5">Performance vs positions</p>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      <ChevronRight className="w-3 h-3 animate-pulse" />
-                      <span>Scroll</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-4 overflow-x-auto scrollbar-thin relative">
-                  {/* Scroll indicator at left */}
-                  <div className="absolute top-0 left-0 bottom-0 w-4 bg-gradient-to-r from-white to-transparent pointer-events-none z-10"></div>
-                  
-                  {/* Legend */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 min-w-max">
-                    <div className="text-[10px] font-bold text-gray-700 mb-2">Positions</div>
-                    <div className="grid grid-cols-4 gap-1 text-[9px] text-gray-600">
-                      <div><span className="font-semibold">BTN:</span> Button</div>
-                      <div><span className="font-semibold">CO:</span> Cutoff</div>
-                      <div><span className="font-semibold">HJ:</span> Hijack</div>
-                      <div><span className="font-semibold">MP:</span> Mid Pos</div>
-                      <div><span className="font-semibold">EP:</span> Early Pos</div>
-                      <div><span className="font-semibold">UTG:</span> Under Gun</div>
-                      <div><span className="font-semibold">SB:</span> Small Blind</div>
-                      <div><span className="font-semibold">BB:</span> Big Blind</div>
-                    </div>
-                  </div>
-                  
-                  {/* Position vs Position Grid */}
-                  <div className="flex gap-2 pb-4 min-w-max">
-                  {['BB', 'SB', 'BTN', 'CO', 'HJ', 'MP', 'EP', 'UTG'].map((heroPosition) => (
-                    <div key={heroPosition} className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex-shrink-0 w-48">
-                      <div className="text-[10px] font-bold text-gray-700 mb-2 text-center">{heroPosition} vs All</div>
-                      <div className="h-32 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ScatterChart
-                            margin={{ top: 5, right: 5, bottom: 5, left: 5 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis 
-                              type="number" 
-                              dataKey="x"
-                              domain={[0, 1]}
-                              tick={false}
-                              stroke="#9ca3af"
-                              hide={true}
-                            />
-                            <YAxis 
-                              type="number" 
-                              dataKey="winrate"
-                              domain={[-50, 50]}
-                              ticks={[-50, -25, 0, 25, 50]}
-                              tick={{ fontSize: 9 }}
-                              stroke="#9ca3af"
-                              width={30}
-                            />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: '#ffffff',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '6px',
-                                padding: '6px',
-                                fontSize: '11px'
-                              }}
-                              formatter={(value: number, name: string, props: any) => [
-                                `${value > 0 ? '+' : ''}${value.toFixed(1)} bb/100`,
-                                `vs ${props.payload.villain}`
-                              ]}
-                            />
-                            <ZAxis range={[50, 50]} />
-                            <Scatter 
-                              data={(() => {
-                                // All possible villain positions
-                                const allPositions = ['BB', 'SB', 'BTN', 'CO', 'HJ', 'MP', 'EP', 'UTG'];
-                                const villainPositions = allPositions.filter(p => p !== heroPosition);
-                                
-                                // Position strength for realistic data
-                                const positionStrength: Record<string, number> = {
-                                  'BTN': 20, 'CO': 15, 'HJ': 10, 'MP': 5, 
-                                  'EP': 0, 'UTG': -5, 'SB': -8, 'BB': -10
-                                };
-                                
-                                const heroStrength = positionStrength[heroPosition] || 0;
-                                
-                                return villainPositions.map((villain) => {
-                                  const villainStrength = positionStrength[villain] || 0;
-                                  // Hero vs Villain advantage
-                                  const baseWinrate = heroStrength - villainStrength;
-                                  const variance = 8;
-                                  const winrate = baseWinrate + (Math.random() * variance * 2 - variance);
-                                  
-                                  // Calculate color based on winrate (gradient from red to green)
-                                  const getColor = (wr: number) => {
-                                    if (wr >= 20) return '#10b981'; // green-500
-                                    if (wr >= 10) return '#22c55e'; // green-400
-                                    if (wr >= 5) return '#84cc16'; // lime-500
-                                    if (wr >= 0) return '#eab308'; // yellow-500
-                                    if (wr >= -5) return '#f97316'; // orange-500
-                                    if (wr >= -10) return '#f87171'; // red-400
-                                    return '#ef4444'; // red-500
-                                  };
-                                  
-                                  return {
-                                    villain,
-                                    x: 0.5 + (Math.random() * 0.1 - 0.05), // Slight horizontal jitter
-                                    winrate,
-                                    fill: getColor(winrate)
-                                  };
-                                });
-                              })()}
-                              shape={(props: any) => {
-                                const { cx, cy, fill } = props;
-                                return (
-                                  <circle
-                                    cx={cx}
-                                    cy={cy}
-                                    r={4}
-                                    fill={fill}
-                                    opacity={0.8}
-                                  />
-                                );
-                              }}
-                            />
-                          </ScatterChart>
-                        </ResponsiveContainer>
-                      </div>
-                      {/* Average winrate vs all positions */}
-                      <div className="text-center mt-2 pt-2 border-t border-gray-200">
-                        <div className="text-[9px] text-gray-500">Avg vs All</div>
-                        <div className="text-xs font-bold text-gray-900">
-                          {(() => {
-                            const posStrength: Record<string, number> = {
-                              'BTN': 12, 'CO': 8, 'HJ': 5, 'MP': 2, 
-                              'EP': -1, 'UTG': -3, 'SB': -6, 'BB': -8
-                            };
-                            const avg = posStrength[heroPosition] || 0;
-                            return `${avg > 0 ? '+' : ''}${avg.toFixed(1)} bb/100`;
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  </div>
-                  
-                  {/* Scroll indicator at right */}
-                  <div className="absolute top-0 right-0 bottom-0 w-4 bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column (30%) - Reconciliations */}
-          <div className="lg:col-span-3 space-y-3">
-            {/* Reconciliation Sidebar */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-slate-50 flex-shrink-0">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Reconciliation</h3>
-                  {reconciliationItems.length > 0 && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                      {reconciliationItems.length} pending
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[500px]">
-                {reconciliationItems.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                    <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
-                    <p className="text-sm font-medium text-gray-900">All caught up!</p>
-                    <p className="text-xs text-gray-500 mt-1">No transactions pending reconciliation</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Summary Card */}
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
-                      <div className="text-xs text-gray-600 font-medium">Total Pending</div>
-                      <div className="text-lg font-bold text-gray-900">
-                        ${reconciliationItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
-                      </div>
-                    </div>
-
-                    {/* Pending Items List */}
-                    {reconciliationItems.map((item, index) => (
-                      <div key={`${item.opId}-${item.txIndex}`} className="border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow bg-white">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-gray-900">{item.opId}</span>
-                            <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                              item.opType === 'Deposit' ? 'bg-blue-100 text-blue-700' :
-                              item.opType === 'Withdrawal' ? 'bg-red-100 text-red-700' :
-                              item.opType === 'Split' ? 'bg-purple-100 text-purple-700' :
-                              'bg-gray-100 text-gray-700'
-                            }`}>
-                              {item.opType}
-                            </span>
-                          </div>
-                          <span className="text-xs font-bold text-gray-700">${item.amount.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
-                          {getWalletIcon(item.fromType, item.from)}
-                          {getWalletWithLink(item.from, item.fromType, item.nickname)}
-                          <span>→</span>
-                          {getWalletIcon(item.toType, item.to)}
-                          {getWalletWithLink(item.to, item.toType, item.nickname)}
-                        </div>
-                        <div className="flex gap-2">
-                          {item.buttonType === 'confirm' ? (
-                            <button
-                              onClick={() => {
-                                approveTransaction(item.opId, item.txIndex);
-                              }}
-                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
-                            >
-                              <CheckCircle className="w-3 h-3" />
-                              Confirm
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                approveTransaction(item.opId, item.txIndex);
-                              }}
-                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
-                            >
-                              <DollarSign className="w-3 h-3" />
-                              Pay
-                            </button>
-                          )}
-                          <button
-                            onClick={() => {
-                              rejectTransaction(item.opId, item.txIndex);
-                            }}
-                            className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            Reject
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Calendar View */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Last 30 Days</h3>
-                <p className="text-[10px] text-gray-500 mt-0.5">Win/Loss calendar</p>
-              </div>
-              
-              <div className="p-3">
-                {/* Calendar Grid */}
-                <div className="mb-3">
-                  {/* Day Headers */}
-                  <div className="grid grid-cols-7 gap-1 mb-1">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-                      <div key={i} className="text-center text-[9px] font-bold text-gray-500">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-                  
-                  {/* Calendar Days */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {(() => {
-                      const days = [];
-                      const today = new Date();
-                      const thirtyDaysAgo = new Date(today);
-                      thirtyDaysAgo.setDate(today.getDate() - 29);
-                      
-                      // Find the starting day of week for 30 days ago
-                      const startDayOfWeek = thirtyDaysAgo.getDay();
-                      
-                      // Add empty cells for days before our 30-day range
-                      for (let i = 0; i < startDayOfWeek; i++) {
-                        days.push(
-                          <div key={`empty-${i}`} className="aspect-square"></div>
-                        );
-                      }
-                      
-                      // Generate 30 days
-                      for (let i = 0; i < 30; i++) {
-                        const date = new Date(thirtyDaysAgo);
-                        date.setDate(thirtyDaysAgo.getDate() + i);
-                        const dayNum = date.getDate();
-                        const isToday = date.toDateString() === today.toDateString();
-                        
-                        // Simulate session data (random wins/losses)
-                        const hasSession = Math.random() > 0.3;
-                        const pl = hasSession ? (Math.random() - 0.4) * 500 : 0;
-                        const isWin = pl > 0;
-                        const isLoss = pl < 0;
-                        const magnitude = Math.abs(pl);
-                        
-                        // Determine color intensity
-                        let bgColor = 'bg-gray-100';
-                        if (isWin) {
-                          if (magnitude > 300) bgColor = 'bg-green-600';
-                          else if (magnitude > 150) bgColor = 'bg-green-500';
-                          else bgColor = 'bg-green-300';
-                        } else if (isLoss) {
-                          if (magnitude > 300) bgColor = 'bg-red-600';
-                          else if (magnitude > 150) bgColor = 'bg-red-500';
-                          else bgColor = 'bg-red-300';
-                        }
-                        
-                        days.push(
-                          <UITooltip key={`day-${i}`}>
-                            <TooltipTrigger asChild>
-                              <div
-                                className={`aspect-square rounded ${bgColor} ${isToday ? 'ring-2 ring-blue-500' : ''} flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity`}
-                              >
-                                <span className={`text-[9px] font-medium ${isWin || isLoss ? 'text-white' : 'text-gray-600'}`}>
-                                  {dayNum}
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="text-xs">
-                                <div className="font-bold">{date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                                {hasSession ? (
-                                  <>
-                                    <div className={isWin ? 'text-green-600' : 'text-red-600'}>
-                                      {isWin ? '+' : ''}{formatPL(pl)}
-                                    </div>
-                                    <div className="text-gray-500 text-[10px]">1 session</div>
-                                  </>
-                                ) : (
-                                  <div className="text-gray-500">No session</div>
-                                )}
-                              </div>
-                            </TooltipContent>
-                          </UITooltip>
-                        );
-                      }
-                      
-                      return days;
-                    })()}
-                  </div>
-                </div>
-
-                {/* Legend */}
-                <div className="border-t border-gray-200 pt-2 mb-2">
-                  <div className="text-[9px] font-bold text-gray-600 mb-1.5">Legend</div>
-                  <div className="grid grid-cols-2 gap-1 text-[8px] text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-green-600"></div>
-                      <span>Big Win (&gt;$300)</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-red-600"></div>
-                      <span>Big Loss (&gt;$300)</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-green-500"></div>
-                      <span>Win ($150-300)</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-red-500"></div>
-                      <span>Loss ($150-300)</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-green-300"></div>
-                      <span>Small Win (&lt;$150)</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-red-300"></div>
-                      <span>Small Loss (&lt;$150)</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-gray-100 border border-gray-300"></div>
-                      <span>No Session</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded ring-2 ring-blue-500 bg-gray-100"></div>
-                      <span>Today</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Summary Stats */}
-                <div className="border-t border-gray-200 pt-2 grid grid-cols-3 gap-2 text-center">
-                  <div>
-                    <div className="text-[9px] text-gray-500">Win Days</div>
-                    <div className="text-sm font-bold text-green-600">12</div>
-                  </div>
-                  <div>
-                    <div className="text-[9px] text-gray-500">Loss Days</div>
-                    <div className="text-sm font-bold text-red-600">9</div>
-                  </div>
-                  <div>
-                    <div className="text-[9px] text-gray-500">Win Rate</div>
-                    <div className="text-sm font-bold text-gray-900">57%</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Hand Range Heatmap Section */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Hand Performance</h3>
-                    <p className="text-[10px] text-gray-500 mt-0.5">Color-coded by P/L</p>
-                  </div>
-                </div>
-              </div>
-              <div className="p-3">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-gray-800 rounded"></div>
-                    <span className="text-[9px] text-gray-600">High</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded"></div>
-                    <span className="text-[9px] text-gray-600">Medium</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-2 h-2 bg-gray-200 rounded"></div>
-                    <span className="text-[9px] text-gray-600">Low</span>
-                  </div>
-                </div>
-
-              {/* Poker Hand Grid (13x13) */}
-              <div className="grid gap-1" style={{ gridTemplateColumns: 'repeat(13, minmax(0, 1fr))' }}>
-                {(() => {
-                  const ranks = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
-                  const handData: Record<string, number> = {
-                    'AA': 450, 'KK': 380, 'QQ': 320, 'JJ': 280, 'TT': 210, '99': 180, '88': 150, '77': 120, '66': 90, '55': 60, '44': 30, '33': -10, '22': -20,
-                    'AKs': 250, 'AQs': 200, 'AJs': 180, 'ATs': 150, 'A9s': 80, 'A8s': 50, 'A7s': 20, 'A6s': 10, 'A5s': 40, 'A4s': 30, 'A3s': 10, 'A2s': 0,
-                    'AKo': 180, 'KQs': 170, 'KJs': 140, 'KTs': 110, 'K9s': 50, 'K8s': 20, 'K7s': -10, 'K6s': -20, 'K5s': -30, 'K4s': -40, 'K3s': -50, 'K2s': -60,
-                    'AQo': 150, 'KQo': 120, 'QJs': 130, 'QTs': 100, 'Q9s': 40, 'Q8s': 10, 'Q7s': -20, 'Q6s': -30, 'Q5s': -40, 'Q4s': -50, 'Q3s': -60, 'Q2s': -70,
-                    'AJo': 130, 'KJo': 90, 'QJo': 80, 'JTs': 110, 'J9s': 50, 'J8s': 20, 'J7s': -10, 'J6s': -30, 'J5s': -40, 'J4s': -50, 'J3s': -60, 'J2s': -70,
-                    'ATo': 100, 'KTo': 70, 'QTo': 60, 'JTo': 80, 'T9s': 80, 'T8s': 50, 'T7s': 20, 'T6s': -10, 'T5s': -20, 'T4s': -40, 'T3s': -50, 'T2s': -60,
-                    'A9o': 50, 'K9o': 30, 'Q9o': 20, 'J9o': 30, 'T9o': 50, '98s': 70, '97s': 40, '96s': 10, '95s': -10, '94s': -30, '93s': -40, '92s': -50,
-                    'A8o': 30, 'K8o': 10, 'Q8o': 0, 'J8o': 10, 'T8o': 30, '98o': 40, '87s': 60, '86s': 30, '85s': 10, '84s': -20, '83s': -30, '82s': -40,
-                    'A7o': 10, 'K7o': -10, 'Q7o': -20, 'J7o': -10, 'T7o': 10, '97o': 20, '87o': 30, '76s': 50, '75s': 30, '74s': 0, '73s': -20, '72s': -50,
-                    'A6o': 0, 'K6o': -20, 'Q6o': -30, 'J6o': -20, 'T6o': -10, '96o': 0, '86o': 10, '76o': 20, '65s': 40, '64s': 20, '63s': -10, '62s': -40,
-                    'A5o': 20, 'K5o': -30, 'Q5o': -40, 'J5o': -30, 'T5o': -20, '95o': -10, '85o': 0, '75o': 10, '65o': 20, '54s': 40, '53s': 10, '52s': -30,
-                    'A4o': 10, 'K4o': -40, 'Q4o': -50, 'J4o': -40, 'T4o': -30, '94o': -20, '84o': -10, '74o': 0, '64o': 10, '54o': 20, '43s': 20, '42s': -20,
-                    'A3o': 0, 'K3o': -50, 'Q3o': -60, 'J3o': -50, 'T3o': -40, '93o': -30, '83o': -20, '73o': -10, '63o': 0, '53o': 10, '43o': 10, '32s': 0
-                  };
-
-                  return ranks.map((rank1, i) => 
-                    ranks.map((rank2, j) => {
-                      let handLabel = '';
-                      let handKey = '';
-                      
-                      if (i === j) {
-                        // Pocket pairs (diagonal)
-                        handLabel = `${rank1}${rank2}`;
-                        handKey = handLabel;
-                      } else if (i < j) {
-                        // Suited hands (above diagonal)
-                        handLabel = `${rank1}${rank2}s`;
-                        handKey = handLabel;
-                      } else {
-                        // Offsuit hands (below diagonal)
-                        handLabel = `${rank2}${rank1}o`;
-                        handKey = handLabel;
-                      }
-
-                      const plValue = handData[handKey] || 0;
-                      
-                      // Determine background color based on P/L - Neutral grayscale
-                      let bgColor = '';
-                      let textColor = 'text-white';
-                      
-                      if (plValue > 150) {
-                        bgColor = 'bg-gray-900';
-                      } else if (plValue > 50) {
-                        bgColor = 'bg-gray-800';
-                      } else if (plValue > 0) {
-                        bgColor = 'bg-gray-700';
-                      } else if (plValue === 0) {
-                        bgColor = 'bg-gray-400';
-                      } else if (plValue > -50) {
-                        bgColor = 'bg-gray-300';
-                        textColor = 'text-gray-700';
-                      } else if (plValue > -100) {
-                        bgColor = 'bg-gray-200';
-                        textColor = 'text-gray-700';
-                      } else {
-                        bgColor = 'bg-gray-100';
-                        textColor = 'text-gray-700';
-                      }
-
-                      return (
-                        <div
-                          key={`${i}-${j}`}
-                          className={`${bgColor} ${textColor} aspect-square flex flex-col items-center justify-center rounded text-[10px] font-bold hover:scale-110 transition-transform cursor-pointer relative group`}
-                        >
-                          <span>{handLabel}</span>
-                          {/* Tooltip */}
-                          <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded py-1 px-2 whitespace-nowrap z-10">
-                            {handLabel}: {plValue >= 0 ? '+' : ''}{plValue > 0 ? `$${plValue}` : plValue === 0 ? '$0' : `-$${Math.abs(plValue)}`}
-                          </div>
-                        </div>
-                      );
-                    })
-                  );
-                })()}
-              </div>
-
-              <div className="mt-3 text-[10px] text-gray-500 text-center">
-                <p>Hover for P/L • s=suited, o=offsuit</p>
-              </div>
-
-              {/* Hand Range Stats Summary - Inside Hand Performance Section */}
-              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200">
-                <div className="text-center">
-                  <div className="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-1">Best</div>
-                  <div className="text-base font-bold text-gray-900">AA</div>
-                  <div className="text-[9px] text-gray-500">+$450</div>
-                </div>
-                
-                <div className="text-center">
-                  <div className="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-1">Worst</div>
-                  <div className="text-base font-bold text-gray-900">72o</div>
-                  <div className="text-[9px] text-gray-500">-$50</div>
-                </div>
-                
-                <div className="text-center">
-                  <div className="text-[9px] font-medium text-gray-500 uppercase tracking-wide mb-1">Hands</div>
-                  <div className="text-base font-bold text-gray-900">169</div>
-                  <div className="text-[9px] text-gray-500">combos</div>
-                </div>
-              </div>
-            </div>
-            </div>
-            </div>
-            </div>
-          </TabsContent>
 
           <TabsContent value="sessions" className="space-y-3 mt-6">
             {/* Sessions Table */}
@@ -2982,6 +2101,23 @@ export function PlayerView() {
           </TabsContent>
 
           <TabsContent value="analytics">
+            {/* Ready to Play CTA */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 border-2 border-blue-500 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-white text-base font-bold mb-1">Ready to Play?</h3>
+                  <p className="text-blue-100 text-xs">Start a new session to track your performance</p>
+                </div>
+                <button
+                  onClick={startSession}
+                  className="bg-white hover:bg-gray-50 text-blue-600 font-bold px-5 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  Start Session
+                </button>
+              </div>
+            </div>
+
             <DrillDownAnalytics 
               playerId={currentPlayer.name}
               playerName={currentPlayer.name}
@@ -2989,213 +2125,310 @@ export function PlayerView() {
             />
           </TabsContent>
 
-          <TabsContent value="operations" className="mt-6 flex flex-col h-[calc(100vh-280px)]">
-            {/* Operations Table */}
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col flex-1">
-              <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
-                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Operations History</h3>
-              </div>
-              <div 
-                ref={operationsScrollRef}
-                onScroll={handleOperationsScroll}
-                className="overflow-x-auto overflow-y-auto flex-1"
-              >
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Amount</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Transactions</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {operations.map((operation) => {
-                      const getOperationIcon = (type: string) => {
-                        switch (type) {
-                          case 'Deposit': return <ArrowDownRight className="w-4 h-4 text-gray-700" />;
-                          case 'Withdrawal': return <ArrowUpRight className="w-4 h-4 text-gray-700" />;
-                          case 'Split': return <Split className="w-4 h-4 text-gray-700" />;
-                          case 'Swap': return <Repeat2 className="w-4 h-4 text-gray-700" />;
-                          default: return <ArrowLeftRight className="w-4 h-4 text-gray-700" />;
-                        }
-                      };
+          <TabsContent value="operations" className="mt-6">
+            {/* 70/30 Grid: Operations Table | Reconciliation */}
+            <div className="grid grid-cols-10 gap-4">
+              {/* Operations Table - 70% */}
+              <div className="col-span-7 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Operations History</h3>
+                </div>
+                <div 
+                  ref={operationsScrollRef}
+                  onScroll={handleOperationsScroll}
+                  className="overflow-x-auto overflow-y-auto flex-1"
+                >
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Amount</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Transactions</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide bg-gray-50">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {operations.map((operation) => {
+                        const getOperationIcon = (type: string) => {
+                          switch (type) {
+                            case 'Deposit': return <ArrowDownRight className="w-4 h-4 text-gray-700" />;
+                            case 'Withdrawal': return <ArrowUpRight className="w-4 h-4 text-gray-700" />;
+                            case 'Split': return <Split className="w-4 h-4 text-gray-700" />;
+                            case 'Swap': return <Repeat2 className="w-4 h-4 text-gray-700" />;
+                            default: return <ArrowLeftRight className="w-4 h-4 text-gray-700" />;
+                          }
+                        };
 
-                      const getWalletIcon = (type: string, name: string) => {
-                        if (type === 'external') {
-                          if (name.includes('Bank') || name.includes('Wire')) {
+                        const getWalletIcon = (type: string, name: string) => {
+                          if (type === 'external') {
+                            if (name.includes('Bank') || name.includes('Wire')) {
+                              return (
+                                <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                                  <DollarSign className="w-3 h-3 text-gray-600" />
+                                </div>
+                              );
+                            }
+                            if (name.includes('Card')) {
+                              return (
+                                <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
+                                  <CreditCard className="w-3 h-3 text-gray-600" />
+                                </div>
+                              );
+                            }
+                          }
+                          if (type === 'wallet') {
+                            return (
+                              <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                                <Wallet className="w-3 h-3 text-blue-600" />
+                              </div>
+                            );
+                          }
+                          if (type === 'profit') {
+                            return (
+                              <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+                                <DollarSign className="w-3 h-3 text-purple-600" />
+                              </div>
+                            );
+                          }
+                          if (type === 'player') {
+                            return (
+                              <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
+                                <Users className="w-3 h-3 text-blue-600" />
+                              </div>
+                            );
+                          }
+                          if (type === 'house') {
                             return (
                               <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
                                 <DollarSign className="w-3 h-3 text-gray-600" />
                               </div>
                             );
                           }
-                          if (name.includes('Card')) {
-                            return (
-                              <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                                <CreditCard className="w-3 h-3 text-gray-600" />
-                              </div>
-                            );
+                          if (type === 'platform') {
+                            if (name === 'PokerStars') {
+                              return (
+                                <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
+                                  <span className="text-[8px] font-bold text-red-600">PS</span>
+                                </div>
+                              );
+                            }
+                            if (name === 'GGPoker') {
+                              return (
+                                <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
+                                  <span className="text-[8px] font-bold text-orange-600">GG</span>
+                                </div>
+                              );
+                            }
+                            if (name === '888Poker') {
+                              return (
+                                <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+                                  <span className="text-[8px] font-bold text-green-600">888</span>
+                                </div>
+                              );
+                            }
+                            if (name === 'PartyPoker') {
+                              return (
+                                <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
+                                  <span className="text-[8px] font-bold text-purple-600">PP</span>
+                                </div>
+                              );
+                            }
                           }
-                        }
-                        if (type === 'wallet') {
-                          return (
-                            <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
-                              <Wallet className="w-3 h-3 text-blue-600" />
-                            </div>
-                          );
-                        }
-                        if (type === 'profit') {
-                          return (
-                            <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-                              <DollarSign className="w-3 h-3 text-purple-600" />
-                            </div>
-                          );
-                        }
-                        if (type === 'player') {
-                          return (
-                            <div className="w-5 h-5 bg-blue-100 rounded flex items-center justify-center">
-                              <Users className="w-3 h-3 text-blue-600" />
-                            </div>
-                          );
-                        }
-                        if (type === 'house') {
                           return (
                             <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                              <DollarSign className="w-3 h-3 text-gray-600" />
+                              <Wallet className="w-3 h-3 text-gray-600" />
                             </div>
                           );
-                        }
-                        if (type === 'platform') {
-                          if (name === 'PokerStars') {
-                            return (
-                              <div className="w-5 h-5 bg-red-100 rounded flex items-center justify-center">
-                                <span className="text-[8px] font-bold text-red-600">PS</span>
-                              </div>
-                            );
-                          }
-                          if (name === 'GGPoker') {
-                            return (
-                              <div className="w-5 h-5 bg-orange-100 rounded flex items-center justify-center">
-                                <span className="text-[8px] font-bold text-orange-600">GG</span>
-                              </div>
-                            );
-                          }
-                          if (name === '888Poker') {
-                            return (
-                              <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-                                <span className="text-[8px] font-bold text-green-600">888</span>
-                              </div>
-                            );
-                          }
-                          if (name === 'PartyPoker') {
-                            return (
-                              <div className="w-5 h-5 bg-purple-100 rounded flex items-center justify-center">
-                                <span className="text-[8px] font-bold text-purple-600">PP</span>
-                              </div>
-                            );
-                          }
-                        }
-                        return (
-                          <div className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center">
-                            <Wallet className="w-3 h-3 text-gray-600" />
-                          </div>
-                        );
-                      };
+                        };
 
-                      const isExpanded = expandedOperations.has(operation.id);
-                      
-                      return (
-                        <>
-                          <tr 
-                            key={operation.id} 
-                            onClick={() => toggleOperation(operation.id)}
-                            className="hover:bg-gray-50 transition-colors cursor-pointer"
-                          >
-                            <td className="px-4 py-3">
-                              <div className="flex items-center gap-2">
-                                <div className="flex-shrink-0">
-                                  <ChevronRight 
-                                    className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                                  />
-                                </div>
-                                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                                  {getOperationIcon(operation.type)}
-                                </div>
-                                <div>
-                                  <div className="text-sm font-semibold text-gray-900">{operation.type}</div>
-                                  <div className="text-xs text-gray-500">{operation.id}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm text-gray-900">{formatDateOnly(operation.date)}</div>
-                              <div className="text-xs text-gray-500">{formatTimeOnly(operation.date)}</div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm font-bold text-gray-900">
-                                {operation.type === 'Withdrawal' ? '-' : operation.type === 'Deposit' ? '+' : ''}${operation.amount.toLocaleString()}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <div className="text-sm text-gray-900">{operation.transactions.length} transaction{operation.transactions.length !== 1 ? 's' : ''}</div>
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-200">
-                                <CheckCircle className="w-3 h-3" />
-                                {operation.status}
-                              </span>
-                            </td>
-                          </tr>
-                          
-                          {/* Sub-transactions - Only show when expanded */}
-                          {isExpanded && (
-                            <tr className="bg-gray-50">
-                              <td colSpan={5} className="px-4 py-0">
-                                <div className="pl-12 py-2 space-y-1">
-                                  {operation.transactions.map((tx: any, txIndex: number) => (
-                                    <div key={txIndex} className="flex items-center justify-between py-1.5 px-3 bg-white rounded border border-gray-200">
-                                      <div className="flex items-center gap-2">
-                                        {getWalletIcon(tx.fromType, tx.from)}
-                                        <span className="text-xs text-gray-600">{tx.from}</span>
-                                        <span className="text-xs text-gray-400">→</span>
-                                        {getWalletIcon(tx.toType, tx.to)}
-                                        <span className="text-xs text-gray-600">{tx.to}</span>
-                                      </div>
-                                      <span className="text-xs font-semibold text-gray-900">${tx.amount.toLocaleString()}</span>
-                                    </div>
-                                  ))}
+                        const isExpanded = expandedOperations.has(operation.id);
+                        
+                        return (
+                          <>
+                            <tr 
+                              key={operation.id} 
+                              onClick={() => toggleOperation(operation.id)}
+                              className="hover:bg-gray-50 transition-colors cursor-pointer"
+                            >
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-shrink-0">
+                                    <ChevronRight 
+                                      className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                    />
+                                  </div>
+                                  <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                                    {getOperationIcon(operation.type)}
+                                  </div>
+                                  <div>
+                                    <div className="text-sm font-semibold text-gray-900">{operation.type}</div>
+                                    <div className="text-xs text-gray-500">{operation.id}</div>
+                                  </div>
                                 </div>
                               </td>
+                              <td className="px-4 py-3">
+                                <div className="text-sm text-gray-900">{formatDateOnly(operation.date)}</div>
+                                <div className="text-xs text-gray-500">{formatTimeOnly(operation.date)}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="text-sm font-bold text-gray-900">
+                                  {operation.type === 'Withdrawal' ? '-' : operation.type === 'Deposit' ? '+' : ''}${operation.amount.toLocaleString()}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="text-sm text-gray-900">{operation.transactions.length} transaction{operation.transactions.length !== 1 ? 's' : ''}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-700 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {operation.status}
+                                </span>
+                              </td>
                             </tr>
-                          )}
-                        </>
-                      );
-                    })}
-                    
-                    {/* Loading indicator */}
-                    {isLoadingOperations && (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-8 text-center">
-                          <div className="flex items-center justify-center gap-2 text-gray-500">
-                            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                            <span className="text-sm">Loading more operations...</span>
+                            
+                            {/* Sub-transactions - Only show when expanded */}
+                            {isExpanded && (
+                              <tr className="bg-gray-50">
+                                <td colSpan={5} className="px-4 py-0">
+                                  <div className="pl-12 py-2 space-y-1">
+                                    {operation.transactions.map((tx: any, txIndex: number) => (
+                                      <div key={txIndex} className="flex items-center justify-between py-1.5 px-3 bg-white rounded border border-gray-200">
+                                        <div className="flex items-center gap-2">
+                                          {getWalletIcon(tx.fromType, tx.from)}
+                                          <span className="text-xs text-gray-600">{tx.from}</span>
+                                          <span className="text-xs text-gray-400">→</span>
+                                          {getWalletIcon(tx.toType, tx.to)}
+                                          <span className="text-xs text-gray-600">{tx.to}</span>
+                                        </div>
+                                        <span className="text-xs font-semibold text-gray-900">${tx.amount.toLocaleString()}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        );
+                      })}
+                      
+                      {/* Loading indicator */}
+                      {isLoadingOperations && (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center">
+                            <div className="flex items-center justify-center gap-2 text-gray-500">
+                              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                              <span className="text-sm">Loading more operations...</span>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      
+                      {/* End of list indicator */}
+                      {!hasMoreOperations && operations.length > 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-6 text-center">
+                            <span className="text-xs text-gray-400">No more operations to load</span>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Reconciliation Sidebar - 30% */}
+              <div className="col-span-3 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-slate-50 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Reconciliation</h3>
+                    {reconciliationItems.length > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                        {reconciliationItems.length} pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[calc(100vh-340px)]">
+                  {reconciliationItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                      <CheckCircle className="w-10 h-10 text-green-500 mb-2" />
+                      <p className="text-sm font-medium text-gray-900">All caught up!</p>
+                      <p className="text-xs text-gray-500 mt-1">No transactions pending reconciliation</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Summary Card */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-3">
+                        <div className="text-xs text-gray-600 font-medium">Total Pending</div>
+                        <div className="text-lg font-bold text-gray-900">
+                          ${reconciliationItems.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}
+                        </div>
+                      </div>
+
+                      {/* Pending Items List */}
+                      {reconciliationItems.map((item, index) => (
+                        <div key={`${item.opId}-${item.txIndex}`} className="border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow bg-white">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-gray-900">{item.opId}</span>
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                item.opType === 'Deposit' ? 'bg-blue-100 text-blue-700' :
+                                item.opType === 'Withdrawal' ? 'bg-red-100 text-red-700' :
+                                item.opType === 'Split' ? 'bg-purple-100 text-purple-700' :
+                                'bg-gray-100 text-gray-700'
+                              }`}>
+                                {item.opType}
+                              </span>
+                            </div>
+                            <span className="text-xs font-bold text-gray-700">${item.amount.toLocaleString()}</span>
                           </div>
-                        </td>
-                      </tr>
-                    )}
-                    
-                    {/* End of list indicator */}
-                    {!hasMoreOperations && operations.length > 0 && (
-                      <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center">
-                          <span className="text-xs text-gray-400">No more operations to load</span>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                          <div className="flex items-center gap-1 text-xs text-gray-500 mb-3">
+                            {getWalletIcon(item.fromType, item.from)}
+                            {getWalletWithLink(item.from, item.fromType, item.nickname)}
+                            <span>→</span>
+                            {getWalletIcon(item.toType, item.to)}
+                            {getWalletWithLink(item.to, item.toType, item.nickname)}
+                          </div>
+                          <div className="flex gap-2">
+                            {item.buttonType === 'confirm' ? (
+                              <button
+                                onClick={() => {
+                                  approveTransaction(item.opId, item.txIndex);
+                                }}
+                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
+                              >
+                                <CheckCircle className="w-3 h-3" />
+                                Confirm
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  approveTransaction(item.opId, item.txIndex);
+                                }}
+                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
+                              >
+                                <DollarSign className="w-3 h-3" />
+                                Pay
+                              </button>
+                            )}
+                            <button
+                              onClick={() => {
+                                rejectTransaction(item.opId, item.txIndex);
+                              }}
+                              className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded transition-colors"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </TabsContent>

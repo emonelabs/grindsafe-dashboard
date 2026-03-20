@@ -228,6 +228,7 @@ export function AdminView() {
     playerStatus: 'all'
   });
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [analyticsSelectedPlayer, setAnalyticsSelectedPlayer] = useState<Player | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [timePeriod, setTimePeriod] = useState<string>('today');
   
@@ -1827,13 +1828,13 @@ export function AdminView() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <select
-                  value={selectedPlayer?.id || 'company'}
+                  value={analyticsSelectedPlayer?.id || 'company'}
                   onChange={(e) => {
                     if (e.target.value === 'company') {
-                      setSelectedPlayer(null);
+                      setAnalyticsSelectedPlayer(null);
                     } else {
                       const player = players.find(p => p.id === e.target.value);
-                      setSelectedPlayer(player || null);
+                      setAnalyticsSelectedPlayer(player || null);
                     }
                   }}
                   className="px-4 py-2 text-sm border border-gray-200 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors cursor-pointer"
@@ -1846,9 +1847,9 @@ export function AdminView() {
               </div>
             </div>
             <DrillDownAnalytics 
-              playerId={selectedPlayer?.id}
-              playerName={selectedPlayer?.name}
-              isCompanyWide={!selectedPlayer}
+              playerId={analyticsSelectedPlayer?.id}
+              playerName={analyticsSelectedPlayer?.name}
+              isCompanyWide={!analyticsSelectedPlayer}
             />
           </div>
         </TabsContent>

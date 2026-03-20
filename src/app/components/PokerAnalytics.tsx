@@ -843,7 +843,7 @@ export function PokerAnalytics({
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            Graph
+Graphs
           </button>
           <button
             onClick={() => setActiveTab('range')}
@@ -870,7 +870,7 @@ export function PokerAnalytics({
         {activeTab === 'stats' && (
           <>
             {/* Metrics Row - Only shown on Stats tab */}
-            <div className="flex flex-wrap gap-8 border-b border-gray-200 pb-5 mb-5">
+            <div className="flex flex-wrap gap-8">
               <div className="flex flex-col">
                 <span className="text-xl font-bold text-gray-900">
                   {activeFilters.length > 0 
@@ -1075,11 +1075,12 @@ export function PokerAnalytics({
                     {activeCategory.rangeData[i].map((value, j) => (
                       <td
                         key={j}
-                        className="p-0.5 text-center cursor-pointer"
+                        className="p-0.5 text-center cursor-pointer border border-white"
                         style={{
-                          backgroundColor: value === 100 ? '#d1d5db' : value === 50 ? '#e5e7eb' : value === 25 ? '#f3f4f6' : '#fafafa',
-                          color: value > 50 ? '#6b7280' : '#9ca3af',
-                          fontSize: '8px'
+                          backgroundColor: value === 100 ? '#111827' : value === 50 ? '#6b7280' : value === 25 ? '#9ca3af' : '#f9fafb',
+                          color: value > 50 ? '#ffffff' : '#374151',
+                          fontSize: '8px',
+                          fontWeight: value === 100 ? '600' : '400'
                         }}
                         title={`${rowHand} vs ${['AA', 'AK', 'AQ', 'AJ', 'AT', 'A9', 'A8', 'A7', 'A6', 'A5', 'A4', 'A3', 'A2'][j]}: ${value}%`}
                       >
