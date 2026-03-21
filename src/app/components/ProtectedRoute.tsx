@@ -4,9 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireRole?: 'admin' | 'player';
+  allowedEmails?: string[];
 }
 
-export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requireRole, allowedEmails }: ProtectedRouteProps) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -25,7 +26,11 @@ export function ProtectedRoute({ children, requireRole }: ProtectedRouteProps) {
   }
 
   if (requireRole && user.role !== requireRole) {
-    return <Navigate to="/" replace />;
+    const emailLower = user.email.toLowerCase();
+    const isAllowedEmail = allowedEmails?.some(email => email.toLowerCase() === emailLower);
+    if (!isAllowedEmail) {
+      return <Navigate to="/" replace />;
+    }
   }
 
   return <>{children}</>;

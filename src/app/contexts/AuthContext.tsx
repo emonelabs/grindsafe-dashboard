@@ -96,8 +96,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Determine role based on email domain or pattern
-    const role = email.includes('admin') ? 'admin' : 'player';
+    // Determine role based on explicit email mapping or pattern
+    const emailLower = email.toLowerCase();
+    let role: 'admin' | 'player';
+    if (emailLower === 'admin123@testgrindsafe.com') {
+      role = 'admin';
+    } else if (emailLower === 'player321@testgrindsafe.com') {
+      role = 'player';
+    } else {
+      role = email.includes('admin') ? 'admin' : 'player';
+    }
     const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
     const newUser: User = {

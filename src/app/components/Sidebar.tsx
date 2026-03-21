@@ -47,44 +47,46 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {/* Admin View - Parent */}
-        <div className="space-y-1">
-          <Link
-            to="/"
-            title={!isExpanded ? 'Admin View' : ''}
-            className={`
-              flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
-              ${location.pathname === '/'
-                ? 'bg-gray-100 text-gray-900' 
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }
-            `}
-          >
-            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
-            {isExpanded && <span>Admin View</span>}
-          </Link>
+        {/* Admin View - for joao@emonelabs.com and admin accounts */}
+        {(user?.email.toLowerCase() === 'joao@emonelabs.com' || user?.role === 'admin') && (
+          <div className="space-y-1">
+            <Link
+              to="/"
+              title={!isExpanded ? 'Admin View' : ''}
+              className={`
+                flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                ${location.pathname === '/'
+                  ? 'bg-gray-100 text-gray-900' 
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }
+              `}
+            >
+              <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+              {isExpanded && <span>Admin View</span>}
+            </Link>
+          </div>
+        )}
 
+        {/* Player View - for joao@emonelabs.com and player accounts */}
+        {(user?.email.toLowerCase() === 'joao@emonelabs.com' || user?.role === 'player') && (
+          <div className="space-y-1">
+            <Link
+              to="/player"
+              title={!isExpanded ? 'Player View' : ''}
+              className={`
+                flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                ${isPlayerSection
+                  ? 'bg-gray-100 text-gray-900' 
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }
+              `}>
+              <User className="w-5 h-5 flex-shrink-0" />
+              {isExpanded && <span>Player View</span>}
+            </Link>
+          </div>
+        )}
 
-        </div>
-
-        {/* Player View - Parent */}
-        <div className="space-y-1">
-          <Link
-            to="/player"
-            title={!isExpanded ? 'Player View' : ''}
-            className={`
-              flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
-              ${isPlayerSection
-                ? 'bg-gray-100 text-gray-900' 
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }
-            `}>
-            <User className="w-5 h-5 flex-shrink-0" />
-            {isExpanded && <span>Player View</span>}
-          </Link>
-        </div>
-
-        {/* Messages View */}
+        {/* Messages View - visible to all users */}
         <div className="space-y-1">
           <Link
             to="/messages"

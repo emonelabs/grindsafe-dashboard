@@ -15,18 +15,26 @@ export const router = createBrowserRouter(
   {
     path: '/',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute allowedEmails={['joao@emonelabs.com']}>
         <Layout />
       </ProtectedRoute>
     ),
     children: [
       {
         index: true,
-        Component: AdminView,
+        element: (
+          <ProtectedRoute requireRole="admin" allowedEmails={['joao@emonelabs.com']}>
+            <AdminView />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'player',
-        Component: PlayerView,
+        element: (
+          <ProtectedRoute requireRole="player" allowedEmails={['joao@emonelabs.com']}>
+            <PlayerView />
+          </ProtectedRoute>
+        ),
       },
       {
         path: 'messages',
