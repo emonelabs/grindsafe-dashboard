@@ -11,7 +11,7 @@ import { RecentSplits } from '../components/RecentSplits';
 import { WalletPerformance } from '../components/WalletPerformance';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/tooltip';
-import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink, Grid3x3 } from 'lucide-react';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink, Grid3x3, Sparkles, MessageCircle, Trash, Send, History } from 'lucide-react';
 import { TeamsView } from './TeamsView';
 import { PaymentWalletsContent } from '../components/PokerWalletsContent';
 import PaymentWalletForm, { PaymentWallet } from '../components/forms/PokerWalletForm';
@@ -46,6 +46,14 @@ interface Team {
   color: string;
   gameType: 'Cash' | 'MTT';
   tableStructure: '6-max' | '9-max';
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  messages: Array<{role: 'user' | 'assistant', content: string}>;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export function AdminView() {
@@ -286,6 +294,29 @@ export function AdminView() {
   // Player/Member edit state
   const [selectedPlayerForEdit, setSelectedPlayerForEdit] = useState<PlayerData | null>(null);
   const [selectedMemberForEdit, setSelectedMemberForEdit] = useState<MemberData | null>(null);
+
+  // AI Chat state
+  const [aiQuery, setAiQuery] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const aiInputRef = useRef<HTMLInputElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('admin_ai_conversations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map((c: any) => ({
+          ...c,
+          createdAt: new Date(c.createdAt),
+          updatedAt: new Date(c.updatedAt)
+        }));
+      }
+    }
+    return [];
+  });
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [showConversationList, setShowConversationList] = useState(true);
 
   // Members state - convert to useState for editability
   const [members, setMembers] = useState([
@@ -1258,8 +1289,373 @@ export function AdminView() {
     });
   };
 
+  // Save conversations to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('admin_ai_conversations', JSON.stringify(conversations));
+    }
+  }, [conversations]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowAiModal(true);
+      }
+      if (e.key === 'Escape' && showAiModal) {
+        setShowAiModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showAiModal]);
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (showAiModal && aiInputRef.current) {
+      aiInputRef.current.focus();
+    }
+  }, [showAiModal]);
+
+  // Conversation management
+  const createNewConversation = () => {
+    const newConversation: Conversation = {
+      id: `conv_${Date.now()}`,
+      title: 'New conversation',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    setConversations(prev => [newConversation, ...prev]);
+    setCurrentConversationId(newConversation.id);
+    setShowConversationList(false);
+    setTimeout(() => aiInputRef.current?.focus(), 100);
+  };
+
+  const selectConversation = (id: string) => {
+    setCurrentConversationId(id);
+    setShowConversationList(false);
+  };
+
+  const deleteConversation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newConversations = conversations.filter(c => c.id !== id);
+    setConversations(newConversations);
+    if (currentConversationId === id) {
+      setCurrentConversationId(newConversations.length > 0 ? newConversations[0].id : null);
+    }
+  };
+
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days}d ago`;
+    return formatDate(date);
+  };
+
+  const handleAiQuery = async () => {
+    if (!aiQuery.trim()) return;
+    
+    const userMessage = aiQuery.trim();
+    let convId = currentConversationId;
+    let conv = conversations.find(c => c.id === convId);
+    
+    if (!conv) {
+      conv = {
+        id: `conv_${Date.now()}`,
+        title: userMessage.slice(0, 40) + (userMessage.length > 40 ? '...' : ''),
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setConversations(prev => [conv, ...prev]);
+      setCurrentConversationId(conv.id);
+    }
+    
+    setAiQuery('');
+    setIsAiLoading(true);
+    
+    setTimeout(() => {
+      const query = userMessage.toLowerCase();
+      let response = '';
+      
+      if (query.includes('total') || query.includes('pl') || query.includes('profit')) {
+        const topPlayer = [...adjustedPlayers].sort((a, b) => b.profitLoss - a.profitLoss)[0];
+        const winningPlayers = adjustedPlayers.filter(p => p.profitLoss > 0).length;
+        const losingPlayers = adjustedPlayers.filter(p => p.profitLoss < 0).length;
+        response = `**Company P/L Overview**\n\n• Total P/L: ${totalProfitLoss >= 0 ? '+' : ''}$${totalProfitLoss.toLocaleString()}\n• Active Players: ${activePlayers}\n• Total Sessions: ${totalSessions}\n• Average P/L: ${avgProfit >= 0 ? '+' : ''}$${avgProfit.toFixed(0)}\n\n**Performance**\n• Winning Players: ${winningPlayers}\n• Losing Players: ${losingPlayers}\n\n**Top Performer**\n• ${topPlayer.name}: ${topPlayer.profitLoss >= 0 ? '+' : ''}$${topPlayer.profitLoss.toLocaleString()}`;
+      } else if (query.includes('top') || query.includes('best') || query.includes('player')) {
+        const sortedPlayers = [...adjustedPlayers].sort((a, b) => b.profitLoss - a.profitLoss);
+        const top3 = sortedPlayers.slice(0, 3);
+        const bottom3 = sortedPlayers.slice(-3).reverse();
+        response = `**Top & Bottom Players**\n\n**Top 3 Performers**\n${top3.map((p, i) => `${i + 1}. ${p.name}: ${p.profitLoss >= 0 ? '+' : ''}$${p.profitLoss.toLocaleString()}`).join('\n')}\n\n**Bottom 3**\n${bottom3.map((p, i) => `${sortedPlayers.length - 2 + i}. ${p.name}: ${p.profitLoss >= 0 ? '+' : ''}$${p.profitLoss.toLocaleString()}`).join('\n')}`;
+      } else if (query.includes('team')) {
+        const sortedTeams = [...teams].sort((a, b) => b.totalProfitLoss - a.totalProfitLoss);
+        response = `**Team Performance**\n\n${sortedTeams.map((t, i) => `${i + 1}. ${t.name}\n   P/L: ${t.totalProfitLoss >= 0 ? '+' : ''}$${t.totalProfitLoss.toLocaleString()}\n   Active: ${t.activePlayers}/${t.memberCount} players`).join('\n\n')}`;
+      } else if (query.includes('risk')) {
+        const riskyPlayers = adjustedPlayers.filter(p => p.profitLoss < -1000);
+        const atRiskAmount = riskyPlayers.reduce((sum, p) => sum + Math.abs(p.profitLoss), 0);
+        response = `**Risk Overview**\n\n• Players at Risk: ${riskyPlayers.length}\n• Total Negative P/L: -$${atRiskAmount.toLocaleString()}\n\n${riskyPlayers.length > 0 ? `**Players Needing Attention**\n${riskyPlayers.slice(0, 5).map(p => `• ${p.name}: ${p.profitLoss >= 0 ? '+' : ''}$${p.profitLoss.toLocaleString()}`).join('\n')}` : 'No critical risk indicators.'}`;
+      } else if (query.includes('operation') || query.includes('recent')) {
+        const pendingOps = operations.filter(op => op.status === 'Pending').length;
+        const recentOps = operations.slice(0, 5);
+        response = `**Operations Summary**\n\n• Total Operations: ${operations.length}\n• Pending: ${pendingOps}\n\n**Recent Operations**\n${recentOps.map(op => `• ${op.type}: $${op.amount.toLocaleString()} (${op.status})`).join('\n')}`;
+      } else if (query.includes('wallet')) {
+        const totalWalletBalance = paymentWallets.reduce((sum, w) => sum + (w.balance || 0), 0);
+        const activeWallets = paymentWallets.filter(w => w.status === 'active').length;
+        response = `**Wallet Status**\n\n• Active Wallets: ${activeWallets}\n• Total Balance: $${totalWalletBalance.toLocaleString()}\n\n${paymentWallets.map(w => `• ${w.provider}: ${w.status === 'active' ? '$' + (w.balance || 0).toLocaleString() : 'Inactive'}`).join('\n')}`;
+      } else if (query.includes('summary')) {
+        response = `**Executive Summary**\n\n• Company P/L: ${totalProfitLoss >= 0 ? '+' : ''}$${totalProfitLoss.toLocaleString()}\n• Active Players: ${activePlayers}\n• Teams: ${teams.length}\n• Total Members: ${members.length}\n\n**Quick Stats**\n• Winning Sessions: ${adjustedPlayers.filter(p => p.profitLoss > 0).length} players\n• Pending Operations: ${operations.filter(op => op.status === 'Pending').length}`;
+      } else {
+        response = "I'm your admin assistant. Ask me about:\n\n• **Total P/L?** - Company profit/loss overview\n• **Top player?** - Best performing players\n• **Team stats?** - Team performance breakdown\n• **Risk?** - Risk management overview\n• **Operations?** - Recent operations summary\n• **Wallets?** - Payment wallet status\n• **Summary?** - Executive summary";
+      }
+      
+      setConversations(prev => prev.map(c => {
+        if (c.id === conv.id) {
+          return {
+            ...c,
+            messages: [
+              ...c.messages,
+              { role: 'user' as const, content: userMessage },
+              { role: 'assistant' as const, content: response }
+            ],
+            updatedAt: new Date()
+          };
+        }
+        return c;
+      }));
+      setIsAiLoading(false);
+      
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }, 1500);
+  };
+
+  // Get current conversation
+  const currentConversation = conversations.find(c => c.id === currentConversationId);
+  const currentMessages = currentConversation?.messages || [];
+
+  const renderAiWidget = () => (
+    <>
+      {/* Floating Action Button */}
+      {!showAiModal && (
+        <button
+          onClick={() => setShowAiModal(true)}
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gray-900 hover:bg-gray-800 shadow-lg transition-all duration-200 hover:scale-105 flex items-center justify-center"
+          title="Open AI Assistant (Ctrl+K)"
+        >
+          <MessageCircle className="w-6 h-6 text-white" />
+          {conversations.length > 0 && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white"></div>
+          )}
+        </button>
+      )}
+
+      {/* Chat Widget Panel */}
+      {showAiModal && (
+        <div className="fixed bottom-6 right-6 z-50 w-[420px] h-[560px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-slideUp">
+          {/* Header */}
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gray-900 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Admin Assistant</h3>
+                <p className="text-xs text-gray-500">Company insights</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {conversations.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowConversationList(!showConversationList)}
+                    className="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+                    title="View conversations"
+                  >
+                    <History className="w-4 h-4 text-gray-600" />
+                  </button>
+                  {showConversationList && (
+                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-700">Conversations</span>
+                        <button
+                          onClick={() => { createNewConversation(); setShowConversationList(false); }}
+                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          + New
+                        </button>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {conversations.map((conv) => (
+                          <button
+                            key={conv.id}
+                            onClick={() => { selectConversation(conv.id); setShowConversationList(false); }}
+                            className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors group relative ${
+                              currentConversationId === conv.id ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">{conv.title}</div>
+                                <div className="text-xs text-gray-500">{formatRelativeTime(conv.updatedAt)}</div>
+                              </div>
+                              <button
+                                onClick={(e) => deleteConversation(conv.id, e)}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+                              >
+                                <Trash className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                              </button>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={() => { setShowAiModal(false); setAiQuery(''); setShowConversationList(false); }}
+                className="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+              >
+                <span className="text-gray-600 text-lg leading-none">×</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Chat Area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gray-50">
+              {currentMessages.length === 0 && !isAiLoading && (
+                <div className="flex flex-col items-center justify-center h-full text-center px-2">
+                  <div className="w-14 h-14 rounded-xl bg-gray-900 flex items-center justify-center mb-4">
+                    <Sparkles className="w-6 h-6 text-white" />
+                  </div>
+                  <h4 className="text-base font-semibold text-gray-900 mb-2">Admin Assistant</h4>
+                  <p className="text-sm text-gray-500 mb-5 max-w-[280px]">
+                    Get insights on company performance, players, teams, and more.
+                  </p>
+                  
+                  {/* Quick Actions */}
+                  <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+                    {[
+                      { q: "Total P/L?", icon: "💰" },
+                      { q: "Top player?", icon: "🏆" },
+                      { q: "Team stats?", icon: "👥" },
+                      { q: "Summary?", icon: "📋" }
+                    ].map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setAiQuery(item.q);
+                          setTimeout(() => handleAiQuery(), 100);
+                        }}
+                        className="px-3 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors flex items-center gap-2 group text-left"
+                      >
+                        <span className="text-lg">{item.icon}</span>
+                        <span className="text-sm text-gray-700 group-hover:text-gray-900">{item.q}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {currentMessages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex gap-2.5 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] ${
+                      message.role === 'user' 
+                        ? 'bg-blue-600 text-white rounded-2xl rounded-br-md' 
+                        : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md'
+                    }`}
+                  >
+                    <div className="px-4 py-3 text-sm leading-relaxed whitespace-pre-line">
+                      {message.content}
+                    </div>
+                  </div>
+                  {message.role === 'user' && (
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 text-white font-semibold text-xs">
+                      A
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isAiLoading && (
+                <div className="flex gap-2.5 justify-start">
+                  <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="px-4 py-3 bg-white border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={aiInputRef}
+                  type="text"
+                  value={aiQuery}
+                  onChange={(e) => setAiQuery(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !isAiLoading && aiQuery.trim()) {
+                      handleAiQuery();
+                    }
+                  }}
+                  placeholder="Ask about performance, teams..."
+                  disabled={isAiLoading}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  autoFocus
+                />
+                <button
+                  onClick={handleAiQuery}
+                  disabled={!aiQuery.trim() || isAiLoading}
+                  className="w-10 h-10 rounded-xl bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                >
+                  <Send className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <div className="space-y-0">
+    <div className="space-y-0 relative">
+      {renderAiWidget()}
+      
       {/* Metrics Marquee */}
       <MetricsMarquee 
         totalProfitLoss={totalProfitLoss}
