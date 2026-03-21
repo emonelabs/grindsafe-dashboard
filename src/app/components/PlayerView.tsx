@@ -2076,7 +2076,7 @@ export function PlayerView() {
           )}
         </SlideInPanel>
         
-        <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
+        <div className="space-y-6 p-6">
         {/* Player Header */}
         <div className="py-4">
           <div className="flex items-center justify-between">
@@ -2598,7 +2598,7 @@ export function PlayerView() {
         {renderAiWidget()}
         
         {/* Live Session View - Player is locked in */}
-        <div className={`space-y-3 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
+        <div className="space-y-3 p-6">
         {/* Compact Session Header Bar */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
