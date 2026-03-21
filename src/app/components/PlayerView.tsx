@@ -2062,6 +2062,19 @@ export function PlayerView() {
             </div>
           )}
         </SlideInPanel>
+
+        <SlideInPanel
+          isOpen={!!selectedHandForReplay}
+          onClose={() => setSelectedHandForReplay(null)}
+          title="Hand Replay"
+        >
+          {selectedHandForReplay && (
+            <HandReplayer 
+              hand={selectedHandForReplay}
+              playerName={currentPlayer.name}
+            />
+          )}
+        </SlideInPanel>
         
         <div className={`space-y-6 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
         {/* Player Header */}
