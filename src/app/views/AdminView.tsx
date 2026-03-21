@@ -20,6 +20,7 @@ import { RiskManagement } from '../components/RiskManagement';
 import PlayerEditForm, { PlayerData, PlayerFormData } from '../components/forms/PlayerEditForm';
 import MemberEditForm, { MemberData, MemberFormData } from '../components/forms/MemberEditForm';
 import { DrillDownAnalytics } from '../components/DrillDownAnalytics';
+import { HandReplayer, Hand } from '../components/HandReplayer';
 import { WalletIcon } from '../components/WalletIcon';
 import { PokerWalletIcon } from '../components/PokerWalletIcon';
 import { walletImages } from '../constants/walletImages';
@@ -278,6 +279,9 @@ export function AdminView() {
   ]);
   const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
   const [activeSlideIn, setActiveSlideIn] = useState<'paymentwallet' | 'player' | 'member' | null>(null);
+
+  // Hand replayer state
+  const [selectedHandForReplay, setSelectedHandForReplay] = useState<Hand | null>(null);
 
   // Player/Member edit state
   const [selectedPlayerForEdit, setSelectedPlayerForEdit] = useState<PlayerData | null>(null);
@@ -1776,6 +1780,7 @@ export function AdminView() {
               playerId={analyticsSelectedPlayer?.id}
               playerName={analyticsSelectedPlayer?.name}
               isCompanyWide={!analyticsSelectedPlayer}
+              onHandClick={setSelectedHandForReplay}
             />
           </div>
         </TabsContent>
@@ -2322,6 +2327,20 @@ export function AdminView() {
             onSubmit={handleMemberSubmit}
             editMember={selectedMemberForEdit}
           />
+        </SlideInPanel>
+
+        {/* Slide-In Panel for Hand Replayer */}
+        <SlideInPanel
+          isOpen={!!selectedHandForReplay}
+          onClose={() => setSelectedHandForReplay(null)}
+          title="Hand Replay"
+        >
+          {selectedHandForReplay && (
+            <HandReplayer 
+              hand={selectedHandForReplay}
+              playerName={analyticsSelectedPlayer?.name}
+            />
+          )}
         </SlideInPanel>
       </div>
     </div>

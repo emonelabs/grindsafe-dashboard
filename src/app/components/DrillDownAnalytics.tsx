@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { PokerAnalytics } from './PokerAnalytics';
+import { PokerAnalytics, Hand } from './PokerAnalytics';
 import { ChevronRight, ChevronLeft, X } from 'lucide-react';
 
 export type StatType = 'fold-to-raise' | 'call-raise' | '3-bet' | 'missed-2nd' | '2nd-barrel' | '3rd-barrel' | 'check-profit';
@@ -21,9 +21,10 @@ interface DrillDownAnalyticsProps {
   playerName?: string;
   isCompanyWide?: boolean;
   defaultTab?: 'stats' | 'graph' | 'range' | 'strength';
+  onHandClick?: (hand: Hand) => void;
 }
 
-export function DrillDownAnalytics({ playerId, playerName, isCompanyWide = false, defaultTab = 'stats' }: DrillDownAnalyticsProps) {
+export function DrillDownAnalytics({ playerId, playerName, isCompanyWide = false, defaultTab = 'stats', onHandClick }: DrillDownAnalyticsProps) {
   const [panels, setPanels] = useState<Panel[]>([
     { id: 'base', title: 'Analytics', filterContext: {}, isCollapsed: false }
   ]);
@@ -140,6 +141,7 @@ export function DrillDownAnalytics({ playerId, playerName, isCompanyWide = false
                   isCompanyWide={isCompanyWide}
                   isBasePanel={panel.id === 'base'}
                   defaultTab={defaultTab}
+                  onHandClick={onHandClick}
                 />
               </div>
             </div>

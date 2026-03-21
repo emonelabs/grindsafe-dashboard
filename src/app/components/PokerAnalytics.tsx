@@ -476,6 +476,7 @@ interface PokerAnalyticsProps {
   playerName?: string;
   isCompanyWide?: boolean;
   defaultTab?: 'stats' | 'graph' | 'range' | 'strength';
+  onHandClick?: (hand: Hand) => void;
 }
 
 const STAT_TYPE_MAP: Record<string, string> = {
@@ -488,6 +489,22 @@ const STAT_TYPE_MAP: Record<string, string> = {
   'Check Profit Rate': 'check-profit',
 };
 
+export interface Card {
+  rank: string;
+  suit: 'hearts' | 'diamonds' | 'clubs' | 'spades';
+}
+
+export interface Hand {
+  id: string;
+  preflop: Card[];
+  flop: Card[];
+  turn: Card | null;
+  river: Card | null;
+  position: string;
+  result: 'win' | 'lose' | 'split';
+  profit: number;
+}
+
 export function PokerAnalytics({ 
   panelId, 
   title, 
@@ -498,7 +515,8 @@ export function PokerAnalytics({
   playerId, 
   playerName, 
   isCompanyWide = false,
-  defaultTab = 'stats'
+  defaultTab = 'stats',
+  onHandClick
 }: PokerAnalyticsProps) {
   const [activeCategory, setActiveCategory] = useState(ANALYTICS_CATEGORIES[0]);
   const [activeTab, setActiveTab] = useState<'stats' | 'graph' | 'range' | 'strength'>(defaultTab);
@@ -509,22 +527,6 @@ export function PokerAnalytics({
   const [graphType, setGraphType] = useState<'line' | 'bar'>('line');
   const [handsPage, setHandsPage] = useState(1);
   const handsPerPage = 10;
-
-  interface Card {
-    rank: string;
-    suit: 'hearts' | 'diamonds' | 'clubs' | 'spades';
-  }
-
-  interface Hand {
-    id: string;
-    preflop: Card[];
-    flop: Card[];
-    turn: Card | null;
-    river: Card | null;
-    position: string;
-    result: 'win' | 'lose' | 'split';
-    profit: number;
-  }
 
   const generateMockHands = (): Hand[] => {
     const suits: ('hearts' | 'diamonds' | 'clubs' | 'spades')[] = ['hearts', 'diamonds', 'clubs', 'spades'];
@@ -1284,7 +1286,8 @@ Graphs
                   {mockHands.slice((handsPage - 1) * handsPerPage, handsPage * handsPerPage).map((hand) => (
                     <tr 
                       key={hand.id} 
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => onHandClick?.(hand)}
                     >
                       <td className="py-2.5 pr-4 text-sm text-gray-700">{hand.position}</td>
                       <td className="py-2.5 pr-4">

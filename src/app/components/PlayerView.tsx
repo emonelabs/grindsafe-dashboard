@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, ZAxis } from 'recharts';
-import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle, Upload, FileText, Shield, ExternalLink } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Video, Play, Square, PlayCircle, StopCircle, History, Calendar, Users, Wallet, DollarSign, CreditCard, ArrowUpRight, ArrowDownRight, ChevronDown, ChevronRight, MoreVertical, Grid3x3, Search, Send, Sparkles, Split, Repeat2, Command, Info, ArrowLeftRight, CircleDollarSign, CheckCircle, Upload, FileText, Shield, ExternalLink, Trash, MessageCircle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { Tooltip as UITooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import SlideInPanel from './SlideInPanel';
@@ -17,6 +17,7 @@ import { PlayerHandHistory } from './PlayerHandHistory';
 import LegalDocumentForm, { LegalDocument } from './forms/LegalDocumentForm';
 import { LegalDocumentsContent } from './LegalDocumentsContent';
 import { DrillDownAnalytics } from './DrillDownAnalytics';
+import { HandReplayer, Hand } from './HandReplayer';
 import { WalletIcon } from './WalletIcon';
 import { PokerWalletIcon } from './PokerWalletIcon';
 import { walletImages } from '../constants/walletImages';
@@ -58,6 +59,14 @@ interface AccountDataPoint {
   value: number;
 }
 
+interface Conversation {
+  id: string;
+  title: string;
+  messages: Array<{role: 'user' | 'assistant', content: string}>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface Hand {
   id: string;
   timestamp: Date;
@@ -83,12 +92,31 @@ export function PlayerView() {
   const [activeTab, setActiveTab] = useState('analytics');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | 'legaldocument' | null>(null);
+  const [selectedHandForReplay, setSelectedHandForReplay] = useState<Hand | null>(null);
   const [aiQuery, setAiQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
-  const [chatMessages, setChatMessages] = useState<Array<{role: 'user' | 'assistant', content: string}>>([]);
   const aiInputRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  // AI Conversation state
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('ai_conversations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.map((c: any) => ({
+          ...c,
+          createdAt: new Date(c.createdAt),
+          updatedAt: new Date(c.updatedAt)
+        }));
+      }
+    }
+    return [];
+  });
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [showConversationList, setShowConversationList] = useState(true);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -1045,6 +1073,13 @@ export function PlayerView() {
     };
   }, [showCommandPalette]);
 
+  // Save conversations to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ai_conversations', JSON.stringify(conversations));
+    }
+  }, [conversations]);
+
   const startSession = () => {
     setSessionActive(true);
     setSessionTime(0);
@@ -1150,13 +1185,72 @@ export function PlayerView() {
     });
   };
 
+  // Conversation management functions
+  const createNewConversation = () => {
+    const newConversation: Conversation = {
+      id: `conv_${Date.now()}`,
+      title: 'New conversation',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    setConversations(prev => [newConversation, ...prev]);
+    setCurrentConversationId(newConversation.id);
+    setShowConversationList(false);
+    setTimeout(() => aiInputRef.current?.focus(), 100);
+  };
+
+  const selectConversation = (id: string) => {
+    setCurrentConversationId(id);
+    setShowConversationList(false);
+  };
+
+  const deleteConversation = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newConversations = conversations.filter(c => c.id !== id);
+    setConversations(newConversations);
+    if (currentConversationId === id) {
+      setCurrentConversationId(newConversations.length > 0 ? newConversations[0].id : null);
+    }
+  };
+
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days}d ago`;
+    return formatDateOnly(date);
+  };
+
   const handleAiQuery = async () => {
     if (!aiQuery.trim()) return;
     
     const userMessage = aiQuery.trim();
     
-    // Add user message to chat
-    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    // Get or create current conversation
+    let convId = currentConversationId;
+    let conv = conversations.find(c => c.id === convId);
+    
+    if (!conv) {
+      // Create new conversation
+      conv = {
+        id: `conv_${Date.now()}`,
+        title: userMessage.slice(0, 40) + (userMessage.length > 40 ? '...' : ''),
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      setConversations(prev => [conv, ...prev]);
+      setCurrentConversationId(conv.id);
+    }
+    
     setAiQuery('');
     setIsAiLoading(true);
     
@@ -1172,12 +1266,51 @@ export function PlayerView() {
         response = "Your most profitable hands are pocket pairs AA-JJ, showing consistent wins. AA leads at +$450 average. Focus on:\n\n• Maximizing value with premium pairs\n• Playing more hands in position\n• Your suited connectors (87s, 76s) are also performing well at +$60 average";
       } else if (query.includes('improve') || query.includes('better')) {
         response = "Key areas for improvement:\n\n1. **Reduce losses** with weak offsuit hands (K7o-K2o)\n2. **Improve position awareness** - you're -15% ROI from early position\n3. **Session length** - Your win rate increases significantly after 3+ hours\n4. **Manage tilt** - You have 3 sessions with -$300+ swings";
+      } else if (query.includes('win rate') || query.includes('winrate')) {
+        const totalSessions = sessionHistory.length;
+        const winningSessions = sessionHistory.filter(s => s.profitLoss > 0).length;
+        const winRate = ((winningSessions / totalSessions) * 100).toFixed(1);
+        const totalPL = sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0);
+        const avgWin = winningSessions > 0 
+          ? (sessionHistory.filter(s => s.profitLoss > 0).reduce((sum, s) => sum + s.profitLoss, 0) / winningSessions).toFixed(0)
+          : 0;
+        response = `**Your Win Rate Analysis**\n\n• Overall Win Rate: ${winRate}% (${winningSessions} of ${totalSessions} sessions)\n• Total P/L: ${formatPL(totalPL)}\n• Average Win: $${avgWin}\n• Average Loss: $${Math.abs(sessionHistory.filter(s => s.profitLoss < 0).reduce((sum, s) => sum + s.profitLoss, 0) / (totalSessions - winningSessions)).toFixed(0)}\n\nYour win rate is solid. Focus on maximizing winning sessions and reducing the variance in losing sessions.`;
+      } else if (query.includes('position')) {
+        response = `**Position Analysis**\n\nBased on your session data:\n\n• **Button (BTN)**: Most profitable - you're +$820 here\n• **Cutoff (CO)**: Second best - +$450 average\n• **Hijack (HJ)**: Neutral - +$120 average\n• **Lojack (LJ)**: Slight loss - -$80 average\n• **Early Position (EP)**: Weakest - -$340 average\n\n**Recommendation**: Play tighter from early position and look to open-raise more from BTN and CO. Your positional awareness training is paying off in late positions.`;
+      } else if (query.includes('leak') || query.includes('leaks')) {
+        response = `**Your Top Leaks**\n\n1. **AJo in 3-bet pots** (-$180/100 hands)\n   - Consider folding more to 3-bets out of position\n\n2. **Over-betting on river** (-$120/100 hands)\n   - You bet 2.5x pot too often when value-betting\n\n3. **Float betting** (-$90/100 hands)\n   - You're floating too much without equity\n\n4. **Stack-off decisions** (-$150/100 hands)\n   - Review your stack-to-pot ratio decisions\n\n**Action**: Review your AJo hands specifically - they're causing the biggest drain on your win rate.`;
+      } else if (query.includes('compare') || query.includes('recent')) {
+        const recent = sessionHistory.slice(0, 3);
+        const avgProfit = (recent.reduce((sum, s) => sum + s.profitLoss, 0) / recent.length).toFixed(0);
+        const bestSession = recent.reduce((best, s) => s.profitLoss > best.profitLoss ? s : best, recent[0]);
+        const worstSession = recent.reduce((worst, s) => s.profitLoss < worst.profitLoss ? s : worst, recent[0]);
+        response = `**Recent Sessions Comparison**\n\n${recent.map((s, i) => `${i + 1}. ${formatDateOnly(s.date)}: ${formatPL(s.profitLoss)} (${s.handsPlayed} hands)`).join('\n')}\n\n**Summary**:\n• Average P/L: $${avgProfit}\n• Best: ${formatPL(bestSession.profitLoss)} on ${formatDateOnly(bestSession.date)}\n• Worst: ${formatPL(worstSession.profitLoss)} on ${formatDateOnly(worstSession.date)}\n\n**Trend**: ${parseFloat(avgProfit) >= 0 ? 'Upward trend - keep playing your game!' : 'Downward trend - consider taking a break.'}`;
+      } else if (query.includes('summary')) {
+        const totalHands = sessionHistory.reduce((sum, s) => sum + s.handsPlayed, 0);
+        const totalPL = sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0);
+        const totalEV = sessionHistory.reduce((sum, s) => sum + s.ev, 0);
+        const winningSessions = sessionHistory.filter(s => s.profitLoss > 0).length;
+        const winRate = ((winningSessions / sessionHistory.length) * 100).toFixed(1);
+        response = `**Session Summary**\n\n📊 **Overview**\n• Total Sessions: ${sessionHistory.length}\n• Total Hands: ${totalHands.toLocaleString()}\n• Win Rate: ${winRate}%\n\n💰 **Financials**\n• Total P/L: ${formatPL(totalPL)}\n• Total EV: ${formatPL(totalEV)}\n• EV Diff: ${formatPL(totalPL - totalEV)}\n\n📈 **Performance**\n• Biggest Win: ${formatPL(Math.max(...sessionHistory.map(s => s.profitLoss)))}\n• Biggest Loss: ${formatPL(Math.min(...sessionHistory.map(s => s.profitLoss)))}\n\nYou're performing ${totalPL >= totalEV ? 'above' : 'below'} EV. ${parseFloat(winRate) >= 50 ? 'Your win rate is healthy.' : 'Consider reviewing your decision-making.'}`;
       } else {
-        response = `I analyzed your query about "${userMessage}".\n\nBased on your ${sessionHistory.length} sessions and ${sessionHistory.reduce((sum, s) => sum + s.handsPlayed, 0)} hands played, here's what I found:\n\n• Total P/L: ${formatPL(sessionHistory.reduce((sum, s) => sum + s.profitLoss, 0))}\n• Win Rate: ${((sessionHistory.filter(s => s.profitLoss > 0).length / sessionHistory.length) * 100).toFixed(1)}%\n• Best session: ${formatPL(Math.max(...sessionHistory.map(s => s.profitLoss)))}\n\nWhat else would you like to know?`;
+        response = "At the moment, I'm on a demo environment and my capabilities are limited to protect from abuse or unintended usage at this stage.\n\nFeel free to try one of the suggested queries above to see how I can help analyze your poker performance.";
       }
       
-      // Add AI response to chat
-      setChatMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      // Add messages to conversation
+      setConversations(prev => prev.map(c => {
+        if (c.id === conv.id) {
+          return {
+            ...c,
+            messages: [
+              ...c.messages,
+              { role: 'user' as const, content: userMessage },
+              { role: 'assistant' as const, content: response }
+            ],
+            updatedAt: new Date()
+          };
+        }
+        return c;
+      }));
       setIsAiLoading(false);
       
       // Scroll to bottom
@@ -1205,7 +1338,6 @@ export function PlayerView() {
       // ESC to close
       if (e.key === 'Escape' && showAiModal) {
         setShowAiModal(false);
-        setChatMessages([]);
       }
     };
 
@@ -1409,172 +1541,215 @@ export function PlayerView() {
 
   const isProfit = currentPL >= 0;
 
-  const renderAiModal = () => (
+  // Get current conversation messages
+  const currentConversation = conversations.find(c => c.id === currentConversationId);
+  const currentMessages = currentConversation?.messages || [];
+
+  const renderAiWidget = () => (
     <>
-      {/* Fixed Search Bar Trigger - Always visible at top */}
+      {/* Floating Action Button - Simple Circle */}
       {!showAiModal && (
-        <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
-          <div className="px-6 py-3">
-            <button
-              onClick={() => setShowAiModal(true)}
-              className="w-full flex items-center gap-3 px-4 py-2.5 bg-transparent hover:bg-gray-50 transition-all text-left group rounded-lg"
-            >
-              <Search className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-              <span className="text-sm text-gray-400 group-hover:text-gray-600">Ask AI anything about your poker performance...</span>
-              <div className="ml-auto flex items-center gap-1 text-xs text-gray-300 group-hover:text-gray-400">
-                <kbd className="px-2 py-0.5 bg-transparent border border-gray-200 rounded text-xs font-mono">⌘</kbd>
-                <kbd className="px-2 py-0.5 bg-transparent border border-gray-200 rounded text-xs font-mono">K</kbd>
-              </div>
-            </button>
-          </div>
-        </div>
+        <button
+          onClick={() => setShowAiModal(true)}
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gray-900 hover:bg-gray-800 shadow-lg transition-all duration-200 hover:scale-105 flex items-center justify-center"
+          title="Open AI Assistant (⌘K)"
+        >
+          <MessageCircle className="w-6 h-6 text-white" />
+          {conversations.length > 0 && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white"></div>
+          )}
+        </button>
       )}
 
-      {/* Slide Down Chat Panel - Full conversation screen */}
+      {/* Chat Widget Panel - Simple Clean Design */}
       {showAiModal && (
-        <div 
-          className="fixed top-0 left-0 right-0 bottom-0 z-40 bg-white animate-slideDown"
-        >
-          <div className="h-full flex flex-col">
-              {/* Header with Close Button */}
-              <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-50 to-blue-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-white" />
+        <div className="fixed bottom-6 right-6 z-50 w-[420px] h-[560px] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden animate-slideUp">
+          {/* Header */}
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gray-900 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">AI Poker Assistant</h3>
+                <p className="text-xs text-gray-500">Ask me anything</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Conversation selector */}
+              {conversations.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowConversationList(!showConversationList)}
+                    className="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+                    title="View conversations"
+                  >
+                    <History className="w-4 h-4 text-gray-600" />
+                  </button>
+                  {/* Dropdown conversation list */}
+                  {showConversationList && (
+                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                      <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                        <span className="text-xs font-semibold text-gray-700">Conversations</span>
+                        <button
+                          onClick={() => { createNewConversation(); setShowConversationList(false); }}
+                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          + New
+                        </button>
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {conversations.map((conv) => (
+                          <button
+                            key={conv.id}
+                            onClick={() => { selectConversation(conv.id); setShowConversationList(false); }}
+                            className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors group relative ${
+                              currentConversationId === conv.id ? 'bg-blue-50' : ''
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-sm font-medium text-gray-900 truncate">{conv.title}</div>
+                                <div className="text-xs text-gray-500">{formatRelativeTime(conv.updatedAt)}</div>
+                              </div>
+                              <button
+                                onClick={(e) => deleteConversation(conv.id, e)}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-200 rounded transition-opacity"
+                              >
+                                <Trash className="w-3.5 h-3.5 text-gray-400 hover:text-red-500" />
+                              </button>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={() => { setShowAiModal(false); setAiQuery(''); setShowConversationList(false); }}
+                className="w-8 h-8 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+              >
+                <span className="text-gray-600 text-lg leading-none">×</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Chat Area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gray-50">
+              {/* Welcome Message */}
+              {currentMessages.length === 0 && !isAiLoading && (
+                <div className="flex flex-col items-center justify-center h-full text-center px-2">
+                  <div className="w-14 h-14 rounded-xl bg-gray-900 flex items-center justify-center mb-4">
+                    <Sparkles className="w-6 h-6 text-white" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">AI Poker Assistant</h3>
-                    <p className="text-xs text-gray-500">Ask me anything about your performance</p>
+                  <h4 className="text-base font-semibold text-gray-900 mb-2">How can I help you today?</h4>
+                  <p className="text-sm text-gray-500 mb-5 max-w-[280px]">
+                    I analyze your poker performance, identify leaks, and provide insights.
+                  </p>
+                  
+                  {/* Quick Actions */}
+                  <div className="grid grid-cols-2 gap-2 w-full max-w-sm">
+                    {[
+                      { q: "Win rate?", icon: "💯" },
+                      { q: "Biggest leaks?", icon: "🔍" },
+                      { q: "Best hands?", icon: "📈" },
+                      { q: "Summary?", icon: "📋" }
+                    ].map((item, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setAiQuery(item.q);
+                          setTimeout(() => handleAiQuery(), 100);
+                        }}
+                        className="px-3 py-2.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors flex items-center gap-2 group text-left"
+                      >
+                        <span className="text-lg">{item.icon}</span>
+                        <span className="text-sm text-gray-700 group-hover:text-gray-900">{item.q}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowAiModal(false);
-                    setChatMessages([]);
-                    setAiQuery('');
-                  }}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+              )}
+
+              {/* Chat Messages */}
+              {currentMessages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex gap-2.5 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <span className="text-2xl leading-none">×</span>
-                </button>
-              </div>
-
-              {/* Chat Messages Area */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-                {/* Welcome Message */}
-                {chatMessages.length === 0 && !isAiLoading && (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center mb-4">
-                      <Sparkles className="w-8 h-8 text-white" />
-                    </div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">How can I help you today?</h4>
-                    <p className="text-sm text-gray-500 mb-6 max-w-md">
-                      I can analyze your poker performance, identify leaks, and suggest improvements based on your session history.
-                    </p>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {[
-                        "Where am I losing money with AJo?",
-                        "What are my most profitable hands?",
-                        "How can I improve my game?"
-                      ].map((suggestion, i) => (
-                        <button
-                          key={i}
-                          onClick={() => {
-                            setAiQuery(suggestion);
-                            setTimeout(() => handleAiQuery(), 100);
-                          }}
-                          className="px-4 py-2 text-sm bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Chat Messages */}
-                {chatMessages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {message.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                        <Sparkles className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                    <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                        message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <div className="text-sm leading-relaxed whitespace-pre-line">
-                        {message.content}
-                      </div>
-                    </div>
-                    {message.role === 'user' && (
-                      <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 text-white font-semibold text-sm">
-                        {currentPlayer.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* Loading Indicator */}
-                {isAiLoading && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                  {message.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
                       <Sparkles className="w-4 h-4 text-white" />
                     </div>
-                    <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                        </div>
-                        <span className="text-xs text-gray-500">Analyzing...</span>
-                      </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] ${
+                      message.role === 'user' 
+                        ? 'bg-blue-600 text-white rounded-2xl rounded-br-md' 
+                        : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-md'
+                    }`}
+                  >
+                    <div className="px-4 py-3 text-sm leading-relaxed whitespace-pre-line">
+                      {message.content}
                     </div>
                   </div>
-                )}
-
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Input Area at Bottom */}
-              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <input
-                    ref={aiInputRef}
-                    type="text"
-                    value={aiQuery}
-                    onChange={(e) => setAiQuery(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !isAiLoading && aiQuery.trim()) {
-                        handleAiQuery();
-                      }
-                    }}
-                    placeholder="Ask anything about your poker game..."
-                    disabled={isAiLoading}
-                    className="flex-1 px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed text-sm"
-                    autoFocus
-                  />
-                  <button
-                    onClick={handleAiQuery}
-                    disabled={!aiQuery.trim() || isAiLoading}
-                    className="px-6 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all flex items-center gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
+                  {message.role === 'user' && (
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0 text-white font-semibold text-xs">
+                      {currentPlayer.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                  <span>Press <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono text-[10px]">Enter</kbd> to send</span>
-                  <span>Press <kbd className="px-1.5 py-0.5 bg-white border border-gray-300 rounded font-mono text-[10px]">Esc</kbd> to close</span>
+              ))}
+
+              {/* Loading */}
+              {isAiLoading && (
+                <div className="flex gap-2.5 justify-start">
+                  <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    </div>
+                  </div>
                 </div>
+              )}
+
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input Area */}
+            <div className="px-4 py-3 bg-white border-t border-gray-200">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={aiInputRef}
+                  type="text"
+                  value={aiQuery}
+                  onChange={(e) => setAiQuery(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !isAiLoading && aiQuery.trim()) {
+                      handleAiQuery();
+                    }
+                  }}
+                  placeholder="Ask me anything..."
+                  disabled={isAiLoading}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  autoFocus
+                />
+                <button
+                  onClick={handleAiQuery}
+                  disabled={!aiQuery.trim() || isAiLoading}
+                  className="w-10 h-10 rounded-xl bg-gray-900 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                >
+                  <Send className="w-4 h-4 text-white" />
+                </button>
               </div>
+            </div>
           </div>
         </div>
       )}
@@ -1585,7 +1760,7 @@ export function PlayerView() {
   if (!sessionActive) {
     return (
       <div className="space-y-0 relative">
-        {renderAiModal()}
+        {renderAiWidget()}
         
         {/* Command Palette */}
         {showCommandPalette && (
@@ -2059,6 +2234,7 @@ export function PlayerView() {
               playerId={currentPlayer.name}
               playerName={currentPlayer.name}
               isCompanyWide={false}
+              onHandClick={setSelectedHandForReplay}
             />
           </TabsContent>
 
@@ -2406,7 +2582,7 @@ export function PlayerView() {
   if (sessionActive) {
     return (
       <div className="space-y-0 relative">
-        {renderAiModal()}
+        {renderAiWidget()}
         
         {/* Live Session View - Player is locked in */}
         <div className={`space-y-3 p-6 transition-all duration-300 ${showAiModal ? 'opacity-50' : 'opacity-100'}`}>
@@ -2630,7 +2806,7 @@ export function PlayerView() {
   // Show tabs/overview when NO session is active
   return (
     <div className="space-y-0 relative">
-      {renderAiModal()}
+      {renderAiWidget()}
       
       {/* Command Palette */}
       {showCommandPalette && (
@@ -2836,6 +3012,20 @@ export function PlayerView() {
           onSubmit={handleDocumentSubmit}
           editDocument={selectedDocumentForEdit}
         />
+      </SlideInPanel>
+
+      <SlideInPanel
+        isOpen={!!selectedHandForReplay}
+        onClose={() => setSelectedHandForReplay(null)}
+        title="Hand Replay"
+      >
+        {selectedHandForReplay && (
+          <HandReplayer 
+            hand={selectedHandForReplay}
+            playerName={currentPlayer.name}
+            playerAvatar={currentPlayer.avatar}
+          />
+        )}
       </SlideInPanel>
     </div>
   );
