@@ -2464,8 +2464,6 @@ export function AdminView() {
         </TabsContent>
 
         <TabsContent value="players" className="space-y-3">
-          <FilterPanel onFilterChange={setFilters} />
-
           {/* Players Table - With filters and View Session */}
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
@@ -2857,7 +2855,12 @@ export function AdminView() {
                           <button
                             key={player.id}
                             onClick={() => {
-                              setSelectedPlayer(player);
+                              setSelectedPlayerForEdit({
+                                id: player.id,
+                                name: player.name,
+                                avatar: player.avatar
+                              });
+                              setActiveSlideIn('player');
                               setShowCommandPalette(false);
                               setCommandSearchQuery('');
                             }}
