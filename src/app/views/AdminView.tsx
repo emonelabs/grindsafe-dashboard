@@ -11,7 +11,7 @@ import { RecentSplits } from '../components/RecentSplits';
 import { WalletPerformance } from '../components/WalletPerformance';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/tooltip';
-import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Calendar, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink, Grid3x3, Sparkles, MessageCircle, Trash, Send, History } from 'lucide-react';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink, Grid3x3, Sparkles, MessageCircle, Trash, Send, History, Search, Command } from 'lucide-react';
 import { TeamsView } from './TeamsView';
 import { PaymentWalletsContent } from '../components/PokerWalletsContent';
 import PaymentWalletForm, { PaymentWallet } from '../components/forms/PokerWalletForm';
@@ -287,6 +287,8 @@ export function AdminView() {
   ]);
   const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
   const [activeSlideIn, setActiveSlideIn] = useState<'paymentwallet' | 'player' | 'member' | null>(null);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [commandSearchQuery, setCommandSearchQuery] = useState('');
 
   // Hand replayer state
   const [selectedHandForReplay, setSelectedHandForReplay] = useState<Hand | null>(null);
@@ -715,6 +717,21 @@ export function AdminView() {
 
     return true;
   });
+
+  // Filtered lists for command palette
+  const filteredPlayersForCommand = commandSearchQuery
+    ? adjustedPlayers.filter(p => 
+        p.name.toLowerCase().includes(commandSearchQuery.toLowerCase())
+      )
+    : [];
+
+  const filteredOperationsForCommand = commandSearchQuery
+    ? operations.filter(op => 
+        op.type.toLowerCase().includes(commandSearchQuery.toLowerCase()) ||
+        op.id.toLowerCase().includes(commandSearchQuery.toLowerCase()) ||
+        (op.player?.name && op.player.name.toLowerCase().includes(commandSearchQuery.toLowerCase()))
+      )
+    : [];
 
   // Payment Wallet handlers
   const handleAddWallet = () => {
@@ -1299,18 +1316,27 @@ export function AdminView() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setShowAiModal(true);
+        if (showAiModal) {
+          setShowAiModal(false);
+        } else {
+          setShowCommandPalette(prev => !prev);
+        }
       }
-      if (e.key === 'Escape' && showAiModal) {
-        setShowAiModal(false);
+      if (e.key === 'Escape') {
+        if (showAiModal) {
+          setShowAiModal(false);
+        }
+        if (showCommandPalette) {
+          setShowCommandPalette(false);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [showAiModal]);
+  }, [showAiModal, showCommandPalette]);
 
   // Focus input when modal opens
   useEffect(() => {
@@ -1710,23 +1736,16 @@ export function AdminView() {
             </TabsTrigger>
           </TabsList>
           
-          {/* Time Period Filter */}
+          {/* Quick Actions Button */}
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-500" />
-            <select
-              value={timePeriod}
-              onChange={(e) => setTimePeriod(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-md bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-colors cursor-pointer"
+            <button
+              onClick={() => setShowCommandPalette(true)}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-md hover:bg-gray-50 hover:border-gray-300 transition-colors"
             >
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-              <option value="last-month">Last Month</option>
-              <option value="quarter">This Quarter</option>
-              <option value="year">This Year</option>
-              <option value="all">All Time</option>
-            </select>
+              <Command className="w-4 h-4" />
+              <span>Quick Actions</span>
+              <kbd className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded">K</kbd>
+            </button>
           </div>
         </div>
 
@@ -2738,6 +2757,165 @@ export function AdminView() {
             />
           )}
         </SlideInPanel>
+
+        {/* Command Palette */}
+        {showCommandPalette && (
+          <>
+            <div 
+              className="fixed inset-0 bg-black/50 z-50 animate-fadeIn"
+              onClick={() => setShowCommandPalette(false)}
+            />
+            <div className="fixed top-[15%] left-1/2 -translate-x-1/2 w-full max-w-2xl z-50 animate-fadeIn">
+              <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <div className="flex items-center gap-2">
+                    <Command className="w-4 h-4 text-gray-600" />
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Quick Actions</h3>
+                    <div className="ml-auto flex items-center gap-2">
+                      <kbd className="px-2 py-0.5 text-xs font-semibold text-gray-600 bg-gray-100 border border-gray-300 rounded">ESC</kbd>
+                      <span className="text-xs text-gray-500">to close</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-2 border-b border-gray-100">
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setSelectedPlayerForEdit(null);
+                      setActiveSlideIn('player');
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Onboard Player</div>
+                      <div className="text-xs text-gray-500">Add a new player to the system</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setSelectedMemberForEdit(null);
+                      setActiveSlideIn('member');
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                      <User className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Onboard Member</div>
+                      <div className="text-xs text-gray-500">Add a new team member</div>
+                    </div>
+                  </button>
+                </div>
+
+                <div className="p-3 border-b border-gray-100">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search players or operations..."
+                      value={commandSearchQuery}
+                      onChange={(e) => setCommandSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto">
+                  {commandSearchQuery && (
+                    <div className="p-2">
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Players
+                      </div>
+                      {filteredPlayersForCommand.length === 0 ? (
+                        <div className="px-3 py-4 text-sm text-gray-500 text-center">No players found</div>
+                      ) : (
+                        filteredPlayersForCommand.slice(0, 5).map(player => (
+                          <button
+                            key={player.id}
+                            onClick={() => {
+                              setSelectedPlayer(player);
+                              setShowCommandPalette(false);
+                              setCommandSearchQuery('');
+                            }}
+                            className="w-full px-3 py-2 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                          >
+                            <img 
+                              src={player.avatar} 
+                              alt={player.name}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-gray-900">{player.name}</div>
+                              <div className="text-xs text-gray-500">{teams.find(t => t.id === player.teamId)?.name || 'No Team'}</div>
+                            </div>
+                            <span className={`text-xs font-medium px-2 py-1 rounded ${player.profitLoss >= 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'}`}>
+                              {player.profitLoss >= 0 ? '+' : ''}${player.profitLoss.toLocaleString()}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {commandSearchQuery && (
+                    <div className="p-2 border-t border-gray-100">
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Operations
+                      </div>
+                      {filteredOperationsForCommand.length === 0 ? (
+                        <div className="px-3 py-4 text-sm text-gray-500 text-center">No operations found</div>
+                      ) : (
+                        filteredOperationsForCommand.slice(0, 5).map(op => (
+                          <button
+                            key={op.id}
+                            onClick={() => {
+                              toggleOperation(op.id);
+                              setShowCommandPalette(false);
+                              setCommandSearchQuery('');
+                            }}
+                            className="w-full px-3 py-2 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              op.type === 'Deposit' ? 'bg-green-50' :
+                              op.type === 'Withdrawal' ? 'bg-blue-50' :
+                              op.type === 'Split' ? 'bg-purple-50' : 'bg-orange-50'
+                            }`}>
+                              {op.type === 'Deposit' && <ArrowDownRight className="w-4 h-4 text-green-600" />}
+                              {op.type === 'Withdrawal' && <ArrowUpRight className="w-4 h-4 text-blue-600" />}
+                              {op.type === 'Split' && <Split className="w-4 h-4 text-purple-600" />}
+                              {op.type === 'Swap' && <Repeat2 className="w-4 h-4 text-orange-600" />}
+                            </div>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-gray-900">{op.type}</div>
+                              <div className="text-xs text-gray-500">{op.id} • {op.player?.name || 'Unknown'}</div>
+                            </div>
+                            <span className="text-sm font-semibold text-gray-900">
+                              ${op.amount.toLocaleString()}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {!commandSearchQuery && (
+                    <div className="p-4 text-sm text-gray-500 text-center">
+                      Start typing to search players or operations...
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
