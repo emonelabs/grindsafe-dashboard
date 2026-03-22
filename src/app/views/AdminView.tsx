@@ -2458,7 +2458,6 @@ export function AdminView() {
         <TabsContent value="wallets">
           <PaymentWalletsContent
             wallets={paymentWallets}
-            onAdd={handleAddWallet}
             onEdit={handleEditWallet}
             onDelete={handleDeleteWallet}
           />
@@ -2810,6 +2809,23 @@ export function AdminView() {
                     <div className="flex-1">
                       <div className="text-sm font-semibold text-gray-900">Onboard Member</div>
                       <div className="text-xs text-gray-500">Add a new team member</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setSelectedWalletForEdit(null);
+                      setActiveSlideIn('paymentwallet');
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                      <Wallet className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Add Wallet</div>
+                      <div className="text-xs text-gray-500">Add a new payment wallet</div>
                     </div>
                   </button>
                 </div>

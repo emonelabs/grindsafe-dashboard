@@ -5,7 +5,7 @@ import { PaymentWallet } from './forms/PokerWalletForm';
 
 interface PaymentWalletsContentProps {
   wallets: PaymentWallet[];
-  onAdd: () => void;
+  onAdd?: () => void;
   onEdit: (wallet: PaymentWallet) => void;
   onDelete: (walletId: string) => void;
 }
@@ -35,27 +35,31 @@ export function PaymentWalletsContent({ wallets, onAdd, onEdit, onDelete }: Paym
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No wallets yet</h3>
           <p className="text-gray-500 mb-4">Add your first payment wallet to get started</p>
-          <button
-            onClick={onAdd}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg 
-                       hover:bg-gray-800 transition-colors font-medium text-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Add Your First Wallet
-          </button>
+          {onAdd && (
+            <button
+              onClick={onAdd}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg 
+                         hover:bg-gray-800 transition-colors font-medium text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Add Your First Wallet
+            </button>
+          )}
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Wallets</h3>
-            <button
-              onClick={onAdd}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white rounded-lg 
-                         hover:bg-gray-800 transition-colors font-medium text-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add Wallet
-            </button>
+            {onAdd && (
+              <button
+                onClick={onAdd}
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-900 text-white rounded-lg 
+                           hover:bg-gray-800 transition-colors font-medium text-xs"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Wallet
+              </button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
