@@ -91,7 +91,7 @@ export function PlayerView() {
 
   const [activeTab, setActiveTab] = useState('analytics');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | 'legaldocument' | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | 'legaldocument' | 'addtournament' | null>(null);
   const [selectedHandForReplay, setSelectedHandForReplay] = useState<Hand | null>(null);
   const [aiQuery, setAiQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -158,6 +158,15 @@ export function PlayerView() {
     const saved = localStorage.getItem('activeSession');
     return saved ? JSON.parse(saved).biggestLoss : 0;
   });
+  const [liveSessionView, setLiveSessionView] = useState<'overview' | 'cash' | 'tournaments'>('overview');
+  const [tournamentEntries, setTournamentEntries] = useState<Array<{
+    id: string;
+    accountId: string;
+    accountName: string;
+    buyIn: number;
+    rake: number;
+    timestamp: Date;
+  }>>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SavedSession[]>([
     {
@@ -1090,6 +1099,8 @@ export function PlayerView() {
     setSessionData([]);
     setUploadedHands([]);
     setIsScreenSharing(false);
+    setLiveSessionView('overview');
+    setTournamentEntries([]);
     // Initial save to localStorage
     localStorage.setItem('activeSession', JSON.stringify({
       isActive: true,
@@ -2613,10 +2624,49 @@ export function PlayerView() {
                 </span>
               </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setLiveSessionView('overview')}
+                    className={`px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
+                      liveSessionView === 'overview' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Overview
+                  </button>
+                  <button
+                    onClick={() => setLiveSessionView('cash')}
+                    className={`px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
+                      liveSessionView === 'cash' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Cash
+                  </button>
+                  <button
+                    onClick={() => setLiveSessionView('tournaments')}
+                    className={`px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
+                      liveSessionView === 'tournaments' 
+                        ? 'bg-white text-gray-900 shadow-sm' 
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    Tournaments
+                  </button>
+                </div>
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded border border-gray-200">
                   <Clock className="w-3.5 h-3.5 text-gray-500" />
                   <span className="text-xs font-semibold text-gray-700">{formatTime(sessionTime)}</span>
                 </div>
+                <button
+                  onClick={() => setActiveSlideIn('addtournament')}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all flex items-center gap-1.5"
+                >
+                  <span className="text-sm font-bold">+</span>
+                  Tournament
+                </button>
                 <button
                   onClick={endSession}
                   className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded transition-all flex items-center gap-1.5"
@@ -2629,100 +2679,126 @@ export function PlayerView() {
           </div>
 
           {/* Compact Metrics Row */}
-          <div className="grid grid-cols-6 divide-x divide-gray-200 bg-white">
-            <div className="px-3 py-2">
-              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">P/L</div>
-              <div className={`text-lg font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-                {formatPL(currentPL)}
+          {(liveSessionView === 'overview' || liveSessionView === 'cash') && (
+            <div className="grid grid-cols-6 divide-x divide-gray-200 bg-white">
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">P/L</div>
+                <div className={`text-lg font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatPL(currentPL)}
+                </div>
               </div>
-            </div>
 
-            <div className="px-3 py-2">
-              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">EV</div>
-              <div className="text-lg font-bold text-blue-600">
-                {formatPL(currentEV)}
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">EV</div>
+                <div className="text-lg font-bold text-blue-600">
+                  {formatPL(currentEV)}
+                </div>
               </div>
-            </div>
 
-            <div className="px-3 py-2">
-              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Hands</div>
-              <div className="text-lg font-bold text-gray-900">
-                {Math.floor((sessionTime / 60) * 100)}
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Hands</div>
+                <div className="text-lg font-bold text-gray-900">
+                  {Math.floor((sessionTime / 60) * 100)}
+                </div>
               </div>
-            </div>
 
-            <div className="px-3 py-2">
-              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">BB/100</div>
-              <div className="text-lg font-bold text-purple-600">
-                {sessionTime > 0 ? Math.max(2, Math.min(10, 5 + (currentPL / 1000))).toFixed(1) : '5.0'}
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">BB/100</div>
+                <div className="text-lg font-bold text-purple-600">
+                  {sessionTime > 0 ? Math.max(2, Math.min(10, 5 + (currentPL / 1000))).toFixed(1) : '5.0'}
+                </div>
               </div>
-            </div>
 
-            <div className="px-3 py-2">
-              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Best Win</div>
-              <div className="text-lg font-bold text-green-600">
-                ${biggestWin}
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Best Win</div>
+                <div className="text-lg font-bold text-green-600">
+                  ${biggestWin}
+                </div>
               </div>
-            </div>
 
-            <div className="px-3 py-2">
-              <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Worst Loss</div>
-              <div className="text-lg font-bold text-red-600">
-                -${Math.abs(biggestLoss)}
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Worst Loss</div>
+                <div className="text-lg font-bold text-red-600">
+                  -${Math.abs(biggestLoss)}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {(liveSessionView === 'overview' || liveSessionView === 'tournaments') && tournamentEntries.length > 0 && (
+            <div className="grid grid-cols-3 divide-x divide-gray-200 bg-white">
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Entries</div>
+                <div className="text-lg font-bold text-gray-900">
+                  {tournamentEntries.length}
+                </div>
+              </div>
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Total Buy-in</div>
+                <div className="text-lg font-bold text-gray-900">
+                  ${tournamentEntries.reduce((sum, e) => sum + e.buyIn, 0).toLocaleString()}
+                </div>
+              </div>
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Total Rake</div>
+                <div className="text-lg font-bold text-gray-600">
+                  ${tournamentEntries.reduce((sum, e) => sum + e.rake, 0).toLocaleString()}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 80/20 Grid: Session Performance | Live Feed */}
-        <div className="grid grid-cols-5 gap-3">
-          {/* Session Performance (80%) */}
-          <div className="col-span-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Performance</h3>
+        {(liveSessionView === 'overview' || liveSessionView === 'cash') && (
+          <div className="grid grid-cols-5 gap-3">
+            {/* Session Performance (80%) */}
+            <div className="col-span-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Performance</h3>
+              </div>
+              <div className="p-4">
+                <ResponsiveContainer width="100%" height={160}>
+                  <LineChart data={sessionData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      dataKey="time" 
+                      stroke="#6b7280"
+                      style={{ fontSize: '10px' }}
+                    />
+                    <YAxis 
+                      stroke="#6b7280"
+                      style={{ fontSize: '10px' }}
+                      tickFormatter={(value) => `$${value}`}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        fontSize: '12px'
+                      }}
+                      formatter={(value: number, name: string) => [`$${value}`, name === 'pl' ? 'P/L' : 'EV']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="pl" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="ev" 
+                      stroke="#3b82f6" 
+                      strokeWidth={2}
+                      dot={false}
+                      strokeDasharray="5 5"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-            <div className="p-4">
-              <ResponsiveContainer width="100%" height={160}>
-                <LineChart data={sessionData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="time" 
-                    stroke="#6b7280"
-                    style={{ fontSize: '10px' }}
-                  />
-                  <YAxis 
-                    stroke="#6b7280"
-                    style={{ fontSize: '10px' }}
-                    tickFormatter={(value) => `$${value}`}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#ffffff',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      fontSize: '12px'
-                    }}
-                    formatter={(value: number, name: string) => [`$${value}`, name === 'pl' ? 'P/L' : 'EV']}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="pl" 
-                    stroke="#10b981" 
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="ev" 
-                    stroke="#3b82f6" 
-                    strokeWidth={2}
-                    dot={false}
-                    strokeDasharray="5 5"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
 
           {/* Live Feed (20%) */}
           <div className="col-span-1 bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -2782,6 +2858,52 @@ export function PlayerView() {
             )}
           </div>
         </div>
+        )}
+
+        {(liveSessionView === 'overview' || liveSessionView === 'tournaments') && (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Tournament Entries</h3>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="text-gray-500">Total: <span className="font-semibold text-gray-900">{tournamentEntries.length}</span></span>
+                <span className="text-gray-500">Buy-in: <span className="font-semibold text-gray-900">${tournamentEntries.reduce((sum, e) => sum + e.buyIn, 0).toLocaleString()}</span></span>
+                <span className="text-gray-500">Rake: <span className="font-semibold text-gray-600">${tournamentEntries.reduce((sum, e) => sum + e.rake, 0).toLocaleString()}</span></span>
+              </div>
+            </div>
+            {tournamentEntries.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Time</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Account</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Buy-in</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Rake</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {tournamentEntries.map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50">
+                        <td className="px-3 py-2 text-xs text-gray-500">
+                          {entry.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-3 py-2 text-xs font-medium text-gray-900">{entry.accountName}</td>
+                        <td className="px-3 py-2 text-xs font-semibold text-gray-900">${entry.buyIn}</td>
+                        <td className="px-3 py-2 text-xs text-gray-600">${entry.rake}</td>
+                        <td className="px-3 py-2 text-xs font-semibold text-gray-900">${entry.buyIn + entry.rake}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <p className="text-xs">No tournament entries yet. Click "+ Tournament" to add one.</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Hands - Full Width */}
         <PlayerHandHistory 
@@ -2812,6 +2934,89 @@ export function PlayerView() {
             }}
           />
         </div>
+
+        <SlideInPanel
+          isOpen={activeSlideIn === 'addtournament'}
+          onClose={() => setActiveSlideIn(null)}
+          title="Add Tournament Entry"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Account</label>
+              <select
+                id="tournamentAccount"
+                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => {
+                  const account = pokerRoomAccounts.find(a => a.id === e.target.value);
+                  if (account) {
+                    (window as any).__tempTournamentAccount = account;
+                  }
+                }}
+              >
+                <option value="">Select account...</option>
+                {pokerRoomAccounts.filter(a => a.status === 'active').map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.pokerRoom} - {account.nickname}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Buy-in ($)</label>
+              <input
+                type="number"
+                id="tournamentBuyIn"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Rake ($)</label>
+              <input
+                type="number"
+                id="tournamentRake"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <button
+              onClick={() => {
+                const accountSelect = document.getElementById('tournamentAccount') as HTMLSelectElement;
+                const buyInInput = document.getElementById('tournamentBuyIn') as HTMLInputElement;
+                const rakeInput = document.getElementById('tournamentRake') as HTMLInputElement;
+                
+                const selectedAccount = pokerRoomAccounts.find(a => a.id === accountSelect.value);
+                const buyIn = parseFloat(buyInInput.value) || 0;
+                const rake = parseFloat(rakeInput.value) || 0;
+                
+                if (selectedAccount && (buyIn > 0 || rake > 0)) {
+                  setTournamentEntries(prev => [
+                    ...prev,
+                    {
+                      id: `t-${Date.now()}`,
+                      accountId: selectedAccount.id,
+                      accountName: `${selectedAccount.pokerRoom} (${selectedAccount.nickname})`,
+                      buyIn,
+                      rake,
+                      timestamp: new Date()
+                    }
+                  ]);
+                  setActiveSlideIn(null);
+                  accountSelect.value = '';
+                  buyInInput.value = '';
+                  rakeInput.value = '';
+                }
+              }}
+              className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-lg transition-colors"
+            >
+              Add Entry
+            </button>
+          </div>
+        </SlideInPanel>
       </div>
     );
   }
