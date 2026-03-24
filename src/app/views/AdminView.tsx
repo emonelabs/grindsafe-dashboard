@@ -11,7 +11,7 @@ import { RecentSplits } from '../components/RecentSplits';
 import { WalletPerformance } from '../components/WalletPerformance';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../components/ui/tooltip';
-import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink, Grid3x3, Sparkles, MessageCircle, Trash, Send, History, Search, Command } from 'lucide-react';
+import { Users, User, LayoutGrid, TrendingUp, TrendingDown, DollarSign, Activity, Clock, Play, Network, Split, Wallet, ArrowLeftRight, ArrowUpRight, ArrowDownRight, Repeat2, CreditCard, CheckCircle, ChevronRight, Shield, ExternalLink, Grid3x3, Sparkles, MessageCircle, Trash, Send, History, Search, Command, Calendar } from 'lucide-react';
 import { TeamsView } from './TeamsView';
 import { PaymentWalletsContent } from '../components/PokerWalletsContent';
 import PaymentWalletForm, { PaymentWallet } from '../components/forms/PokerWalletForm';
@@ -35,6 +35,8 @@ interface Player {
   status: 'LIVE' | 'IN GAME' | 'Offline';
   color: string;
   teamId: string;
+  stakeLevel: string;
+  riskLevel: string;
 }
 
 interface Team {
@@ -81,7 +83,9 @@ export function AdminView() {
       sessionTime: 186,
       status: 'LIVE',
       color: '#3b82f6',
-      teamId: 'team1'
+      teamId: 'team1',
+      stakeLevel: 'NL50',
+      riskLevel: 'Level 1'
     },
     {
       id: 'player2',
@@ -91,7 +95,9 @@ export function AdminView() {
       sessionTime: 245,
       status: 'IN GAME',
       color: '#10b981',
-      teamId: 'team1'
+      teamId: 'team1',
+      stakeLevel: 'NL25',
+      riskLevel: 'Level 1'
     },
     {
       id: 'player3',
@@ -101,7 +107,9 @@ export function AdminView() {
       sessionTime: 142,
       status: 'Offline',
       color: '#f59e0b',
-      teamId: 'team2'
+      teamId: 'team2',
+      stakeLevel: 'NL100',
+      riskLevel: 'Level 2'
     },
     {
       id: 'player4',
@@ -111,7 +119,9 @@ export function AdminView() {
       sessionTime: 298,
       status: 'LIVE',
       color: '#8b5cf6',
-      teamId: 'team3'
+      teamId: 'team3',
+      stakeLevel: 'NL50',
+      riskLevel: 'Level 1'
     },
     {
       id: 'player5',
@@ -121,7 +131,9 @@ export function AdminView() {
       sessionTime: 167,
       status: 'IN GAME',
       color: '#ec4899',
-      teamId: 'team4'
+      teamId: 'team4',
+      stakeLevel: 'NL10',
+      riskLevel: 'Level 1'
     },
     {
       id: 'player6',
@@ -131,7 +143,9 @@ export function AdminView() {
       sessionTime: 203,
       status: 'IN GAME',
       color: '#06b6d4',
-      teamId: 'team2'
+      teamId: 'team2',
+      stakeLevel: 'NL25',
+      riskLevel: 'Level 2'
     },
     {
       id: 'player7',
@@ -141,7 +155,9 @@ export function AdminView() {
       sessionTime: 225,
       status: 'Offline',
       color: '#f97316',
-      teamId: 'team1'
+      teamId: 'team1',
+      stakeLevel: 'NL100',
+      riskLevel: 'Level 2'
     },
     {
       id: 'player8',
@@ -151,7 +167,9 @@ export function AdminView() {
       sessionTime: 198,
       status: 'LIVE',
       color: '#14b8a6',
-      teamId: 'team3'
+      teamId: 'team3',
+      stakeLevel: 'NL50',
+      riskLevel: 'Level 1'
     },
     {
       id: 'player9',
@@ -161,7 +179,9 @@ export function AdminView() {
       sessionTime: 178,
       status: 'IN GAME',
       color: '#a855f7',
-      teamId: 'team2'
+      teamId: 'team2',
+      stakeLevel: 'NL25',
+      riskLevel: 'Level 1'
     },
     {
       id: 'player10',
@@ -171,7 +191,9 @@ export function AdminView() {
       sessionTime: 312,
       status: 'LIVE',
       color: '#06b6d4',
-      teamId: 'team4'
+      teamId: 'team4',
+      stakeLevel: 'NL100',
+      riskLevel: 'Level 3'
     },
     {
       id: 'player11',
@@ -181,7 +203,9 @@ export function AdminView() {
       sessionTime: 189,
       status: 'Offline',
       color: '#eab308',
-      teamId: 'team3'
+      teamId: 'team3',
+      stakeLevel: 'NL50',
+      riskLevel: 'Level 1'
     },
     {
       id: 'player12',
@@ -191,7 +215,9 @@ export function AdminView() {
       sessionTime: 156,
       status: 'IN GAME',
       color: '#ec4899',
-      teamId: 'team1'
+      teamId: 'team1',
+      stakeLevel: 'NL10',
+      riskLevel: 'Level 1'
     },
     {
       id: 'player13',
@@ -201,7 +227,9 @@ export function AdminView() {
       sessionTime: 267,
       status: 'LIVE',
       color: '#22c55e',
-      teamId: 'team4'
+      teamId: 'team4',
+      stakeLevel: 'NL200',
+      riskLevel: 'Level 2'
     },
     {
       id: 'player14',
@@ -211,7 +239,9 @@ export function AdminView() {
       sessionTime: 234,
       status: 'IN GAME',
       color: '#3b82f6',
-      teamId: 'team2'
+      teamId: 'team2',
+      stakeLevel: 'NL50',
+      riskLevel: 'Level 2'
     },
     {
       id: 'player15',
@@ -221,7 +251,9 @@ export function AdminView() {
       sessionTime: 145,
       status: 'Offline',
       color: '#f59e0b',
-      teamId: 'team3'
+      teamId: 'team3',
+      stakeLevel: 'NL25',
+      riskLevel: 'Level 1'
     }
   ]);
 
@@ -286,7 +318,7 @@ export function AdminView() {
     }
   ]);
   const [selectedWalletForEdit, setSelectedWalletForEdit] = useState<PaymentWallet | null>(null);
-  const [activeSlideIn, setActiveSlideIn] = useState<'paymentwallet' | 'player' | 'member' | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'paymentwallet' | 'player' | 'member' | 'schedule' | null>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [commandSearchQuery, setCommandSearchQuery] = useState('');
 
@@ -296,6 +328,52 @@ export function AdminView() {
   // Player/Member edit state
   const [selectedPlayerForEdit, setSelectedPlayerForEdit] = useState<PlayerData | null>(null);
   const [selectedMemberForEdit, setSelectedMemberForEdit] = useState<MemberData | null>(null);
+
+  // Tournament Schedules state
+  interface TournamentSchedule {
+    id: string;
+    tournamentName: string;
+    level: string;
+    buyIn: number;
+    startTime?: string;
+    createdAt: Date;
+  }
+
+  const [schedules, setSchedules] = useState<TournamentSchedule[]>([
+    {
+      id: 'schedule-1',
+      tournamentName: 'Morning Multi-Table',
+      level: 'Level 1',
+      buyIn: 50,
+      startTime: '10:00',
+      createdAt: new Date('2026-03-01')
+    },
+    {
+      id: 'schedule-2',
+      tournamentName: 'Evening Championship',
+      level: 'Level 2',
+      buyIn: 150,
+      startTime: '19:00',
+      createdAt: new Date('2026-03-01')
+    },
+    {
+      id: 'schedule-3',
+      tournamentName: 'Weekend Freeroll',
+      level: 'Level 1',
+      buyIn: 0,
+      startTime: '14:00',
+      createdAt: new Date('2026-03-15')
+    },
+    {
+      id: 'schedule-4',
+      tournamentName: 'High Roller Special',
+      level: 'Level 3',
+      buyIn: 500,
+      startTime: '20:00',
+      createdAt: new Date('2026-03-10')
+    }
+  ]);
+  const [selectedScheduleForEdit, setSelectedScheduleForEdit] = useState<TournamentSchedule | null>(null);
 
   // AI Chat state
   const [aiQuery, setAiQuery] = useState('');
@@ -784,7 +862,9 @@ export function AdminView() {
             ? { 
                 ...p, 
                 name: playerData.name,
-                avatar: playerData.avatar
+                avatar: playerData.avatar,
+                stakeLevel: playerData.stakeLevel,
+                riskLevel: playerData.riskLevel
               }
             : p
         )
@@ -810,6 +890,44 @@ export function AdminView() {
       );
     }
     setSelectedMemberForEdit(null);
+  };
+
+  // Schedule handlers
+  const handleAddSchedule = () => {
+    setSelectedScheduleForEdit(null);
+    setActiveSlideIn('schedule');
+  };
+
+  const handleEditSchedule = (schedule: TournamentSchedule) => {
+    setSelectedScheduleForEdit(schedule);
+    setActiveSlideIn('schedule');
+  };
+
+  const handleDeleteSchedule = (scheduleId: string) => {
+    if (confirm('Are you sure you want to delete this schedule?')) {
+      setSchedules(prev => prev.filter(s => s.id !== scheduleId));
+    }
+  };
+
+  const handleScheduleSubmit = (scheduleData: Omit<TournamentSchedule, 'id' | 'createdAt'>) => {
+    if (selectedScheduleForEdit) {
+      setSchedules(prev => 
+        prev.map(s => 
+          s.id === selectedScheduleForEdit.id 
+            ? { ...s, ...scheduleData }
+            : s
+        )
+      );
+    } else {
+      const newSchedule: TournamentSchedule = {
+        ...scheduleData,
+        id: `schedule-${Date.now()}`,
+        createdAt: new Date()
+      };
+      setSchedules(prev => [...prev, newSchedule]);
+    }
+    setSelectedScheduleForEdit(null);
+    setActiveSlideIn(null);
   };
 
   // Helper function to calculate operation status from transactions
@@ -1734,6 +1852,10 @@ export function AdminView() {
               <Shield className="w-4 h-4" />
               Risk Management
             </TabsTrigger>
+            <TabsTrigger value="schedules" className="flex items-center gap-2 px-4 py-3 data-[state=active]:bg-gray-900 data-[state=active]:text-white">
+              <Calendar className="w-4 h-4" />
+              Schedules
+            </TabsTrigger>
           </TabsList>
           
           {/* Quick Actions Button */}
@@ -2492,7 +2614,9 @@ export function AdminView() {
                       const playerData: PlayerData = {
                         id: player.id,
                         name: player.name,
-                        avatar: player.avatar
+                        avatar: player.avatar,
+                        stakeLevel: player.stakeLevel,
+                        riskLevel: player.riskLevel
                       };
                       return (
                         <tr key={player.id} className="hover:bg-gray-50 transition-colors">
@@ -2674,6 +2798,71 @@ export function AdminView() {
         <TabsContent value="risk">
           <RiskManagement />
         </TabsContent>
+
+        <TabsContent value="schedules">
+          <div className="space-y-4">
+            {/* Schedules Table */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Tournament Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Level</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Buy-in</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Start Time</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {schedules.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                          No schedules yet. Use ⌘K to add a schedule.
+                        </td>
+                      </tr>
+                    ) : (
+                      schedules.map(schedule => (
+                        <tr key={schedule.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-medium text-gray-900">{schedule.tournamentName}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-2.5 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">
+                              {schedule.level}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm font-semibold text-gray-900">${schedule.buyIn}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-gray-600">{schedule.startTime || '-'}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleEditSchedule(schedule)}
+                                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSchedule(schedule.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
       </Tabs>
 
         {selectedPlayer && (
@@ -2755,6 +2944,93 @@ export function AdminView() {
           )}
         </SlideInPanel>
 
+        {/* Slide-In Panel for Schedule Form */}
+        <SlideInPanel
+          isOpen={activeSlideIn === 'schedule'}
+          onClose={() => {
+            setActiveSlideIn(null);
+            setSelectedScheduleForEdit(null);
+          }}
+          title={selectedScheduleForEdit ? 'Edit Schedule' : 'Add Schedule'}
+        >
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="scheduleName" className="block text-sm font-medium text-gray-700 mb-2">
+                Tournament Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="scheduleName"
+                type="text"
+                required
+                defaultValue={selectedScheduleForEdit?.tournamentName}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none"
+                placeholder="e.g., Morning Multi-Table"
+              />
+            </div>
+            <div>
+              <label htmlFor="scheduleLevel" className="block text-sm font-medium text-gray-700 mb-2">
+                Level <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="scheduleLevel"
+                required
+                defaultValue={selectedScheduleForEdit?.level || 'Level 1'}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none bg-white"
+              >
+                <option value="Level 1">Level 1</option>
+                <option value="Level 2">Level 2</option>
+                <option value="Level 3">Level 3</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="scheduleBuyIn" className="block text-sm font-medium text-gray-700 mb-2">
+                Buy-in ($) <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="scheduleBuyIn"
+                type="number"
+                min="0"
+                step="1"
+                required
+                defaultValue={selectedScheduleForEdit?.buyIn || 0}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label htmlFor="scheduleStartTime" className="block text-sm font-medium text-gray-700 mb-2">
+                Start Time (optional)
+              </label>
+              <input
+                id="scheduleStartTime"
+                type="time"
+                defaultValue={selectedScheduleForEdit?.startTime || ''}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none"
+              />
+            </div>
+            <button
+              onClick={() => {
+                const nameInput = document.getElementById('scheduleName') as HTMLInputElement;
+                const levelSelect = document.getElementById('scheduleLevel') as HTMLSelectElement;
+                const buyInInput = document.getElementById('scheduleBuyIn') as HTMLInputElement;
+                const startTimeInput = document.getElementById('scheduleStartTime') as HTMLInputElement;
+
+                if (nameInput.value && buyInInput.value) {
+                  handleScheduleSubmit({
+                    tournamentName: nameInput.value,
+                    level: levelSelect.value,
+                    buyIn: parseFloat(buyInInput.value) || 0,
+                    startTime: startTimeInput.value || undefined
+                  });
+                }
+              }}
+              className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-lg transition-colors"
+            >
+              {selectedScheduleForEdit ? 'Update Schedule' : 'Create Schedule'}
+            </button>
+          </div>
+        </SlideInPanel>
+
         {/* Command Palette */}
         {showCommandPalette && (
           <>
@@ -2824,6 +3100,23 @@ export function AdminView() {
                     <div className="flex-1">
                       <div className="text-sm font-semibold text-gray-900">Add Wallet</div>
                       <div className="text-xs text-gray-500">Add a new payment wallet</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowCommandPalette(false);
+                      setSelectedScheduleForEdit(null);
+                      setActiveSlideIn('schedule');
+                    }}
+                    className="w-full px-4 py-3 text-left rounded-lg hover:bg-gray-50 flex items-center gap-3 transition-colors group"
+                  >
+                    <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors">
+                      <Calendar className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-gray-900">Add Tournament Schedule</div>
+                      <div className="text-xs text-gray-500">Create a new tournament schedule</div>
                     </div>
                   </button>
                 </div>

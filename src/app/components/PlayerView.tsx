@@ -86,7 +86,9 @@ export function PlayerView() {
   const currentPlayer = {
     name: 'Marcus Chen',
     avatar: 'https://images.unsplash.com/photo-1674644674031-b49db824edbc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=400',
-    team: 'High Rollers'
+    team: 'High Rollers',
+    riskLevel: 'Level 1',
+    stakeLevel: 'NL50'
   };
 
   const [activeTab, setActiveTab] = useState('analytics');
@@ -166,7 +168,14 @@ export function PlayerView() {
     buyIn: number;
     rake: number;
     timestamp: Date;
+    scheduleName?: string;
   }>>([]);
+
+  // Mock schedules for the player (filtered by player's risk level)
+  const playerSchedules = [
+    { id: 'schedule-1', tournamentName: 'Morning Multi-Table', level: 'Level 1', buyIn: 50, rake: 5 },
+    { id: 'schedule-3', tournamentName: 'Weekend Freeroll', level: 'Level 1', buyIn: 0, rake: 0 },
+  ];
   const [showHistory, setShowHistory] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SavedSession[]>([
     {
@@ -2102,7 +2111,10 @@ export function PlayerView() {
                   <h2 className="text-lg font-semibold text-gray-900">Hi, {currentPlayer.name.split(' ')[0]}</h2>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-200 rounded text-xs font-semibold text-gray-700">
                     <Shield className="w-3 h-3" />
-                    NL50
+                    {currentPlayer.stakeLevel}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs font-semibold text-blue-700">
+                    {currentPlayer.riskLevel}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
@@ -2665,7 +2677,7 @@ export function PlayerView() {
                   className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all flex items-center gap-1.5"
                 >
                   <span className="text-sm font-bold">+</span>
-                  Tournament
+                  Entry
                 </button>
                 <button
                   onClick={endSession}
@@ -2876,6 +2888,7 @@ export function PlayerView() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Time</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Schedule</th>
                       <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Account</th>
                       <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Buy-in</th>
                       <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Rake</th>
@@ -2888,6 +2901,9 @@ export function PlayerView() {
                         <td className="px-3 py-2 text-xs text-gray-500">
                           {entry.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                         </td>
+                        <td className="px-3 py-2 text-xs font-medium text-blue-700">
+                          {entry.scheduleName || '-'}
+                        </td>
                         <td className="px-3 py-2 text-xs font-medium text-gray-900">{entry.accountName}</td>
                         <td className="px-3 py-2 text-xs font-semibold text-gray-900">${entry.buyIn}</td>
                         <td className="px-3 py-2 text-xs text-gray-600">${entry.rake}</td>
@@ -2899,7 +2915,7 @@ export function PlayerView() {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-400">
-                <p className="text-xs">No tournament entries yet. Click "+ Tournament" to add one.</p>
+                <p className="text-xs">No tournament entries yet. Click "+ Entry" to add one.</p>
               </div>
             )}
           </div>
@@ -2942,6 +2958,21 @@ export function PlayerView() {
         >
           <div className="space-y-4">
             <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Schedule</label>
+              <select
+                id="tournamentSchedule"
+                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select schedule...</option>
+                {playerSchedules.map((schedule) => (
+                  <option key={schedule.id} value={schedule.id}>
+                    {schedule.tournamentName} (Buy-in: ${schedule.buyIn}, Rake: ${schedule.rake})
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">Available for {currentPlayer.riskLevel}</p>
+            </div>
+            <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Account</label>
               <select
                 id="tournamentAccount"
@@ -2961,54 +2992,30 @@ export function PlayerView() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Buy-in ($)</label>
-              <input
-                type="number"
-                id="tournamentBuyIn"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Rake ($)</label>
-              <input
-                type="number"
-                id="tournamentRake"
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-                className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
             <button
               onClick={() => {
+                const scheduleSelect = document.getElementById('tournamentSchedule') as HTMLSelectElement;
                 const accountSelect = document.getElementById('tournamentAccount') as HTMLSelectElement;
-                const buyInInput = document.getElementById('tournamentBuyIn') as HTMLInputElement;
-                const rakeInput = document.getElementById('tournamentRake') as HTMLInputElement;
                 
                 const selectedAccount = pokerRoomAccounts.find(a => a.id === accountSelect.value);
-                const buyIn = parseFloat(buyInInput.value) || 0;
-                const rake = parseFloat(rakeInput.value) || 0;
+                const selectedSchedule = playerSchedules.find(s => s.id === scheduleSelect.value);
                 
-                if (selectedAccount && (buyIn > 0 || rake > 0)) {
+                if (selectedAccount && selectedSchedule) {
                   setTournamentEntries(prev => [
                     ...prev,
                     {
                       id: `t-${Date.now()}`,
                       accountId: selectedAccount.id,
                       accountName: `${selectedAccount.pokerRoom} (${selectedAccount.nickname})`,
-                      buyIn,
-                      rake,
-                      timestamp: new Date()
+                      buyIn: selectedSchedule.buyIn,
+                      rake: selectedSchedule.rake,
+                      timestamp: new Date(),
+                      scheduleName: selectedSchedule.tournamentName
                     }
                   ]);
                   setActiveSlideIn(null);
+                  scheduleSelect.value = '';
                   accountSelect.value = '';
-                  buyInInput.value = '';
-                  rakeInput.value = '';
                 }
               }}
               className="w-full py-2.5 bg-gray-900 hover:bg-gray-800 text-white font-semibold rounded-lg transition-colors"

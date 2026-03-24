@@ -11,16 +11,22 @@ export interface PlayerData {
   id: string;
   name: string;
   avatar: string;
+  stakeLevel?: string;
+  riskLevel?: string;
 }
 
 export interface PlayerFormData {
   name: string;
   avatar: string;
+  stakeLevel: string;
+  riskLevel: string;
 }
 
 export default function PlayerEditForm({ onClose, onSubmit, editPlayer }: PlayerEditFormProps) {
   const [name, setName] = useState(editPlayer?.name || '');
   const [avatar, setAvatar] = useState(editPlayer?.avatar || '');
+  const [stakeLevel, setStakeLevel] = useState(editPlayer?.stakeLevel || 'NL25');
+  const [riskLevel, setRiskLevel] = useState(editPlayer?.riskLevel || 'Level 1');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,6 +34,8 @@ export default function PlayerEditForm({ onClose, onSubmit, editPlayer }: Player
     if (editPlayer) {
       setName(editPlayer.name);
       setAvatar(editPlayer.avatar);
+      setStakeLevel(editPlayer.stakeLevel || 'NL25');
+      setRiskLevel(editPlayer.riskLevel || 'Level 1');
     }
   }, [editPlayer]);
 
@@ -79,7 +87,9 @@ export default function PlayerEditForm({ onClose, onSubmit, editPlayer }: Player
     
     onSubmit({
       name,
-      avatar
+      avatar,
+      stakeLevel,
+      riskLevel
     });
     
     onClose();
@@ -176,8 +186,54 @@ export default function PlayerEditForm({ onClose, onSubmit, editPlayer }: Player
                 </p>
               </div>
             </div>
-          </div>
-        )}
+            </div>
+          )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="stakeLevel" className="block text-sm font-medium text-gray-700 mb-2">
+            Stake Level <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="stakeLevel"
+            required
+            value={stakeLevel}
+            onChange={(e) => setStakeLevel(e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg 
+                       focus:ring-2 focus:ring-gray-400 focus:border-gray-400 
+                       outline-none transition-colors bg-white"
+          >
+            <option value="NL10">NL10</option>
+            <option value="NL25">NL25</option>
+            <option value="NL50">NL50</option>
+            <option value="NL100">NL100</option>
+            <option value="NL200">NL200</option>
+            <option value="NL500">NL500</option>
+            <option value="NL1000">NL1000</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">For Cash games</p>
+        </div>
+
+        <div>
+          <label htmlFor="riskLevel" className="block text-sm font-medium text-gray-700 mb-2">
+            Risk Level <span className="text-red-500">*</span>
+          </label>
+          <select
+            id="riskLevel"
+            required
+            value={riskLevel}
+            onChange={(e) => setRiskLevel(e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg 
+                       focus:ring-2 focus:ring-gray-400 focus:border-gray-400 
+                       outline-none transition-colors bg-white"
+          >
+            <option value="Level 1">Level 1</option>
+            <option value="Level 2">Level 2</option>
+            <option value="Level 3">Level 3</option>
+          </select>
+          <p className="text-xs text-gray-500 mt-1">For Tournaments/MTT</p>
+        </div>
       </div>
 
       {/* Legal Documents */}
