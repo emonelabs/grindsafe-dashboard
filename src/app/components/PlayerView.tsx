@@ -38,6 +38,7 @@ interface SavedSession {
   handsPlayed: number;
   biggestWin: number;
   biggestLoss: number;
+  isReconciled: boolean;
 }
 
 interface PokerAccount {
@@ -126,6 +127,7 @@ export function PlayerView() {
   const [uploadedHands, setUploadedHands] = useState<Hand[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
+  const [selectedSessionForReconciliation, setSelectedSessionForReconciliation] = useState<string | null>(null);
   
   // Initialize session state from localStorage
   const [sessionActive, setSessionActive] = useState(() => {
@@ -201,7 +203,8 @@ export function PlayerView() {
       buyIn: 500,
       handsPlayed: 408, // ~100 hands/hour: (245/60)*100
       biggestWin: 420,
-      biggestLoss: -180
+      biggestLoss: -180,
+      isReconciled: false
     },
     {
       id: '2',
@@ -212,7 +215,8 @@ export function PlayerView() {
       buyIn: 500,
       handsPlayed: 300, // 3h * 100 hands/hour
       biggestWin: 280,
-      biggestLoss: -310
+      biggestLoss: -310,
+      isReconciled: true
     },
     {
       id: '3',
@@ -223,7 +227,8 @@ export function PlayerView() {
       buyIn: 1000,
       handsPlayed: 533, // ~100 hands/hour: (320/60)*100
       biggestWin: 850,
-      biggestLoss: -220
+      biggestLoss: -220,
+      isReconciled: true
     }
   ]);
 
@@ -1170,7 +1175,8 @@ export function PlayerView() {
       buyIn: buyIn,
       handsPlayed: Math.floor((sessionTime / 60) * 100), // 100 hands per hour
       biggestWin: biggestWin,
-      biggestLoss: biggestLoss
+      biggestLoss: biggestLoss,
+      isReconciled: false
     };
 
     setSessionHistory([newSession, ...sessionHistory]);
@@ -2202,9 +2208,11 @@ export function PlayerView() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Status</th>
                       <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Date</th>
                       <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Duration</th>
                       <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Hands</th>
+                      <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Buy-in</th>
                       <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">P/L</th>
                       <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">Balance</th>
                       <th className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-600 uppercase tracking-wide">ROI</th>
@@ -2218,6 +2226,19 @@ export function PlayerView() {
                       
                       return (
                         <tr key={session.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-3 py-2.5">
+                            {session.isReconciled ? (
+                              <div className="flex items-center gap-1.5">
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                                <span className="text-xs text-green-600 font-medium">Reconciled</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-yellow-500" />
+                                <span className="text-xs text-yellow-600 font-medium">Pending</span>
+                              </div>
+                            )}
+                          </td>
                           <td className="px-3 py-2.5">
                             <div className="flex items-center gap-1.5 text-gray-500 text-xs">
                               <Calendar className="w-3.5 h-3.5" />
@@ -2289,7 +2310,7 @@ export function PlayerView() {
               </div>
             </div>
 
-            {/* 70/20 Grid: DrillDownAnalytics | Schedules */}
+            {/* 70/30 Grid: DrillDownAnalytics | Schedules + Session Reconciliation */}
             <div className="grid grid-cols-10 gap-4">
               {/* DrillDownAnalytics - 70% */}
               <div className="col-span-7">
@@ -2301,53 +2322,115 @@ export function PlayerView() {
                 />
               </div>
 
-              {/* Schedules Section - 30% */}
-              <div className="col-span-3 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col self-start max-h-[400px]">
-                <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex-shrink-0">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Schedules</h3>
-                </div>
-                <div className="overflow-y-auto max-h-[400px]">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
-                      <tr>
-                        <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Tournament</th>
-                        <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Room</th>
-                        <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Buy-in</th>
-                        <th className="px-2 py-2 text-center text-[10px] font-bold text-gray-600 uppercase">Time</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {playerSchedules.map((schedule) => {
-                        const scheduleEntries = tournamentEntries.filter(e => e.scheduleId === schedule.id);
-                        
-                        return (
-                          <>
-                            <tr key={schedule.id} className="hover:bg-gray-50">
-                              <td className="px-2 py-2 text-xs font-medium text-gray-900">{schedule.tournamentName}</td>
-                              <td className="px-2 py-2 text-xs text-gray-600">{schedule.pokerRoom || '-'}</td>
-                              <td className="px-2 py-2 text-xs font-semibold text-gray-900">${schedule.buyIn}</td>
-                              <td className="px-2 py-2 text-center text-xs text-gray-500">{schedule.startTime || '-'}</td>
-                            </tr>
-                            {scheduleEntries.map((entry) => (
-                              <tr key={entry.id} className={`${entry.isEnded ? 'bg-gray-50' : 'bg-blue-50/50'} hover:bg-blue-50`}>
-                                <td className="px-2 py-2 text-xs text-gray-500" colSpan={2}>
-                                  <span className="text-blue-600 font-medium">→</span> {entry.accountName}
-                                </td>
-                                <td className="px-2 py-2 text-xs font-semibold text-gray-900">${entry.buyIn}</td>
-                                <td className="px-2 py-2 text-center">
-                                  {entry.isEnded ? (
-                                    <span className="text-xs text-gray-500">{formatElapsedTime(entry.startTime, entry.endTime)}</span>
-                                  ) : (
-                                    <span className="text-xs text-green-600 font-medium">{formatElapsedTime(entry.startTime)}</span>
-                                  )}
-                                </td>
+              {/* Right Sidebar - Schedules + Session Reconciliation - 30% */}
+              <div className="col-span-3 flex flex-col gap-4">
+                {/* Schedules Section */}
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col max-h-[250px]">
+                  <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex-shrink-0">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Schedules</h3>
+                  </div>
+                  <div className="overflow-y-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Tournament</th>
+                          <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Room</th>
+                          <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Buy-in</th>
+                          <th className="px-2 py-2 text-center text-[10px] font-bold text-gray-600 uppercase">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {playerSchedules.map((schedule) => {
+                          const scheduleEntries = tournamentEntries.filter(e => e.scheduleId === schedule.id);
+                          
+                          return (
+                            <>
+                              <tr key={schedule.id} className="hover:bg-gray-50">
+                                <td className="px-2 py-2 text-xs font-medium text-gray-900">{schedule.tournamentName}</td>
+                                <td className="px-2 py-2 text-xs text-gray-600">{schedule.pokerRoom || '-'}</td>
+                                <td className="px-2 py-2 text-xs font-semibold text-gray-900">${schedule.buyIn}</td>
+                                <td className="px-2 py-2 text-center text-xs text-gray-500">{schedule.startTime || '-'}</td>
                               </tr>
-                            ))}
-                          </>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                              {scheduleEntries.map((entry) => (
+                                <tr key={entry.id} className={`${entry.isEnded ? 'bg-gray-50' : 'bg-blue-50/50'} hover:bg-blue-50`}>
+                                  <td className="px-2 py-2 text-xs text-gray-500" colSpan={2}>
+                                    <span className="text-blue-600 font-medium">→</span> {entry.accountName}
+                                  </td>
+                                  <td className="px-2 py-2 text-xs font-semibold text-gray-900">${entry.buyIn}</td>
+                                  <td className="px-2 py-2 text-center">
+                                    {entry.isEnded ? (
+                                      <span className="text-xs text-gray-500">{formatElapsedTime(entry.startTime, entry.endTime)}</span>
+                                    ) : (
+                                      <span className="text-xs text-green-600 font-medium">{formatElapsedTime(entry.startTime)}</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Session Reconciliation */}
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col">
+                  <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100 flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Reconciliation</h3>
+                      {sessionHistory.filter(s => !s.isReconciled).length > 0 && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          {sessionHistory.filter(s => !s.isReconciled).length}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    {sessionHistory.filter(s => !s.isReconciled).length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-4 text-center">
+                        <CheckCircle className="w-8 h-8 text-green-500 mb-1" />
+                        <p className="text-sm font-medium text-gray-900">All sessions reconciled</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded p-2">
+                          <div className="text-xs text-yellow-800 font-medium">
+                            {sessionHistory.filter(s => !s.isReconciled).length} session(s) pending hand upload
+                          </div>
+                        </div>
+                        <div className="space-y-2 max-h-[180px] overflow-y-auto">
+                          {sessionHistory.filter(s => !s.isReconciled).map((session) => (
+                            <div key={session.id} className="p-2 border border-gray-200 rounded hover:shadow-sm bg-gray-50">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="text-xs font-medium text-gray-900">
+                                  {formatDateOnly(session.date)}
+                                </div>
+                                <div className="text-[10px] text-gray-500">
+                                  {session.handsPlayed} hands • {formatTime(session.duration)}
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <div className="text-[10px] text-yellow-700 font-medium">
+                                  Pending reconciliation
+                                </div>
+                                <button
+                                  onClick={() => {
+                                    setSelectedSessionForReconciliation(session.id);
+                                    setShowUploadModal(true);
+                                  }}
+                                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-semibold rounded transition-all flex items-center gap-1"
+                                >
+                                  <Upload className="w-2.5 h-2.5" />
+                                  Upload
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -3170,6 +3253,34 @@ export function PlayerView() {
               }));
               
               setUploadedHands(mockHands);
+              
+              // Mark selected session and at least one more unreconciled session as reconciled
+              setSessionHistory(prev => {
+                const updated = [...prev];
+                const unreconciledSessions = updated.map((s, i) => ({ ...s, index: i })).filter(s => !s.isReconciled);
+                
+                if (unreconciledSessions.length === 0) return prev;
+                
+                // Find index of selected session if provided
+                let targetIndex = -1;
+                if (selectedSessionForReconciliation) {
+                  const selectedIdx = unreconciledSessions.findIndex(s => s.id === selectedSessionForReconciliation);
+                  if (selectedIdx !== -1) {
+                    targetIndex = unreconciledSessions[selectedIdx].index;
+                    updated[targetIndex] = { ...updated[targetIndex], isReconciled: true };
+                  }
+                }
+                
+                // Reconcile at least one more unreconciled session (to ensure at least 2 are reconciled)
+                const additionalSession = unreconciledSessions.find(s => s.index !== targetIndex);
+                if (additionalSession) {
+                  updated[additionalSession.index] = { ...updated[additionalSession.index], isReconciled: true };
+                }
+                
+                return updated;
+              });
+              
+              setSelectedSessionForReconciliation(null);
               setIsProcessingUpload(false);
             }}
           />
