@@ -91,7 +91,7 @@ export function PlayerView() {
     stakeLevel: 'NL50'
   };
 
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTab] = useState('overview');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | 'legaldocument' | null>(null);
   const [selectedHandForReplay, setSelectedHandForReplay] = useState<Hand | null>(null);
@@ -2165,9 +2165,9 @@ export function PlayerView() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="analytics">
+            <TabsTrigger value="overview">
               <Grid3x3 className="w-4 h-4 mr-2" />
-              Analytics
+              Overview
               <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-bold bg-yellow-400 text-yellow-900 data-[state=active]:bg-white/20 data-[state=active]:text-white/90 rounded">Beta</span>
             </TabsTrigger>
             <TabsTrigger value="sessions">
@@ -2271,7 +2271,7 @@ export function PlayerView() {
             </div>
           </TabsContent>
 
-          <TabsContent value="analytics">
+          <TabsContent value="overview">
             {/* Ready to Play CTA */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg p-4 border-2 border-blue-500 mb-6">
               <div className="flex items-center justify-between">
@@ -2289,12 +2289,68 @@ export function PlayerView() {
               </div>
             </div>
 
-            <DrillDownAnalytics 
-              playerId={currentPlayer.name}
-              playerName={currentPlayer.name}
-              isCompanyWide={false}
-              onHandClick={setSelectedHandForReplay}
-            />
+            {/* 70/20 Grid: DrillDownAnalytics | Schedules */}
+            <div className="grid grid-cols-10 gap-4">
+              {/* DrillDownAnalytics - 70% */}
+              <div className="col-span-7">
+                <DrillDownAnalytics 
+                  playerId={currentPlayer.name}
+                  playerName={currentPlayer.name}
+                  isCompanyWide={false}
+                  onHandClick={setSelectedHandForReplay}
+                />
+              </div>
+
+              {/* Schedules Section - 30% */}
+              <div className="col-span-3 bg-white border border-gray-200 rounded-lg overflow-hidden flex flex-col self-start max-h-[400px]">
+                <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex-shrink-0">
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Schedules</h3>
+                </div>
+                <div className="overflow-y-auto max-h-[400px]">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Tournament</th>
+                        <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Room</th>
+                        <th className="px-2 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Buy-in</th>
+                        <th className="px-2 py-2 text-center text-[10px] font-bold text-gray-600 uppercase">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {playerSchedules.map((schedule) => {
+                        const scheduleEntries = tournamentEntries.filter(e => e.scheduleId === schedule.id);
+                        
+                        return (
+                          <>
+                            <tr key={schedule.id} className="hover:bg-gray-50">
+                              <td className="px-2 py-2 text-xs font-medium text-gray-900">{schedule.tournamentName}</td>
+                              <td className="px-2 py-2 text-xs text-gray-600">{schedule.pokerRoom || '-'}</td>
+                              <td className="px-2 py-2 text-xs font-semibold text-gray-900">${schedule.buyIn}</td>
+                              <td className="px-2 py-2 text-center text-xs text-gray-500">{schedule.startTime || '-'}</td>
+                            </tr>
+                            {scheduleEntries.map((entry) => (
+                              <tr key={entry.id} className={`${entry.isEnded ? 'bg-gray-50' : 'bg-blue-50/50'} hover:bg-blue-50`}>
+                                <td className="px-2 py-2 text-xs text-gray-500" colSpan={2}>
+                                  <span className="text-blue-600 font-medium">→</span> {entry.accountName}
+                                </td>
+                                <td className="px-2 py-2 text-xs font-semibold text-gray-900">${entry.buyIn}</td>
+                                <td className="px-2 py-2 text-center">
+                                  {entry.isEnded ? (
+                                    <span className="text-xs text-gray-500">{formatElapsedTime(entry.startTime, entry.endTime)}</span>
+                                  ) : (
+                                    <span className="text-xs text-green-600 font-medium">{formatElapsedTime(entry.startTime)}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="operations" className="mt-6">
