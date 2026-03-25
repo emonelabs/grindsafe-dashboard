@@ -350,7 +350,7 @@ export function AdminView() {
       buyIn: 50,
       rake: 5,
       pokerRoom: 'PokerStars',
-      maxEntries: 20,
+      maxEntries: 5,
       startTime: '10:00',
       createdAt: new Date('2026-03-01')
     },
@@ -361,7 +361,7 @@ export function AdminView() {
       buyIn: 150,
       rake: 15,
       pokerRoom: 'GGPoker',
-      maxEntries: 50,
+      maxEntries: 5,
       startTime: '19:00',
       createdAt: new Date('2026-03-01')
     },
@@ -372,7 +372,7 @@ export function AdminView() {
       buyIn: 0,
       rake: 0,
       pokerRoom: 'PartyPoker',
-      maxEntries: 100,
+      maxEntries: 5,
       startTime: '14:00',
       createdAt: new Date('2026-03-15')
     },
@@ -383,7 +383,7 @@ export function AdminView() {
       buyIn: 500,
       rake: 50,
       pokerRoom: 'PokerStars',
-      maxEntries: 10,
+      maxEntries: 5,
       startTime: '20:00',
       createdAt: new Date('2026-03-10')
     }

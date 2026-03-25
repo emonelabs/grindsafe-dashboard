@@ -178,6 +178,7 @@ export function PlayerView() {
     rake: number;
     timestamp: Date;
     startTime: Date;
+    endTime?: Date;
     scheduleId?: string;
     scheduleName?: string;
     isEnded?: boolean;
@@ -185,9 +186,9 @@ export function PlayerView() {
 
   // Mock schedules for the player (filtered by player's risk level)
   const playerSchedules = [
-    { id: 'schedule-1', tournamentName: 'Morning Multi-Table', level: 'Level 1', buyIn: 50, rake: 5, pokerRoom: 'PokerStars', maxEntries: 20, startTime: '10:00' },
-    { id: 'schedule-2', tournamentName: 'Evening Championship', level: 'Level 2', buyIn: 150, rake: 15, pokerRoom: 'GGPoker', maxEntries: 50, startTime: '19:00' },
-    { id: 'schedule-3', tournamentName: 'Weekend Freeroll', level: 'Level 1', buyIn: 0, rake: 0, pokerRoom: 'PartyPoker', maxEntries: 100, startTime: '14:00' },
+    { id: 'schedule-1', tournamentName: 'Morning Multi-Table', level: 'Level 1', buyIn: 50, rake: 5, pokerRoom: 'PokerStars', maxEntries: 5, startTime: '10:00' },
+    { id: 'schedule-2', tournamentName: 'Evening Championship', level: 'Level 2', buyIn: 150, rake: 15, pokerRoom: 'GGPoker', maxEntries: 5, startTime: '19:00' },
+    { id: 'schedule-3', tournamentName: 'Weekend Freeroll', level: 'Level 1', buyIn: 0, rake: 0, pokerRoom: 'PartyPoker', maxEntries: 5, startTime: '14:00' },
   ];
   const [showHistory, setShowHistory] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SavedSession[]>([
@@ -1188,9 +1189,9 @@ export function PlayerView() {
     return `${hours}h ${mins}m`;
   };
 
-  const formatElapsedTime = (startTime: Date) => {
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+  const formatElapsedTime = (startTime: Date, endTime?: Date) => {
+    const end = endTime || new Date();
+    const diff = Math.floor((end.getTime() - startTime.getTime()) / 1000);
     const hours = Math.floor(diff / 3600);
     const minutes = Math.floor((diff % 3600) / 60);
     const seconds = diff % 60;
@@ -2954,7 +2955,7 @@ export function PlayerView() {
                               <td className="px-3 py-2 text-xs text-gray-600">${entry.rake}</td>
                               <td className="px-3 py-2 text-xs font-medium" colSpan={2}>
                                 {entry.isEnded ? (
-                                  <span className="text-gray-500">Ended: {formatElapsedTime(entry.startTime)}</span>
+                                  <span className="text-gray-500">Ended: {formatElapsedTime(entry.startTime, entry.endTime)}</span>
                                 ) : (
                                   <span className="text-green-600">Running: {formatElapsedTime(entry.startTime)}</span>
                                 )}
@@ -2964,7 +2965,7 @@ export function PlayerView() {
                                   <span className="text-xs text-gray-400 font-medium">Ended</span>
                                 ) : (
                                   <button
-                                    onClick={() => setTournamentEntries(prev => prev.map(e => e.id === entry.id ? { ...e, isEnded: true } : e))}
+                                    onClick={() => setTournamentEntries(prev => prev.map(e => e.id === entry.id ? { ...e, isEnded: true, endTime: new Date() } : e))}
                                     className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded transition-all"
                                   >
                                     End
