@@ -93,7 +93,7 @@ export function PlayerView() {
 
   const [activeTab, setActiveTab] = useState('analytics');
   const [showCommandPalette, setShowCommandPalette] = useState(false);
-  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | 'legaldocument' | 'addtournament' | null>(null);
+  const [activeSlideIn, setActiveSlideIn] = useState<'deposit' | 'withdrawal' | 'split' | 'swap' | 'handhistory' | 'accountdetails' | 'paymentwallet' | 'pokeraccount' | 'legaldocument' | null>(null);
   const [selectedHandForReplay, setSelectedHandForReplay] = useState<Hand | null>(null);
   const [aiQuery, setAiQuery] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -161,6 +161,15 @@ export function PlayerView() {
     return saved ? JSON.parse(saved).biggestLoss : 0;
   });
   const [liveSessionView, setLiveSessionView] = useState<'overview' | 'cash' | 'tournaments'>('overview');
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
   const [tournamentEntries, setTournamentEntries] = useState<Array<{
     id: string;
     accountId: string;
@@ -168,13 +177,17 @@ export function PlayerView() {
     buyIn: number;
     rake: number;
     timestamp: Date;
+    startTime: Date;
+    scheduleId?: string;
     scheduleName?: string;
+    isEnded?: boolean;
   }>>([]);
 
   // Mock schedules for the player (filtered by player's risk level)
   const playerSchedules = [
-    { id: 'schedule-1', tournamentName: 'Morning Multi-Table', level: 'Level 1', buyIn: 50, rake: 5 },
-    { id: 'schedule-3', tournamentName: 'Weekend Freeroll', level: 'Level 1', buyIn: 0, rake: 0 },
+    { id: 'schedule-1', tournamentName: 'Morning Multi-Table', level: 'Level 1', buyIn: 50, rake: 5, pokerRoom: 'PokerStars', maxEntries: 20, startTime: '10:00' },
+    { id: 'schedule-2', tournamentName: 'Evening Championship', level: 'Level 2', buyIn: 150, rake: 15, pokerRoom: 'GGPoker', maxEntries: 50, startTime: '19:00' },
+    { id: 'schedule-3', tournamentName: 'Weekend Freeroll', level: 'Level 1', buyIn: 0, rake: 0, pokerRoom: 'PartyPoker', maxEntries: 100, startTime: '14:00' },
   ];
   const [showHistory, setShowHistory] = useState(false);
   const [sessionHistory, setSessionHistory] = useState<SavedSession[]>([
@@ -1173,6 +1186,15 @@ export function PlayerView() {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
+  };
+
+  const formatElapsedTime = (startTime: Date) => {
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+    const hours = Math.floor(diff / 3600);
+    const minutes = Math.floor((diff % 3600) / 60);
+    const seconds = diff % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const formatPL = (amount: number) => {
@@ -2673,13 +2695,6 @@ export function PlayerView() {
                   <span className="text-xs font-semibold text-gray-700">{formatTime(sessionTime)}</span>
                 </div>
                 <button
-                  onClick={() => setActiveSlideIn('addtournament')}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all flex items-center gap-1.5"
-                >
-                  <span className="text-sm font-bold">+</span>
-                  Entry
-                </button>
-                <button
                   onClick={endSession}
                   className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded transition-all flex items-center gap-1.5"
                 >
@@ -2736,33 +2751,10 @@ export function PlayerView() {
               </div>
             </div>
           )}
-
-          {(liveSessionView === 'overview' || liveSessionView === 'tournaments') && tournamentEntries.length > 0 && (
-            <div className="grid grid-cols-3 divide-x divide-gray-200 bg-white">
-              <div className="px-3 py-2">
-                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Entries</div>
-                <div className="text-lg font-bold text-gray-900">
-                  {tournamentEntries.length}
-                </div>
-              </div>
-              <div className="px-3 py-2">
-                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Total Buy-in</div>
-                <div className="text-lg font-bold text-gray-900">
-                  ${tournamentEntries.reduce((sum, e) => sum + e.buyIn, 0).toLocaleString()}
-                </div>
-              </div>
-              <div className="px-3 py-2">
-                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">Total Rake</div>
-                <div className="text-lg font-bold text-gray-600">
-                  ${tournamentEntries.reduce((sum, e) => sum + e.rake, 0).toLocaleString()}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* 80/20 Grid: Session Performance | Live Feed */}
-        {(liveSessionView === 'overview' || liveSessionView === 'cash') && (
+        {/* 80/20 Grid: Session Performance | Live Feed - Only for Cash view */}
+        {(liveSessionView === 'cash') && (
           <div className="grid grid-cols-5 gap-3">
             {/* Session Performance (80%) */}
             <div className="col-span-4 bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -2872,52 +2864,227 @@ export function PlayerView() {
         </div>
         )}
 
-        {(liveSessionView === 'overview' || liveSessionView === 'tournaments') && (
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Tournament Entries</h3>
-              <div className="flex items-center gap-3 text-xs">
-                <span className="text-gray-500">Total: <span className="font-semibold text-gray-900">{tournamentEntries.length}</span></span>
-                <span className="text-gray-500">Buy-in: <span className="font-semibold text-gray-900">${tournamentEntries.reduce((sum, e) => sum + e.buyIn, 0).toLocaleString()}</span></span>
-                <span className="text-gray-500">Rake: <span className="font-semibold text-gray-600">${tournamentEntries.reduce((sum, e) => sum + e.rake, 0).toLocaleString()}</span></span>
+        {/* 60/40 Grid: Schedules | Session Performance - Only for Overview view */}
+        {(liveSessionView === 'overview') && (
+          <div className="grid grid-cols-5 gap-3">
+            {/* Schedules (Left - 40%) */}
+            <div className="col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Schedules</h3>
               </div>
-            </div>
-            {tournamentEntries.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Time</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Schedule</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Account</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Tournament</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Room</th>
                       <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Buy-in</th>
                       <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Rake</th>
-                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Total</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Max</th>
+                      <th className="px-3 py-2 text-left text-[10px] font-bold text-gray-600 uppercase">Time</th>
+                      <th className="px-3 py-2 text-center text-[10px] font-bold text-gray-600 uppercase"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {tournamentEntries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-xs text-gray-500">
-                          {entry.timestamp.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                        </td>
-                        <td className="px-3 py-2 text-xs font-medium text-blue-700">
-                          {entry.scheduleName || '-'}
-                        </td>
-                        <td className="px-3 py-2 text-xs font-medium text-gray-900">{entry.accountName}</td>
-                        <td className="px-3 py-2 text-xs font-semibold text-gray-900">${entry.buyIn}</td>
-                        <td className="px-3 py-2 text-xs text-gray-600">${entry.rake}</td>
-                        <td className="px-3 py-2 text-xs font-semibold text-gray-900">${entry.buyIn + entry.rake}</td>
-                      </tr>
-                    ))}
+                    {playerSchedules.map((schedule) => {
+                      const scheduleEntries = tournamentEntries.filter(e => e.scheduleId === schedule.id);
+                      const hasAccount = pokerRoomAccounts.some(a => a.pokerRoom === schedule.pokerRoom && a.status === 'active');
+                      const canAddEntry = hasAccount && (!schedule.maxEntries || scheduleEntries.length < schedule.maxEntries);
+                      const playerAccount = pokerRoomAccounts.find(a => a.pokerRoom === schedule.pokerRoom && a.status === 'active');
+                      
+                      return (
+                        <>
+                          <tr key={schedule.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-xs font-medium text-gray-900">{schedule.tournamentName}</td>
+                            <td className="px-3 py-2 text-xs text-gray-600">{schedule.pokerRoom || '-'}</td>
+                            <td className="px-3 py-2 text-xs font-semibold text-gray-900">${schedule.buyIn}</td>
+                            <td className="px-3 py-2 text-xs text-gray-600">${schedule.rake}</td>
+                            <td className="px-3 py-2 text-xs text-gray-600">{scheduleEntries.length}/{schedule.maxEntries ?? '-'}</td>
+                            <td className="px-3 py-2 text-xs text-gray-500">{schedule.startTime || '-'}</td>
+                            <td className="px-3 py-2 text-center">
+                              {canAddEntry ? (
+                                <button
+                                  onClick={() => {
+                                    if (playerAccount) {
+                                      const now = new Date();
+                                      setTournamentEntries(prev => [
+                                        ...prev,
+                                        {
+                                          id: `t-${Date.now()}`,
+                                          accountId: playerAccount.id,
+                                          accountName: `${playerAccount.pokerRoom} (${playerAccount.nickname})`,
+                                          buyIn: schedule.buyIn,
+                                          rake: schedule.rake,
+                                          timestamp: now,
+                                          startTime: now,
+                                          scheduleId: schedule.id,
+                                          scheduleName: schedule.tournamentName
+                                        }
+                                      ]);
+                                    }
+                                  }}
+                                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-all"
+                                >
+                                  Entry
+                                </button>
+                              ) : (
+                                <UITooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      disabled
+                                      className="px-2 py-1 bg-gray-200 text-gray-400 text-xs font-semibold rounded cursor-not-allowed"
+                                    >
+                                      Entry
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="bg-gray-900 text-white text-xs max-w-xs">
+                                    <p className="font-semibold">No account for {schedule.pokerRoom}</p>
+                                    <p className="text-gray-300 mt-1">You don't have an account to play in this tournament. For modifications, ask the staff or your coach.</p>
+                                  </TooltipContent>
+                                </UITooltip>
+                              )}
+                            </td>
+                          </tr>
+                          {scheduleEntries.map((entry) => (
+                            <tr key={entry.id} className={`${entry.isEnded ? 'bg-gray-50' : 'bg-blue-50/50'} hover:bg-blue-50`}>
+                              <td className="px-3 py-2 pl-6 text-xs text-gray-500" colSpan={2}>
+                                <span className="text-blue-600 font-medium">→</span> {entry.accountName}
+                              </td>
+                              <td className="px-3 py-2 text-xs font-semibold text-gray-900">${entry.buyIn}</td>
+                              <td className="px-3 py-2 text-xs text-gray-600">${entry.rake}</td>
+                              <td className="px-3 py-2 text-xs font-medium" colSpan={2}>
+                                {entry.isEnded ? (
+                                  <span className="text-gray-500">Ended: {formatElapsedTime(entry.startTime)}</span>
+                                ) : (
+                                  <span className="text-green-600">Running: {formatElapsedTime(entry.startTime)}</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-center">
+                                {entry.isEnded ? (
+                                  <span className="text-xs text-gray-400 font-medium">Ended</span>
+                                ) : (
+                                  <button
+                                    onClick={() => setTournamentEntries(prev => prev.map(e => e.id === entry.id ? { ...e, isEnded: true } : e))}
+                                    className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded transition-all"
+                                  >
+                                    End
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <div className="text-center py-8 text-gray-400">
-                <p className="text-xs">No tournament entries yet. Click "+ Entry" to add one.</p>
+            </div>
+
+            {/* Session Performance + Live Feed (Right - 60%) */}
+            <div className="col-span-3 grid grid-cols-4 gap-3">
+              {/* Session Performance (80% of right side) */}
+              <div className="col-span-3 bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Performance</h3>
+                </div>
+                <div className="p-4">
+                  <ResponsiveContainer width="100%" height={160}>
+                    <LineChart data={sessionData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="time" 
+                        stroke="#6b7280"
+                        style={{ fontSize: '10px' }}
+                      />
+                      <YAxis 
+                        stroke="#6b7280"
+                        style={{ fontSize: '10px' }}
+                        tickFormatter={(value) => `$${value}`}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '6px',
+                          fontSize: '12px'
+                        }}
+                        formatter={(value: number, name: string) => [`$${value}`, name === 'pl' ? 'P/L' : 'EV']}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="pl" 
+                        stroke="#10b981" 
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="ev" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2}
+                        dot={false}
+                        strokeDasharray="5 5"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            )}
+
+              {/* Live Feed (20% of right side) */}
+              <div className="col-span-1 bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-2 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide">Live Feed</h3>
+                    {isScreenSharing && (
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {isScreenSharing ? (
+                  <>
+                    <div className="relative bg-black aspect-video">
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-1.5 bg-gray-50 flex items-center justify-center border-t border-gray-200">
+                      <button 
+                        onClick={stopScreenSharing}
+                        className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-[10px] font-semibold transition-all flex items-center gap-1"
+                      >
+                        <Square className="w-2.5 h-2.5" />
+                        Stop
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative bg-gray-100 aspect-video flex items-center justify-center">
+                      <div className="text-center p-2">
+                        <Video className="w-8 h-8 text-gray-400 mx-auto mb-1" />
+                        <p className="text-[10px] text-gray-500">No feed</p>
+                      </div>
+                    </div>
+                    <div className="p-1.5 bg-gray-50 flex items-center justify-center border-t border-gray-200">
+                      <button 
+                        onClick={startScreenSharing}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-[10px] font-semibold transition-all flex items-center gap-1"
+                      >
+                        <Play className="w-2.5 h-2.5" />
+                        Share
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -3001,6 +3168,7 @@ export function PlayerView() {
                 const selectedSchedule = playerSchedules.find(s => s.id === scheduleSelect.value);
                 
                 if (selectedAccount && selectedSchedule) {
+                  const now = new Date();
                   setTournamentEntries(prev => [
                     ...prev,
                     {
@@ -3009,7 +3177,9 @@ export function PlayerView() {
                       accountName: `${selectedAccount.pokerRoom} (${selectedAccount.nickname})`,
                       buyIn: selectedSchedule.buyIn,
                       rake: selectedSchedule.rake,
-                      timestamp: new Date(),
+                      timestamp: now,
+                      startTime: now,
+                      scheduleId: selectedSchedule.id,
                       scheduleName: selectedSchedule.tournamentName
                     }
                   ]);

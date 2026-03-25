@@ -335,6 +335,9 @@ export function AdminView() {
     tournamentName: string;
     level: string;
     buyIn: number;
+    rake?: number;
+    pokerRoom?: string;
+    maxEntries?: number;
     startTime?: string;
     createdAt: Date;
   }
@@ -345,6 +348,9 @@ export function AdminView() {
       tournamentName: 'Morning Multi-Table',
       level: 'Level 1',
       buyIn: 50,
+      rake: 5,
+      pokerRoom: 'PokerStars',
+      maxEntries: 20,
       startTime: '10:00',
       createdAt: new Date('2026-03-01')
     },
@@ -353,6 +359,9 @@ export function AdminView() {
       tournamentName: 'Evening Championship',
       level: 'Level 2',
       buyIn: 150,
+      rake: 15,
+      pokerRoom: 'GGPoker',
+      maxEntries: 50,
       startTime: '19:00',
       createdAt: new Date('2026-03-01')
     },
@@ -361,6 +370,9 @@ export function AdminView() {
       tournamentName: 'Weekend Freeroll',
       level: 'Level 1',
       buyIn: 0,
+      rake: 0,
+      pokerRoom: 'PartyPoker',
+      maxEntries: 100,
       startTime: '14:00',
       createdAt: new Date('2026-03-15')
     },
@@ -369,6 +381,9 @@ export function AdminView() {
       tournamentName: 'High Roller Special',
       level: 'Level 3',
       buyIn: 500,
+      rake: 50,
+      pokerRoom: 'PokerStars',
+      maxEntries: 10,
       startTime: '20:00',
       createdAt: new Date('2026-03-10')
     }
@@ -2809,7 +2824,10 @@ export function AdminView() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Tournament Name</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Level</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Poker Room</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Buy-in</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Rake</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Max Entries</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Start Time</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
                     </tr>
@@ -2817,7 +2835,7 @@ export function AdminView() {
                   <tbody className="divide-y divide-gray-100">
                     {schedules.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                        <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
                           No schedules yet. Use ⌘K to add a schedule.
                         </td>
                       </tr>
@@ -2833,7 +2851,16 @@ export function AdminView() {
                             </span>
                           </td>
                           <td className="px-4 py-3">
+                            <span className="text-sm text-gray-600">{schedule.pokerRoom || '-'}</span>
+                          </td>
+                          <td className="px-4 py-3">
                             <span className="text-sm font-semibold text-gray-900">${schedule.buyIn}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-gray-600">${schedule.rake ?? 0}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-gray-600">{schedule.maxEntries ?? '-'}</span>
                           </td>
                           <td className="px-4 py-3">
                             <span className="text-sm text-gray-600">{schedule.startTime || '-'}</span>
@@ -2998,6 +3025,50 @@ export function AdminView() {
               />
             </div>
             <div>
+              <label htmlFor="scheduleRake" className="block text-sm font-medium text-gray-700 mb-2">
+                Rake ($)
+              </label>
+              <input
+                id="scheduleRake"
+                type="number"
+                min="0"
+                step="1"
+                defaultValue={selectedScheduleForEdit?.rake ?? 0}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label htmlFor="schedulePokerRoom" className="block text-sm font-medium text-gray-700 mb-2">
+                Poker Room
+              </label>
+              <select
+                id="schedulePokerRoom"
+                defaultValue={selectedScheduleForEdit?.pokerRoom || ''}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none bg-white"
+              >
+                <option value="">Select poker room...</option>
+                <option value="PokerStars">PokerStars</option>
+                <option value="GGPoker">GGPoker</option>
+                <option value="888Poker">888Poker</option>
+                <option value="PartyPoker">PartyPoker</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="scheduleMaxEntries" className="block text-sm font-medium text-gray-700 mb-2">
+                Max Entries
+              </label>
+              <input
+                id="scheduleMaxEntries"
+                type="number"
+                min="1"
+                step="1"
+                defaultValue={selectedScheduleForEdit?.maxEntries || ''}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none"
+                placeholder="e.g. 20"
+              />
+            </div>
+            <div>
               <label htmlFor="scheduleStartTime" className="block text-sm font-medium text-gray-700 mb-2">
                 Start Time (optional)
               </label>
@@ -3013,6 +3084,9 @@ export function AdminView() {
                 const nameInput = document.getElementById('scheduleName') as HTMLInputElement;
                 const levelSelect = document.getElementById('scheduleLevel') as HTMLSelectElement;
                 const buyInInput = document.getElementById('scheduleBuyIn') as HTMLInputElement;
+                const rakeInput = document.getElementById('scheduleRake') as HTMLInputElement;
+                const pokerRoomSelect = document.getElementById('schedulePokerRoom') as HTMLSelectElement;
+                const maxEntriesInput = document.getElementById('scheduleMaxEntries') as HTMLInputElement;
                 const startTimeInput = document.getElementById('scheduleStartTime') as HTMLInputElement;
 
                 if (nameInput.value && buyInInput.value) {
@@ -3020,6 +3094,9 @@ export function AdminView() {
                     tournamentName: nameInput.value,
                     level: levelSelect.value,
                     buyIn: parseFloat(buyInInput.value) || 0,
+                    rake: parseFloat(rakeInput.value) || 0,
+                    pokerRoom: pokerRoomSelect.value || undefined,
+                    maxEntries: maxEntriesInput.value ? parseInt(maxEntriesInput.value) : undefined,
                     startTime: startTimeInput.value || undefined
                   });
                 }
