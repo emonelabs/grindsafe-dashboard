@@ -62,7 +62,7 @@ import '@xyflow/react/dist/style.css';
 
 type RiskOption = 'ai' | 'rule';
 
-type Resource = 'player' | 'session' | 'wallet' | 'operation';
+type Resource = 'player' | 'session' | 'wallet' | 'operation' | 'entry';
 type LogicOperator = 'AND' | 'OR';
 type FieldType = 'number' | 'text' | 'date' | 'enum';
 
@@ -112,6 +112,12 @@ const resourceFields: Record<Resource, ResourceField[]> = {
       { value: 'saturday', label: 'Saturday' },
       { value: 'sunday', label: 'Sunday' },
     ]},
+  ],
+  entry: [
+    { field: 'buy_in', label: 'Buy-in ($)', type: 'number' },
+    { field: 'cash_out', label: 'Cash-out ($)', type: 'number' },
+    { field: 'net_result', label: 'Net Result ($)', type: 'number' },
+    { field: 'rake', label: 'Rake ($)', type: 'number' },
   ],
   wallet: [
     { field: 'balance', label: 'Balance ($)', type: 'number' },

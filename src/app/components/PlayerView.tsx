@@ -184,7 +184,18 @@ export function PlayerView() {
     scheduleId?: string;
     scheduleName?: string;
     isEnded?: boolean;
+    cashOut?: number;
+    netResult?: number;
   }>>([]);
+
+  const [endingEntryId, setEndingEntryId] = useState<string | null>(null);
+  const [cashOutInput, setCashOutInput] = useState<string>('');
+
+  const tournamentNetResult = tournamentEntries
+    .filter(e => e.isEnded && e.netResult !== undefined)
+    .reduce((sum, e) => sum + (e.netResult || 0), 0);
+  
+  const totalPL = currentPL + tournamentNetResult;
 
   // Mock schedules for the player (filtered by player's risk level)
   const playerSchedules = [
@@ -1075,6 +1086,29 @@ export function PlayerView() {
     return () => clearInterval(interval);
   }, [sessionActive, isScreenSharing, biggestWin, biggestLoss]);
 
+  // Update session chart when tournament net result changes
+  useEffect(() => {
+    if (!sessionActive || tournamentEntries.length === 0) return;
+
+    setSessionData(prevData => {
+      const newData = [...prevData];
+      const currentTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const lastPL = newData[newData.length - 1]?.pl || 0;
+      
+      newData.push({
+        time: currentTime,
+        pl: totalPL,
+        ev: currentEV
+      });
+
+      if (newData.length >= 25) {
+        newData.shift();
+      }
+
+      return newData;
+    });
+  }, [tournamentNetResult]);
+
   // Command palette keyboard shortcut (Cmd+O)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1170,7 +1204,7 @@ export function PlayerView() {
       id: Date.now().toString(),
       date: new Date(),
       duration: sessionTime,
-      profitLoss: currentPL,
+      profitLoss: totalPL,
       ev: currentEV,
       buyIn: buyIn,
       handsPlayed: Math.floor((sessionTime / 60) * 100), // 100 hands per hour
@@ -1588,7 +1622,7 @@ export function PlayerView() {
     return <span className="text-xs text-gray-600">{walletName}</span>;
   };
 
-  const isProfit = currentPL >= 0;
+  const isProfit = totalPL >= 0;
 
   // Get current conversation messages
   const currentConversation = conversations.find(c => c.id === currentConversationId);
@@ -2851,7 +2885,7 @@ export function PlayerView() {
               <div className="px-3 py-2">
                 <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">P/L</div>
                 <div className={`text-lg font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPL(currentPL)}
+                  {formatPL(totalPL)}
                 </div>
               </div>
 
@@ -3101,10 +3135,52 @@ export function PlayerView() {
                               </td>
                               <td className="px-3 py-2 text-center">
                                 {entry.isEnded ? (
-                                  <span className="text-xs text-gray-400 font-medium">Ended</span>
+                                  <span className={`text-xs font-semibold ${entry.netResult !== undefined && entry.netResult >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                    {entry.netResult !== undefined ? `$${entry.netResult.toFixed(2)}` : '-'}
+                                  </span>
+                                ) : endingEntryId === entry.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      value={cashOutInput}
+                                      onChange={(e) => setCashOutInput(e.target.value)}
+                                      placeholder={`$${entry.buyIn}`}
+                                      className="w-16 px-1 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() => {
+                                        const cashOut = parseFloat(cashOutInput) || entry.buyIn;
+                                        setTournamentEntries(prev => prev.map(e => e.id === entry.id ? { 
+                                          ...e, 
+                                          isEnded: true, 
+                                          endTime: new Date(),
+                                          cashOut: cashOut,
+                                          netResult: cashOut - entry.buyIn
+                                        } : e));
+                                        setEndingEntryId(null);
+                                        setCashOutInput('');
+                                      }}
+                                      className="px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 text-xs font-semibold rounded transition-all"
+                                    >
+                                      ✓
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEndingEntryId(null);
+                                        setCashOutInput('');
+                                      }}
+                                      className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded transition-all"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
                                 ) : (
                                   <button
-                                    onClick={() => setTournamentEntries(prev => prev.map(e => e.id === entry.id ? { ...e, isEnded: true, endTime: new Date() } : e))}
+                                    onClick={() => {
+                                      setEndingEntryId(entry.id);
+                                      setCashOutInput(entry.buyIn.toString());
+                                    }}
                                     className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded transition-all"
                                   >
                                     End
