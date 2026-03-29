@@ -871,11 +871,11 @@ Graphs
             onClick={() => setActiveTab('mtt')}
             className={`pb-1 transition-all text-sm font-medium ${
               activeTab === 'mtt'
-                ? 'text-purple-700 border-b-2 border-purple-700'
+                ? 'text-gray-900 border-b-2 border-gray-900'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
-            MTT Stats
+            Tournament Stats
           </button>
         </div>
 
@@ -883,27 +883,27 @@ Graphs
           <div className="py-4">
             {/* MTT Stats Summary */}
             <div className="mb-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">MTT Performance</h3>
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">MTT Performance</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-purple-700">5</div>
-                  <div className="text-xs text-purple-600 uppercase tracking-wide mt-1">Tournaments</div>
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-2xl font-bold text-slate-800">5</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wide mt-1">Tournaments</div>
                 </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-green-700">40%</div>
-                  <div className="text-xs text-green-600 uppercase tracking-wide mt-1">ITM %</div>
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-2xl font-bold text-slate-800">40%</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wide mt-1">ITM %</div>
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-blue-700">$2,035</div>
-                  <div className="text-xs text-blue-600 uppercase tracking-wide mt-1">Net Profit</div>
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-2xl font-bold text-slate-800">$2,035</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wide mt-1">Net Profit</div>
                 </div>
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-orange-700">68.5%</div>
-                  <div className="text-xs text-orange-600 uppercase tracking-wide mt-1">ROI</div>
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-2xl font-bold text-slate-800">68.5%</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wide mt-1">ROI</div>
                 </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <div className="text-2xl font-bold text-gray-700">#84</div>
-                  <div className="text-xs text-gray-600 uppercase tracking-wide mt-1">Avg Finish</div>
+                <div className="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-2xl font-bold text-slate-800">#84</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wide mt-1">Avg Finish</div>
                 </div>
               </div>
             </div>
@@ -911,27 +911,27 @@ Graphs
             {/* MTT Breakdown */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Total Investment vs Returns */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h4 className="text-sm font-bold text-gray-900 mb-4">Investment vs Returns</h4>
+              <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                <h4 className="text-sm font-semibold text-slate-800 mb-4">Investment vs Returns</h4>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={[
                       { name: 'Total Buy-ins', value: 2965 },
                       { name: 'Total Cashed', value: 5000 }
                     ]}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: '11px' }} />
-                      <YAxis stroke="#6b7280" style={{ fontSize: '11px' }} tickFormatter={(v) => `$${v}`} />
-                      <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} />
-                      <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="name" stroke="#64748b" style={{ fontSize: '11px' }} />
+                      <YAxis stroke="#64748b" style={{ fontSize: '11px' }} tickFormatter={(v) => `$${v}`} />
+                      <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
+                      <Bar dataKey="value" fill="#64748b" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Profit Over Time */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h4 className="text-sm font-bold text-gray-900 mb-4">Profit Over Time</h4>
+              <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                <h4 className="text-sm font-semibold text-slate-800 mb-4">Profit Over Time</h4>
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={[
@@ -941,19 +941,19 @@ Graphs
                       { tournament: '4', profit: 1200 },
                       { tournament: '5', profit: 2035 }
                     ]}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="tournament" stroke="#6b7280" style={{ fontSize: '11px' }} />
-                      <YAxis stroke="#6b7280" style={{ fontSize: '11px' }} tickFormatter={(v) => `$${v}`} />
-                      <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Profit']} />
-                      <Line type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="tournament" stroke="#64748b" style={{ fontSize: '11px' }} />
+                      <YAxis stroke="#64748b" style={{ fontSize: '11px' }} tickFormatter={(v) => `$${v}`} />
+                      <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, 'Profit']} contentStyle={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }} />
+                      <Line type="monotone" dataKey="profit" stroke="#475569" strokeWidth={2} dot={{ fill: '#475569' }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Finish Positions */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h4 className="text-sm font-bold text-gray-900 mb-4">Finish Positions</h4>
+              <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                <h4 className="text-sm font-semibold text-slate-800 mb-4">Finish Positions</h4>
                 <div className="space-y-2">
                   {[
                     { date: 'Mar 15', position: 12, entries: 500, prize: '$2,780', roi: '+424%' },
@@ -962,23 +962,23 @@ Graphs
                     { date: 'Mar 8', position: 8, entries: 150, prize: '$1,200', roi: '+457%' },
                     { date: 'Mar 5', position: 110, entries: 200, prize: '-', roi: '-100%' }
                   ].map((tournament, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                       <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                          tournament.prize !== '-' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                          tournament.prize !== '-' ? 'bg-slate-100 text-slate-700' : 'bg-slate-50 text-slate-500'
                         }`}>
                           #{tournament.position}
                         </div>
                         <div>
-                          <div className="text-xs font-medium text-gray-900">{tournament.date}</div>
-                          <div className="text-[10px] text-gray-500">{tournament.entries} entries</div>
+                          <div className="text-xs font-medium text-slate-700">{tournament.date}</div>
+                          <div className="text-[10px] text-slate-500">{tournament.entries} entries</div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`text-xs font-bold ${tournament.prize !== '-' ? 'text-green-600' : 'text-red-500'}`}>
+                        <div className="text-xs font-semibold text-slate-700">
                           {tournament.prize}
                         </div>
-                        <div className={`text-[10px] ${tournament.roi.startsWith('+') ? 'text-green-600' : 'text-red-500'}`}>
+                        <div className="text-[10px] text-slate-500">
                           {tournament.roi}
                         </div>
                       </div>
@@ -988,8 +988,8 @@ Graphs
               </div>
 
               {/* Buyin Distribution */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h4 className="text-sm font-bold text-gray-900 mb-4">Buy-in Distribution</h4>
+              <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm">
+                <h4 className="text-sm font-semibold text-slate-800 mb-4">Buy-in Distribution</h4>
                 <div className="space-y-3">
                   {[
                     { stake: '$530', count: 3, total: '$1,590' },
@@ -998,12 +998,12 @@ Graphs
                   ].map((row, i) => (
                     <div key={i} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                        <span className="text-sm text-gray-700">{row.stake}</span>
+                        <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
+                        <span className="text-sm text-slate-700">{row.stake}</span>
                       </div>
                       <div className="flex items-center gap-4">
-                        <span className="text-xs text-gray-500">{row.count} entries</span>
-                        <span className="text-xs font-medium text-gray-900 w-20 text-right">{row.total}</span>
+                        <span className="text-xs text-slate-500">{row.count} entries</span>
+                        <span className="text-xs font-medium text-slate-700 w-20 text-right">{row.total}</span>
                       </div>
                     </div>
                   ))}
