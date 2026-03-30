@@ -162,7 +162,7 @@ export function PlayerView() {
     const saved = localStorage.getItem('activeSession');
     return saved ? JSON.parse(saved).biggestLoss : 0;
   });
-  const [liveSessionView, setLiveSessionView] = useState<'overview' | 'cash' | 'tournaments'>('overview');
+  const [liveSessionView, setLiveSessionView] = useState<'tournaments' | 'cash'>('tournaments');
   const [currentTime, setCurrentTime] = useState(new Date());
   
   useEffect(() => {
@@ -1161,7 +1161,7 @@ export function PlayerView() {
     setSessionData([]);
     setUploadedHands([]);
     setIsScreenSharing(false);
-    setLiveSessionView('overview');
+    setLiveSessionView('tournaments');
     setTournamentEntries([]);
     // Initial save to localStorage
     localStorage.setItem('activeSession', JSON.stringify({
@@ -2834,14 +2834,14 @@ export function PlayerView() {
               <div className="flex items-center gap-2">
                 <div className="flex items-center bg-gray-100 rounded-lg p-0.5">
                   <button
-                    onClick={() => setLiveSessionView('overview')}
+                    onClick={() => setLiveSessionView('tournaments')}
                     className={`px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
-                      liveSessionView === 'overview' 
+                      liveSessionView === 'tournaments' 
                         ? 'bg-white text-gray-900 shadow-sm' 
                         : 'text-gray-500 hover:text-gray-700'
                     }`}
                   >
-                    Overview
+                    Tournaments
                   </button>
                   <button
                     onClick={() => setLiveSessionView('cash')}
@@ -2852,16 +2852,6 @@ export function PlayerView() {
                     }`}
                   >
                     Cash
-                  </button>
-                  <button
-                    onClick={() => setLiveSessionView('tournaments')}
-                    className={`px-2.5 py-1 text-[10px] font-semibold rounded transition-all ${
-                      liveSessionView === 'tournaments' 
-                        ? 'bg-white text-gray-900 shadow-sm' 
-                        : 'text-gray-500 hover:text-gray-700'
-                    }`}
-                  >
-                    Tournaments
                   </button>
                 </div>
                 <div className="flex items-center gap-1.5 px-2 py-1 bg-white rounded border border-gray-200">
@@ -2879,8 +2869,27 @@ export function PlayerView() {
             </div>
           </div>
 
-          {/* Compact Metrics Row */}
-          {(liveSessionView === 'overview' || liveSessionView === 'cash') && (
+          {/* Compact Metrics Row - Tournaments */}
+          {(liveSessionView === 'tournaments') && (
+            <div className="grid grid-cols-2 divide-x divide-gray-200 bg-white">
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">P/L</div>
+                <div className={`text-lg font-bold ${isProfit ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatPL(totalPL)}
+                </div>
+              </div>
+
+              <div className="px-3 py-2">
+                <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">ROI (%)</div>
+                <div className="text-lg font-bold text-purple-600">
+                  {sessionTime > 0 ? ((currentPL / 500) * 100).toFixed(1) : '0.0'}%
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Compact Metrics Row - Cash (with Hands) */}
+          {(liveSessionView === 'cash') && (
             <div className="grid grid-cols-6 divide-x divide-gray-200 bg-white">
               <div className="px-3 py-2">
                 <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-0.5">P/L</div>
@@ -3039,7 +3048,7 @@ export function PlayerView() {
         )}
 
         {/* 60/40 Grid: Schedules | Session Performance - Only for Overview view */}
-        {(liveSessionView === 'overview') && (
+        {(liveSessionView === 'tournaments') && (
           <div className="grid grid-cols-5 gap-3">
             {/* Schedules (Left - 40%) */}
             <div className="col-span-2 bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -3197,12 +3206,12 @@ export function PlayerView() {
               </div>
             </div>
 
-            {/* Session Performance + Live Feed (Right - 60%) */}
+            {/* Performance + Live Feed (Right - 60%) */}
             <div className="col-span-3 grid grid-cols-4 gap-3">
-              {/* Session Performance (80% of right side) */}
+              {/* Performance (80% of right side) */}
               <div className="col-span-3 bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <div className="px-4 py-2 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
-                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Session Performance</h3>
+                  <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wide">Performance</h3>
                 </div>
                 <div className="p-4">
                   <ResponsiveContainer width="100%" height={160}>
@@ -3304,8 +3313,9 @@ export function PlayerView() {
           </div>
         )}
 
-        {/* Hands - Full Width */}
-        <PlayerHandHistory 
+        {/* Hands - Full Width - Only for Cash view */}
+        {(liveSessionView === 'cash') && (
+          <PlayerHandHistory 
             autoUpdate={isScreenSharing}
             initialHands={uploadedHands.length > 0 ? uploadedHands : undefined}
             uploadedCount={uploadedHands.length}
@@ -3360,6 +3370,7 @@ export function PlayerView() {
               setIsProcessingUpload(false);
             }}
           />
+        )}
         </div>
 
         <SlideInPanel
