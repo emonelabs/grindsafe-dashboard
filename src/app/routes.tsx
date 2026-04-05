@@ -5,6 +5,8 @@ import { PlayerView } from './components/PlayerView';
 import MessagesView from './views/MessagesView';
 import { LoginView } from './views/LoginView';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import UsageView from './views/UsageView';
+import { SettingsLayout } from './views/SettingsLayout';
 
 export const router = createBrowserRouter(
   [
@@ -39,6 +41,16 @@ export const router = createBrowserRouter(
       {
         path: 'messages',
         Component: MessagesView,
+      },
+      {
+        path: 'settings',
+        element: <SettingsLayout />,
+        children: [
+          {
+            path: 'usage',
+            Component: UsageView,
+          },
+        ],
       },
     ],
   },

@@ -1,10 +1,12 @@
-import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, User, Settings, History, PlayCircle, Users, Network, Split, Wallet, ChevronRight, ChevronLeft, MessageSquare, LogOut } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router';
+import { LayoutDashboard, User, Settings, History, PlayCircle, Users, Network, Split, Wallet, ChevronRight, ChevronLeft, MessageSquare, LogOut, CreditCard } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Popover, PopoverTrigger, PopoverContent } from './ui/popover';
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
   const { user, logout } = useAuth();
 
@@ -106,42 +108,52 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="p-4 border-t border-gray-200">
-        {isExpanded ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-xs font-semibold">
-                  {user?.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">{user?.name || 'User'}</div>
-                <div className="text-xs text-gray-500 capitalize">{user?.role || 'Guest'}</div>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-md transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Log Out</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="w-full cursor-pointer">
+              {isExpanded ? (
+                <div className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-md transition-colors">
+                  <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs font-semibold">
+                      {user?.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="text-sm font-medium text-gray-900 truncate">{user?.name || 'User'}</div>
+                    <div className="text-xs text-gray-500 capitalize">{user?.role || 'Guest'}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
+                  <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-semibold">
+                      {user?.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 bg-gray-900 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-semibold">
-                {user?.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-              </span>
+          </PopoverTrigger>
+          <PopoverContent align="start" side="right" className="w-48">
+            <div className="space-y-1">
+              <button
+                onClick={() => navigate('/settings/usage')}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Usage</span>
+              </button>
             </div>
-            <button 
-              onClick={handleLogout}
-              title="Log Out"
-              className="p-1.5 hover:bg-red-50 rounded-md transition-colors"
-            >
-              <LogOut className="w-4 h-4 text-red-600" />
-            </button>
-          </div>
+          </PopoverContent>
+        </Popover>
+        {!isExpanded && (
+          <button 
+            onClick={handleLogout}
+            title="Log Out"
+            className="w-full mt-2 p-1.5 hover:bg-red-50 rounded-md transition-colors flex justify-center"
+          >
+            <LogOut className="w-4 h-4 text-red-600" />
+          </button>
         )}
       </div>
     </div>
